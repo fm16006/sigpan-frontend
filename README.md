@@ -68,15 +68,15 @@ y el pipeline lo detecta.
 
 ### Por qué esta regla existe
 
-DocRecord Sv, el proyecto de expediente clínico de DSI215, tuvo dos veces —con dos meses de
-diferencia— exactamente el mismo defecto: el backend cambió la forma de una respuesta, el
-frontend siguió esperando la anterior, **las dos suites de pruebas estaban en verde**, y la
-aplicación estaba rota entre ellas. Un usuario real vio la pantalla en blanco.
+Cuando el frontend y el backend son dos aplicaciones separadas, cada lado prueba su mitad
+simulando a la otra. El frontend construye un simulacro que devuelve lo que el programador
+**cree** que el servidor manda; el servidor prueba su contrato de forma aislada. Ninguna prueba
+verifica que las dos suposiciones coincidan.
 
-La causa raíz no fue un error de programación. Cada lado simulaba su propia suposición del
-contrato en sus pruebas, y las dos suposiciones divergieron sin que ninguna suite se enterara.
-Un simulacro que devuelve exactamente lo que el programador cree que el otro lado manda no
-prueba el contrato: prueba la suposición del programador.
+Un simulacro que devuelve exactamente lo que el programador supone no prueba el contrato:
+prueba la suposición. El día que el servidor cambia la forma de una respuesta, **las dos suites
+siguen en verde** y la aplicación queda rota entre ellas. Y no se manifiesta en el pipeline: se
+manifiesta en pantalla, delante de quien esté usando el sistema.
 
 Generando el cliente, ese error deja de ser un fallo en producción y pasa a ser un **error de
 compilación** que `tsc --noEmit` atrapa en el Gate 2. Cuesta medio día de configuración una
@@ -116,7 +116,7 @@ La razón es aritmética: el servidor calcula con `BigDecimal` y el navegador lo
 `number` de JavaScript, que es punto flotante de 64 bits. Que los dos diverjan en centavos es
 cuestión de tiempo, y el cliente vería un total distinto del que se le cobra.
 
-Es la misma familia de defecto que el contrato divergente: dos lados calculando por su cuenta
+Es la misma familia de defecto que la deriva del contrato: dos lados calculando por su cuenta
 algo que debería venir de uno solo.
 
 ## Pruebas
@@ -176,10 +176,9 @@ Condición 7 de la Definición de terminado, y es literal:
   «mientras conectamos el endpoint».
 
 Aplica con especial cuidado a **HU-53, el tablero de indicadores de gerencia**. Es la pantalla
-de SIGPAN más parecida a la que produjo el defecto DEF-09 de DocRecord: cuatro tarjetas del
-panel principal mostrando cifras escritas a mano —48 pacientes, 12 consultas, 7 prescripciones,
-3 clínicas— cuando la base real tenía 6, 2, 1 y 1. Una diferencia de más de ocho veces, en el
-dato más visible de la aplicación.
+donde más barato sale escribir cuatro cifras de ejemplo «mientras conectamos el endpoint» y más
+caro sale dejarlas: son los números que la gerencia mira primero y los que menos se cuestionan,
+porque se presentan como un hecho.
 
 ## Convenciones
 
