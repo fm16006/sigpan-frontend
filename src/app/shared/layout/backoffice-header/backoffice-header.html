@@ -1,0 +1,12 @@
+<header class="navbar bg-base-100 shadow-sm px-6">
+  <div class="flex-1 flex items-center gap-2">
+    <span class="text-lg font-semibold text-primary">Panel administrativo</span>
+    @if (kiosk()) {
+      <span class="badge badge-outline badge-sm">Modo quiosco</span>
+    }
+  </div>
+  <div class="flex-none flex items-center gap-3">
+    <span class="text-sm text-base-content/70">{{ auth.user()?.name }}</span>
+    <button class="btn btn-ghost btn-sm" (click)="auth.logout()">Cerrar sesión</button>
+  </div>
+</header>

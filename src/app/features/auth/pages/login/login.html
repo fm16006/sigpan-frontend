@@ -1,0 +1,61 @@
+<div class="min-h-screen flex items-center justify-center bg-base-200 px-4">
+  <div class="card w-full max-w-sm bg-base-100 shadow-xl">
+    <div class="card-body">
+      <h1 class="text-2xl font-bold text-center text-primary mb-1">Iniciar sesión</h1>
+      <p class="text-center text-sm text-base-content/60 mb-4">
+        Modo de prueba 
+      </p>
+
+      <div class="flex flex-col gap-2">
+        <button class="btn btn-primary" (click)="mockLoginAs('CUSTOMER')">
+          Entrar como Cliente
+        </button>
+        <button class="btn btn-secondary" (click)="mockLoginAs('ADMIN')">
+          Entrar como Admin
+        </button>
+        <button class="btn btn-outline" (click)="mockLoginAs('CASHIER')">
+          Entrar como Cajero
+        </button>
+      </div>
+
+      <a routerLink="/" class="link link-hover text-sm text-center mt-4 text-base-content/70">
+        Volver al inicio
+      </a>
+    </div>
+  </div>
+</div>
+
+<!----
+
+<div class="min-h-screen flex items-center justify-center bg-base-200 px-4">
+  <div class="card w-full max-w-sm bg-base-100 shadow-xl">
+    <div class="card-body">
+      <h1 class="text-2xl font-bold text-center text-primary mb-2">Iniciar sesión</h1>
+
+      <form [formGroup]="form" (ngSubmit)="submit()" class="flex flex-col gap-3">
+        <label class="form-control">
+          <span class="label-text">Correo electrónico</span>
+          <input type="email" formControlName="email" class="input input-bordered w-full" placeholder="tucorreo@ejemplo.com" />
+        </label>
+
+        <label class="form-control">
+          <span class="label-text">Contraseña</span>
+          <input type="password" formControlName="password" class="input input-bordered w-full" placeholder="••••••••" />
+        </label>
+
+        @if (loginError()) {
+          <div class="alert alert-error text-sm py-2">Correo o contraseña incorrectos.</div>
+        }
+
+        <button type="submit" class="btn btn-primary mt-2">Ingresar</button>
+      </form>
+
+      <a routerLink="/" class="link link-hover text-sm text-center mt-3 text-base-content/70">
+        Volver al inicio
+      </a>
+    </div>
+  </div>
+</div>
+
+
+--->

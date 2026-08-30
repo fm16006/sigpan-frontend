@@ -1,0 +1,13 @@
+<div class="min-h-screen flex flex-col bg-base-200">
+  @if (!isKioskMode()) {
+    <app-backoffice-header [kiosk]="isKioskMode()" />
+  }
+  <div class="flex flex-1">
+    @if (!isKioskMode()) {
+      <app-backoffice-sidebar />
+    }
+    <main class="flex-1" [class.p-6]="!isKioskMode()">
+      <router-outlet />
+    </main>
+  </div>
+</div>
