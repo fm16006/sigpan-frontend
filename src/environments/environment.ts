@@ -1,4 +1,8 @@
-export const environment = {
+import { AppEnvironment } from './environment.model';
+
+export const environment: AppEnvironment = {
   production: true,
-  apiUrl: 'https://api.panya.example.com/api/v1',
+  appName: 'SigPan',
+  apiUrl: 'https://api.sigpan.example.com/api/v1',
+  requestTimeoutMs: 15_000,
 };

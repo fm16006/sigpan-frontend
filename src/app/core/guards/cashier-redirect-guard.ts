@@ -1,16 +1,11 @@
-import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
-import { Auth } from '../services/auth';
+import { inject } from '@angular/core';
+import { SessionStore } from '../services/session-store';
 
+/** Quien solo atiende caja entra directo al punto de venta, no al panel. */
 export const cashierRedirectGuard: CanActivateFn = () => {
-  const auth = inject(Auth);
+  const session = inject(SessionStore);
   const router = inject(Router);
 
-  const isCashierOnly = auth.hasAnyRole(['CASHIER']) && !auth.hasAnyRole(['ADMIN']);
-
-  if (isCashierOnly) {
-    return router.createUrlTree(['/backoffice/pos']);
-  }
-
-  return true;
+  return session.role() === 'CASHIER' ? router.createUrlTree(['/backoffice/pos']) : true;
 };

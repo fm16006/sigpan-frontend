@@ -1,7 +1,16 @@
-<div class="min-h-screen flex flex-col bg-base-200">
+<div class="flex min-h-full flex-col bg-base-100">
+  <a
+    href="#contenido"
+    class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:btn focus:btn-sm focus:btn-primary"
+  >
+    Saltar al contenido
+  </a>
+
   <app-navbar />
-  <main class="flex-1">
+
+  <main id="contenido" class="container-page flex-1 py-6 sm:py-8 lg:py-10">
     <router-outlet />
   </main>
+
   <app-footer />
 </div>

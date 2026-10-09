@@ -1,50 +1,103 @@
-<nav class="navbar bg-base-100 shadow-sm px-4">
-  <div class="flex-1">
-    <a routerLink="/" class="flex items-center gap-2 text-primary">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" class="h-8 w-8" fill="none">
-        <path
-          d="M24 8c-7 0-12 5-12 11 0 3 1.5 5.5 4 7.5-1 1.5-1.5 3-1.5 4.5 0 4.5 4 8 9.5 8s9.5-3.5 9.5-8c0-1.5-.5-3-1.5-4.5 2.5-2 4-4.5 4-7.5 0-6-5-11-12-11z"
-          fill="currentColor" opacity="0.15" />
-        <path
-          d="M24 8c-7 0-12 5-12 11 0 3 1.5 5.5 4 7.5-1 1.5-1.5 3-1.5 4.5 0 4.5 4 8 9.5 8s9.5-3.5 9.5-8c0-1.5-.5-3-1.5-4.5 2.5-2 4-4.5 4-7.5 0-6-5-11-12-11z"
-          stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
-        <path d="M17 20c2-1.5 4.5-2 7-2s5 .5 7 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-        <circle cx="20" cy="26" r="1" fill="currentColor" />
-        <circle cx="28" cy="26" r="1" fill="currentColor" />
-        <circle cx="24" cy="30" r="1" fill="currentColor" />
-      </svg>
-      <span class="text-xl font-semibold">Panadería</span>
-    </a>
-  </div>
-
-  <div class="flex-none flex items-center gap-1">
-    <a routerLink="/storefront" routerLinkActive="btn-active" class="btn btn-ghost btn-sm">
-      Catálogo
-    </a>
-
-    <a routerLink="/storefront/orders" routerLinkActive="btn-active" class="btn btn-ghost btn-sm">
-      Rastrear pedido
-    </a>
-
-    <a routerLink="/storefront/cart" class="btn btn-ghost btn-sm btn-circle" aria-label="Carrito">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-          d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-      </svg>
-    </a>
-
-    @if (auth.isLoggedIn()) {
-    <div class="dropdown dropdown-end">
-      <div tabindex="0" role="button" class="btn btn-ghost btn-sm">
-        {{ auth.user()?.name }}
-      </div>
-      <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box shadow-md w-44 mt-2 p-2 z-10">
-        <li><a routerLink="/storefront/orders">Mis pedidos</a></li>
-        <li><button (click)="auth.logout()">Cerrar sesión</button></li>
+<header class="sticky top-0 z-30 border-b border-base-300 bg-base-100/90 backdrop-blur">
+  <nav class="container-page flex h-16 items-center gap-2 sm:gap-6" aria-label="Principal">
+    <!-- Navegación en móvil y tablet -->
+    <div class="dropdown sm:hidden">
+      <button type="button" class="btn btn-ghost btn-sm btn-circle" aria-haspopup="menu" aria-label="Abrir menú">
+        <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+          <path d="M4 7h16M4 12h16M4 17h16" stroke-width="1.8" stroke-linecap="round" />
+        </svg>
+      </button>
+      <ul
+        class="dropdown-content menu z-40 mt-2 w-56 rounded-box border border-base-300 bg-base-100 p-2 shadow-sm"
+        role="menu"
+      >
+        <li><a routerLink="/">Inicio</a></li>
+        <li><a routerLink="/storefront">Catálogo</a></li>
+        @if (auth.isAuthenticated()) {
+          <li><a routerLink="/storefront/orders">Mis pedidos</a></li>
+        }
+        @if (canEnterBackoffice()) {
+          <li><a routerLink="/backoffice">Panel administrativo</a></li>
+        }
       </ul>
     </div>
-    } @else {
-    <a routerLink="/auth/login" class="btn btn-primary btn-sm">Ingresar</a>
-    }
-  </div>
-</nav>
+
+    <a routerLink="/" aria-label="Inicio">
+      <app-brand-mark [size]="2.25" />
+    </a>
+
+    <div class="hidden items-center gap-1 sm:flex">
+      <a
+        routerLink="/storefront"
+        routerLinkActive="bg-base-200 text-base-content"
+        class="rounded-field px-3 py-2 text-sm font-medium text-base-content/70 hover:bg-base-200"
+      >
+        Catálogo
+      </a>
+      @if (auth.isAuthenticated()) {
+        <a
+          routerLink="/storefront/orders"
+          routerLinkActive="bg-base-200 text-base-content"
+          class="rounded-field px-3 py-2 text-sm font-medium text-base-content/70 hover:bg-base-200"
+        >
+          Mis pedidos
+        </a>
+      }
+    </div>
+
+    <div class="ms-auto flex items-center gap-1 sm:gap-2">
+      <app-theme-toggle />
+
+      <a
+        routerLink="/storefront/cart"
+        class="btn btn-ghost btn-sm"
+        [attr.aria-label]="'Carrito, ' + cart.count() + ' artículos'"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-5 w-5"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          aria-hidden="true"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="1.8"
+            d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
+          />
+        </svg>
+        @if (cart.count() > 0) {
+          <span class="badge badge-primary badge-sm">{{ cart.count() }}</span>
+        }
+      </a>
+
+      @if (auth.user(); as user) {
+        <div class="dropdown dropdown-end">
+          <button type="button" class="btn btn-ghost btn-sm" aria-haspopup="menu">
+            <span class="hidden sm:inline">{{ user.name }}</span>
+            <span class="sm:hidden" aria-hidden="true">
+              <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <circle cx="12" cy="8.5" r="3.5" stroke-width="1.6" />
+                <path d="M5 20c0-3.3 3.1-5.5 7-5.5s7 2.2 7 5.5" stroke-width="1.6" stroke-linecap="round" />
+              </svg>
+            </span>
+          </button>
+          <ul
+            class="dropdown-content menu z-40 mt-2 w-52 rounded-box border border-base-300 bg-base-100 p-2 shadow-sm"
+            role="menu"
+          >
+            @if (canEnterBackoffice()) {
+              <li><a routerLink="/backoffice">Panel administrativo</a></li>
+            }
+            <li><a routerLink="/storefront/orders">Mis pedidos</a></li>
+            <li><button type="button" (click)="auth.logout()">Cerrar sesión</button></li>
+          </ul>
+        </div>
+      } @else {
+        <a routerLink="/auth/login" class="btn btn-primary btn-sm">Ingresar</a>
+      }
+    </div>
+  </nav>
+</header>

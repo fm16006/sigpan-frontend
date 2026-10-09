@@ -1,10 +1,13 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
+import { BrandMark } from '../../ui/brand-mark/brand-mark';
+import { BackofficeMenu } from '../backoffice-menu';
 
 @Component({
   selector: 'app-backoffice-sidebar',
-  imports: [RouterLink, RouterLinkActive],
+  imports: [RouterLink, RouterLinkActive, BrandMark],
   templateUrl: './backoffice-sidebar.html',
-  styleUrl: './backoffice-sidebar.css',
 })
-export class BackofficeSidebar {}
+export class BackofficeSidebar {
+  protected readonly menu = inject(BackofficeMenu);
+}

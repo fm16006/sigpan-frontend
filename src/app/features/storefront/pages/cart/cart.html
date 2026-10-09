@@ -1,1 +1,82 @@
-<p>cart works!</p>
+<app-page-header title="Tu carrito" />
+
+@if (cart.isEmpty()) {
+  <app-empty-state
+    title="Todavía no agregaste nada"
+    description="Explorá el catálogo y armá tu pedido."
+  >
+    <a routerLink="/storefront" class="btn btn-primary btn-sm">Ir al catálogo</a>
+  </app-empty-state>
+} @else {
+  <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+    <div class="overflow-x-auto rounded-box border border-base-300">
+      <table class="table">
+        <thead>
+          <tr>
+            <th scope="col">Producto</th>
+            <th scope="col" class="w-28">Cantidad</th>
+            <th scope="col" class="text-end">Importe</th>
+            <th scope="col"><span class="sr-only">Acciones</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (line of cart.lines(); track line.productId) {
+            <tr>
+              <td>
+                <p class="font-medium">{{ line.name }}</p>
+                <p class="text-sm text-base-content/55">{{ line.unitPrice | money }} c/u</p>
+              </td>
+              <td>
+                <input
+                  type="number"
+                  min="1"
+                  max="99"
+                  class="input input-bordered input-sm w-20"
+                  [value]="line.quantity"
+                  [attr.aria-label]="'Cantidad de ' + line.name"
+                  (change)="updateQuantity(line.productId, $any($event.target).value)"
+                />
+              </td>
+              <td class="text-end font-medium">{{ line.unitPrice * line.quantity | money }}</td>
+              <td class="text-end">
+                <button
+                  type="button"
+                  class="btn btn-ghost btn-xs"
+                  [attr.aria-label]="'Quitar ' + line.name"
+                  (click)="cart.remove(line.productId)"
+                >
+                  Quitar
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <aside class="h-fit rounded-box border border-base-300 bg-base-100 p-5">
+      <h2 class="text-base font-semibold">Resumen</h2>
+      <dl class="mt-4 flex items-baseline justify-between">
+        <dt class="text-sm text-base-content/60">Subtotal</dt>
+        <dd class="font-serif text-2xl font-semibold">{{ cart.subtotal() | money }}</dd>
+      </dl>
+      <p class="mt-2 text-xs text-base-content/50">
+        El total definitivo, con impuestos y promociones vigentes, se confirma al procesar el pedido.
+      </p>
+      <button
+        type="button"
+        class="btn btn-primary mt-5 w-full"
+        [disabled]="submitting()"
+        (click)="checkout()"
+      >
+        @if (submitting()) {
+          <span class="loading loading-spinner loading-sm"></span>
+        }
+        {{ auth.isAuthenticated() ? 'Confirmar pedido' : 'Iniciar sesión para continuar' }}
+      </button>
+      <button type="button" class="btn btn-ghost btn-sm mt-2 w-full" (click)="cart.clear()">
+        Vaciar carrito
+      </button>
+    </aside>
+  </div>
+}

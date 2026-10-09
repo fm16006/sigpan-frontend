@@ -1,6 +1,9 @@
 {
   "name": "proyecto-panaderia-igf115",
   "version": "0.0.0",
+  "description": "Frontend de panadería en línea: catálogo, pedidos y backoffice (POS, inventario, recetas, promociones).",
+  "author": "Nilson Escobar",
+  "license": "UNLICENSED",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",

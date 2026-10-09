@@ -1,1 +1,49 @@
-<p>inventario works!</p>
+<app-page-header title="Inventario" subtitle="Insumos disponibles y niveles de reposición">
+  @if (lowStockCount() > 0) {
+    <span class="badge badge-warning">{{ lowStockCount() }} en mínimo</span>
+  }
+  <button type="button" class="btn btn-sm" [disabled]="stock.isLoading()" (click)="stock.reload()">
+    Actualizar
+  </button>
+</app-page-header>
+
+<app-resource-state
+  [loading]="stock.isLoading()"
+  [failed]="!!stock.error()"
+  [empty]="items().length === 0"
+  emptyTitle="Sin insumos registrados"
+  emptyDescription="Agregá los insumos que usás en producción para controlar sus existencias."
+  [skeletonCount]="6"
+  (retry)="stock.reload()"
+>
+  <div class="overflow-x-auto rounded-box border border-base-300 bg-base-100">
+    <table class="table">
+      <thead>
+        <tr>
+          <th scope="col">Insumo</th>
+          <th scope="col" class="text-end">Existencia</th>
+          <th scope="col" class="text-end">Mínimo</th>
+          <th scope="col">Estado</th>
+          <th scope="col">Actualizado</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (item of items(); track item.id) {
+          <tr>
+            <td class="font-medium">{{ item.name }}</td>
+            <td class="text-end">{{ item.quantity }} {{ item.unit }}</td>
+            <td class="text-end text-base-content/60">{{ item.reorderLevel }} {{ item.unit }}</td>
+            <td>
+              @if (isLowStock(item)) {
+                <span class="badge badge-warning badge-sm">Reponer</span>
+              } @else {
+                <span class="badge badge-ghost badge-sm">Suficiente</span>
+              }
+            </td>
+            <td class="text-sm text-base-content/55">{{ item.updatedAt | date: 'short' }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</app-resource-state>

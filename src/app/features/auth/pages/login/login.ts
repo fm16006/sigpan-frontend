@@ -1,64 +1,58 @@
-
 import { Component, inject, signal } from '@angular/core';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { AppError } from '../../../../core/http/app-error';
+import { applyFieldErrors, firstErrorMessage } from '../../../../core/http/form-errors';
 import { Auth } from '../../../../core/services/auth';
-import { User } from '../../../../core/models/user.model';
+import { AuthLayout } from '../../ui/auth-layout/auth-layout';
+import { safeReturnUrl } from '../../safe-return-url';
 
 @Component({
   selector: 'app-login',
-  imports: [RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, AuthLayout],
   templateUrl: './login.html',
-  styleUrl: './login.css',
 })
 export class Login {
-  private auth = inject(Auth);
-  private router = inject(Router);
-  private route = inject(ActivatedRoute);
+  private readonly auth = inject(Auth);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
-  protected mockLoginAs(role: 'CUSTOMER' | 'ADMIN' | 'CASHIER'): void {
-    const fakeUser: User = {
-      id: 1,
-      name: role === 'ADMIN' ? 'Admin de prueba' : role === 'CASHIER' ? 'Cajero de prueba' : 'Cliente de prueba',
-      email: 'prueba@panya.com',
-      role,
-    };
+  protected readonly form = inject(FormBuilder).nonNullable.group({
+    email: ['', [Validators.required, Validators.email]],
+    password: ['', [Validators.required, Validators.minLength(8)]],
+  });
 
-    this.auth.saveSession('fake-token-de-prueba', fakeUser);
+  protected readonly submitting = signal(false);
+  protected readonly errorMessage = signal<string | null>(null);
 
-    const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
-    this.router.navigateByUrl(returnUrl ?? (role === 'CUSTOMER' ? '/' : '/backoffice'));
+  protected errorFor(field: string): string | null {
+    return firstErrorMessage(this.form, field);
+  }
+
+  protected submit(): void {
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      return;
+    }
+
+    this.submitting.set(true);
+    this.errorMessage.set(null);
+
+    this.auth.login(this.form.getRawValue()).subscribe({
+      next: () => {
+        const target = safeReturnUrl(this.route.snapshot.queryParamMap.get('returnUrl'));
+        void this.router.navigateByUrl(target);
+      },
+      error: (error: AppError) => {
+        this.submitting.set(false);
+        applyFieldErrors(this.form, error);
+        // Mensaje genérico para no revelar si el correo existe.
+        this.errorMessage.set(
+          error.kind === 'auth' || error.kind === 'validation'
+            ? 'Correo o contraseña incorrectos.'
+            : error.message,
+        );
+      },
+    });
   }
 }
-
-/*
-import { Component, inject, signal } from '@angular/core';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { Auth } from '../../../../core/services/auth';
-import { User } from '../../../../core/models/user.model';
-
-@Component({
-  selector: 'app-login',
-  imports: [RouterLink],
-  templateUrl: './login.html',
-  styleUrl: './login.css',
-})
-export class Login {
-  private auth = inject(Auth);
-  private router = inject(Router);
-  private route = inject(ActivatedRoute);
-
-  protected mockLoginAs(role: 'CUSTOMER' | 'ADMIN' | 'CASHIER'): void {
-    const fakeUser: User = {
-      id: 1,
-      name: role === 'ADMIN' ? 'Admin de prueba' : role === 'CASHIER' ? 'Cajero de prueba' : 'Cliente de prueba',
-      email: 'prueba@panya.com',
-      role,
-    };
-
-    this.auth.saveSession('fake-token-de-prueba', fakeUser);
-
-    const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
-    this.router.navigateByUrl(returnUrl ?? (role === 'CUSTOMER' ? '/' : '/backoffice'));
-  }
-}
-*/

@@ -6,4 +6,14 @@ export const AUTH_ROUTES: Routes = [
     loadComponent: () => import('./pages/login/login').then((m) => m.Login),
     title: 'Iniciar sesión',
   },
+  {
+    path: 'register',
+    loadComponent: () => import('./pages/register/register').then((m) => m.Register),
+    title: 'Crear cuenta',
+  },
+  {
+    path: '',
+    pathMatch: 'full',
+    redirectTo: 'login',
+  },
 ];

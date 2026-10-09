@@ -1,0 +1,45 @@
+import { HttpErrorResponse } from '@angular/common/http';
+import { ApiErrorBody } from '../models/api.model';
+
+export type AppErrorKind = 'network' | 'validation' | 'auth' | 'forbidden' | 'notFound' | 'server';
+
+/** Error ya interpretado, listo para mostrar en pantalla. */
+export interface AppError {
+  readonly kind: AppErrorKind;
+  readonly status: number;
+  readonly message: string;
+  /** Errores por campo que informa el backend en un 400 o 422. */
+  readonly fieldErrors: Readonly<Record<string, string>>;
+}
+
+const MESSAGES: Readonly<Record<AppErrorKind, string>> = {
+  network: 'No pudimos conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.',
+  validation: 'Revisa los datos ingresados.',
+  auth: 'Tu sesión expiró. Vuelve a iniciar sesión.',
+  forbidden: 'No tienes permisos para realizar esta acción.',
+  notFound: 'No encontramos el recurso solicitado.',
+  server: 'Ocurrió un error inesperado. Inténtalo más tarde.',
+};
+
+function kindFor(status: number): AppErrorKind {
+  if (status === 0) return 'network';
+  if (status === 401) return 'auth';
+  if (status === 403) return 'forbidden';
+  if (status === 404) return 'notFound';
+  if (status === 400 || status === 422) return 'validation';
+  return 'server';
+}
+
+export function toAppError(response: HttpErrorResponse): AppError {
+  const kind = kindFor(response.status);
+  const body: ApiErrorBody | null =
+    response.error && typeof response.error === 'object' ? response.error : null;
+
+  return {
+    kind,
+    status: response.status,
+    // En 5xx se ignora el mensaje del backend: puede traer trazas internas.
+    message: (kind === 'server' ? null : body?.message) ?? MESSAGES[kind],
+    fieldErrors: body?.errors ?? {},
+  };
+}

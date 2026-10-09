@@ -1,16 +1,14 @@
-import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
-import { Auth } from '../services/auth';
+import { inject } from '@angular/core';
+import { UserRole } from '../models/user.model';
+import { SessionStore } from '../services/session-store';
 
-export const roleGuard = (allowedRoles: string[]): CanActivateFn => {
-  return () => {
-    const auth = inject(Auth);
+/** Restringe una ruta a ciertos roles. Tipado como UserRole[] para que un rol mal escrito no compile. */
+export const roleGuard =
+  (allowedRoles: readonly UserRole[]): CanActivateFn =>
+  () => {
+    const session = inject(SessionStore);
     const router = inject(Router);
 
-    if (auth.hasAnyRole(allowedRoles)) {
-      return true;
-    }
-
-    return router.createUrlTree(['/']);
+    return session.hasAnyRole(allowedRoles) ? true : router.createUrlTree(['/sin-permisos']);
   };
-};

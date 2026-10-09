@@ -1,12 +1,16 @@
-import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
-import { Auth } from '../services/auth';
+import { inject } from '@angular/core';
+import { SessionStore } from '../services/session-store';
 
+/**
+ * Exige sesión activa. La sesión ya viene restaurada por el inicializador.
+ * Los guards son solo de experiencia de usuario: la autorización la impone el backend.
+ */
 export const authGuard: CanActivateFn = (_route, state) => {
-  const auth = inject(Auth);
+  const session = inject(SessionStore);
   const router = inject(Router);
 
-  if (auth.isAuthenticated()) {
+  if (session.isAuthenticated()) {
     return true;
   }
 

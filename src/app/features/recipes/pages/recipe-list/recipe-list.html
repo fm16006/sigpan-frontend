@@ -1,1 +1,41 @@
-<p>recipe-list works!</p>
+<app-page-header title="Recetas" subtitle="Rendimiento e insumos por tanda de producción">
+  <button type="button" class="btn btn-sm" [disabled]="list.isLoading()" (click)="list.reload()">
+    Actualizar
+  </button>
+</app-page-header>
+
+<app-resource-state
+  [loading]="list.isLoading()"
+  [failed]="!!list.error()"
+  [empty]="items().length === 0"
+  emptyTitle="Sin recetas registradas"
+  emptyDescription="Las recetas permiten descontar insumos del inventario al producir."
+  (retry)="list.reload()"
+>
+  <ul class="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
+    @for (recipe of items(); track recipe.id) {
+      <li class="rounded-box border border-base-300 bg-base-100 p-5">
+        <div class="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 class="text-base font-semibold">{{ recipe.name }}</h2>
+          <span class="text-sm text-base-content/55">
+            Rinde {{ recipe.yieldQuantity }} u. · {{ recipe.preparationMinutes }} min
+          </span>
+        </div>
+
+        <h3 class="mt-4 text-xs font-semibold uppercase tracking-wide text-base-content/50">
+          Insumos
+        </h3>
+        <ul class="mt-2 grid gap-1 text-sm text-base-content/70">
+          @for (ingredient of recipe.ingredients; track ingredient.inventoryItemId) {
+            <li class="flex justify-between gap-4">
+              <span>{{ ingredient.name }}</span>
+              <span class="tabular-nums">{{ ingredient.quantity }} {{ ingredient.unit }}</span>
+            </li>
+          } @empty {
+            <li class="text-base-content/50">Sin insumos asociados.</li>
+          }
+        </ul>
+      </li>
+    }
+  </ul>
+</app-resource-state>

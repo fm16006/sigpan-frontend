@@ -1,239 +1,87 @@
-<div class="h-screen w-screen flex bg-base-200 overflow-hidden">
+<app-page-header title="Punto de venta" subtitle="Registro de ventas en mostrador" />
 
-  <!-- Panel izquierdo: catálogo (70%) -->
-  <div class="w-[70%] flex flex-col p-4 gap-3 overflow-hidden">
-
-    <label class="input input-bordered input-lg flex items-center gap-2 bg-base-100">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-        <circle cx="11" cy="11" r="7" stroke-width="2" />
-        <path d="M21 21l-4.35-4.35" stroke-width="2" stroke-linecap="round" />
-      </svg>
-      <input
-        type="text"
-        placeholder="Buscar pan por nombre o código"
-        class="grow text-lg"
-        [value]="searchTerm()"
-        (input)="searchTerm.set($any($event.target).value)"
-      />
-    </label>
-
-    <div class="flex gap-2 flex-wrap">
-      @for (category of categories; track category) {
-        <button
-          class="btn btn-md rounded-full"
-          [class.btn-neutral]="selectedCategory() === category"
-          [class.btn-ghost]="selectedCategory() !== category"
-          (click)="selectCategory(category)"
-        >
-          {{ category }}
-        </button>
-      }
-    </div>
-
-    <div class="flex-1 overflow-y-auto">
-      <div class="grid grid-cols-5 gap-3">
-        @for (product of filteredProducts(); track product.id) {
-          <button
-            class="card bg-base-100 shadow-sm hover:shadow-md hover:ring-2 hover:ring-primary transition-all text-left"
-            (click)="addToTicket(product)"
-          >
-            <div class="h-24 bg-base-200 rounded-t-box flex items-center justify-center text-4xl">
-              🥖
-            </div>
-            <div class="card-body p-3 gap-0">
-              <p class="font-medium text-sm leading-tight">{{ product.name }}</p>
-              <p class="text-base-content/70 font-semibold">{{ product.price | currency:'USD' }}</p>
-            </div>
-          </button>
-        } @empty {
-          <p class="text-base-content/50 col-span-5 text-center py-10">
-            No se encontraron productos.
-          </p>
-        }
-      </div>
-    </div>
-  </div>
-
-  <!-- Panel derecho: ticket (30%) -->
-  <div class="w-[30%] bg-base-100 flex flex-col border-l border-base-300">
-
-    <!-- Encabezado del cajero -->
-    <div class="p-4 border-b border-base-300 flex items-center justify-between">
-      <div>
-        <p class="font-bold text-lg leading-tight">Punto de venta</p>
-        <p class="text-sm text-base-content/60">
-          Cajero: {{ cashierName() }} · {{ registerLabel }}
-        </p>
-      </div>
-      <button class="btn btn-ghost btn-circle" aria-label="Cerrar sesión">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-          <path stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-            d="M17 16l4-4m0 0l-4-4m4 4H7m6 5v1a3 3 0 01-3 3H6a3 3 0 01-3-3V6a3 3 0 013-3h4a3 3 0 013 3v1" />
-        </svg>
-      </button>
-    </div>
-
-    <!-- Acciones básicas del cajero -->
-    <div class="grid grid-cols-2 gap-2 p-3 border-b border-base-300">
-      <button class="btn btn-outline btn-lg flex-col h-auto py-3 gap-1" (click)="openCashCut()">
-        <span class="text-xl">💰</span>
-        <span class="text-xs font-medium">Corte de caja</span>
-      </button>
-      <button class="btn btn-outline btn-lg flex-col h-auto py-3 gap-1 text-error" (click)="openVoid()">
-        <span class="text-xl">⛔</span>
-        <span class="text-xs font-medium">Anular venta</span>
-      </button>
-    </div>
-
-    <!-- Líneas del ticket -->
-    <div class="flex-1 overflow-y-auto p-3 flex flex-col gap-3">
-      @for (line of ticketLines(); track line.product.id) {
-        <div class="flex items-center justify-between gap-2">
-          <div class="flex-1 min-w-0">
-            <p class="text-base font-medium truncate">{{ line.product.name }}</p>
-            <p class="text-sm text-base-content/60">{{ line.product.price | currency:'USD' }}</p>
-          </div>
-          <div class="flex items-center gap-1">
-            <button class="btn btn-lg btn-circle btn-outline" (click)="decrementLine(line.product.id)">−</button>
-            <span class="w-6 text-center text-lg font-medium">{{ line.quantity }}</span>
-            <button class="btn btn-lg btn-circle btn-outline" (click)="incrementLine(line.product.id)">+</button>
-            <button class="btn btn-lg btn-circle btn-ghost text-error" (click)="removeLine(line.product.id)">
-              🗑
+<div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
+  <section aria-label="Productos disponibles">
+    <app-resource-state
+      [loading]="catalog.isLoading()"
+      [failed]="!!catalog.error()"
+      [empty]="available().length === 0"
+      emptyTitle="Sin productos disponibles"
+      [skeletonCount]="8"
+      (retry)="catalog.reload()"
+    >
+      <ul class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+        @for (product of available(); track product.id) {
+          <li>
+            <button
+              type="button"
+              class="flex h-full w-full flex-col items-start gap-1 rounded-box border border-base-300 bg-base-100 p-4 text-start transition-colors hover:border-primary hover:bg-base-200"
+              (click)="add(product)"
+            >
+              <span class="font-medium leading-snug">{{ product.name }}</span>
+              <span class="text-sm text-primary">{{ product.price | money }}</span>
             </button>
-          </div>
-        </div>
-      } @empty {
-        <p class="text-base-content/40 text-sm text-center py-10">Toca un producto para agregarlo</p>
-      }
-    </div>
+          </li>
+        }
+      </ul>
+    </app-resource-state>
+  </section>
 
-    <!-- Totales -->
-    <div class="border-t border-base-300 p-4 flex flex-col gap-1">
-      <div class="flex justify-between text-sm text-base-content/60">
-        <span>Subtotal</span>
-        <span>{{ subtotal() | currency:'USD' }}</span>
-      </div>
-      <div class="flex justify-between text-sm text-base-content/60">
-        <span>IVA (13%)</span>
-        <span>{{ taxAmount() | currency:'USD' }}</span>
-      </div>
-      <div class="flex justify-between text-2xl font-bold mt-1">
-        <span>Total</span>
-        <span>{{ total() | currency:'USD' }}</span>
-      </div>
-      <button class="btn btn-primary btn-lg mt-2" (click)="openPayment()">Cobrar</button>
-    </div>
-  </div>
-</div>
+  <aside class="h-fit rounded-box border border-base-300 bg-base-100 p-5" aria-label="Ticket actual">
+    <h2 class="text-base font-semibold">Ticket</h2>
 
-<!-- Modal de pago -->
-<dialog class="modal" [class.modal-open]="showPaymentModal()">
-  <div class="modal-box">
-    <h3 class="font-bold text-lg mb-4">Cobrar {{ total() | currency:'USD' }}</h3>
+    @if (lines().length === 0) {
+      <p class="mt-6 text-center text-sm text-base-content/50">
+        Tocá un producto para agregarlo.
+      </p>
+    } @else {
+      <ul class="mt-4 grid gap-2">
+        @for (line of lines(); track line.product.id) {
+          <li class="flex items-center gap-2 text-sm">
+            <span class="flex-1 truncate">{{ line.product.name }}</span>
+            <button
+              type="button"
+              class="btn btn-ghost btn-xs"
+              [attr.aria-label]="'Quitar uno de ' + line.product.name"
+              (click)="decrease(line.product.id)"
+            >
+              −
+            </button>
+            <span class="w-6 text-center tabular-nums">{{ line.quantity }}</span>
+            <button
+              type="button"
+              class="btn btn-ghost btn-xs"
+              [attr.aria-label]="'Agregar uno de ' + line.product.name"
+              (click)="add(line.product)"
+            >
+              +
+            </button>
+            <span class="w-20 text-end tabular-nums">
+              {{ line.product.price * line.quantity | money }}
+            </span>
+          </li>
+        }
+      </ul>
 
-    <div class="flex gap-2 mb-4">
+      <dl class="mt-5 flex items-baseline justify-between border-t border-base-300 pt-4">
+        <dt class="text-sm text-base-content/60">Total</dt>
+        <dd class="font-serif text-2xl font-semibold">{{ total() | money }}</dd>
+      </dl>
+
       <button
-        class="btn btn-lg flex-1"
-        [class.btn-primary]="paymentMethod() === 'CASH'"
-        [class.btn-outline]="paymentMethod() !== 'CASH'"
-        (click)="selectPaymentMethod('CASH')"
+        type="button"
+        class="btn btn-primary mt-4 w-full"
+        [disabled]="submitting()"
+        (click)="charge()"
       >
-        Efectivo
+        @if (submitting()) {
+          <span class="loading loading-spinner loading-sm"></span>
+        }
+        Cobrar
       </button>
-      <button
-        class="btn btn-lg flex-1"
-        [class.btn-primary]="paymentMethod() === 'CARD'"
-        [class.btn-outline]="paymentMethod() !== 'CARD'"
-        (click)="selectPaymentMethod('CARD')"
-      >
-        Tarjeta
+      <button type="button" class="btn btn-ghost btn-sm mt-2 w-full" (click)="clear()">
+        Cancelar ticket
       </button>
-    </div>
-
-    @if (paymentMethod() === 'CASH') {
-      <div class="flex flex-col gap-3">
-        <div class="grid grid-cols-3 gap-2">
-          <button class="btn btn-lg btn-outline" (click)="addQuickCash(5)">+$5</button>
-          <button class="btn btn-lg btn-outline" (click)="addQuickCash(10)">+$10</button>
-          <button class="btn btn-lg btn-outline" (click)="addQuickCash(20)">+$20</button>
-        </div>
-        <div class="flex justify-between text-sm">
-          <span>Recibido</span>
-          <span class="font-medium">{{ cashReceived() | currency:'USD' }}</span>
-        </div>
-        <div class="flex justify-between text-lg font-bold">
-          <span>Cambio</span>
-          <span>{{ change() | currency:'USD' }}</span>
-        </div>
-      </div>
     }
-
-    <div class="modal-action">
-      <button class="btn btn-ghost" (click)="closePayment()">Cancelar</button>
-      <button class="btn btn-primary" [disabled]="!canConfirmPayment()" (click)="confirmPayment()">
-        Confirmar pago
-      </button>
-    </div>
-  </div>
-  <form method="dialog" class="modal-backdrop">
-    <button (click)="closePayment()">cerrar</button>
-  </form>
-</dialog>
-
-<!-- Modal de corte de caja (básico) -->
-<dialog class="modal" [class.modal-open]="showCashCutModal()">
-  <div class="modal-box">
-    <h3 class="font-bold text-lg mb-4">Corte de caja</h3>
-
-    <div class="flex flex-col gap-2 mb-4">
-      <div class="flex justify-between text-sm">
-        <span>Ventas del turno</span>
-        <span class="font-medium">{{ sessionSalesCount() }} transacciones</span>
-      </div>
-      <div class="flex justify-between text-sm">
-        <span>Total vendido (sistema)</span>
-        <span class="font-medium">{{ sessionSalesTotal() | currency:'USD' }}</span>
-      </div>
-    </div>
-
-    <label class="form-control">
-      <span class="label-text">Efectivo contado en caja</span>
-      <input
-        type="number"
-        class="input input-bordered input-lg"
-        [value]="cashCounted()"
-        (input)="cashCounted.set(+$any($event.target).value)"
-      />
-    </label>
-
-    <div class="flex justify-between text-lg font-bold mt-3">
-      <span>Diferencia</span>
-      <span [class.text-error]="cashDifference() !== 0">{{ cashDifference() | currency:'USD' }}</span>
-    </div>
-
-    <div class="modal-action">
-      <button class="btn btn-ghost" (click)="closeCashCut()">Cerrar</button>
-    </div>
-  </div>
-  <form method="dialog" class="modal-backdrop">
-    <button (click)="closeCashCut()">cerrar</button>
-  </form>
-</dialog>
-
-<!-- Modal de anulación (UI lista, lógica pendiente) -->
-<dialog class="modal" [class.modal-open]="showVoidModal()">
-  <div class="modal-box">
-    <h3 class="font-bold text-lg mb-2 text-error">Anular venta</h3>
-    <p class="text-sm text-base-content/70">
-      Esta acción anulará la última venta registrada. Requiere lógica de negocio
-      pendiente de definir (posible autorización de supervisor).
-    </p>
-    <div class="modal-action">
-      <button class="btn btn-ghost" (click)="closeVoid()">Cancelar</button>
-      <button class="btn btn-error" (click)="confirmVoid()">Confirmar anulación</button>
-    </div>
-  </div>
-  <form method="dialog" class="modal-backdrop">
-    <button (click)="closeVoid()">cerrar</button>
-  </form>
-</dialog>
+  </aside>
+</div>

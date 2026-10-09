@@ -1,1 +1,43 @@
-<p>orders works!</p>
+<app-page-header title="Mis pedidos" subtitle="Historial y estado de preparación" />
+
+<app-resource-state
+  [loading]="history.isLoading()"
+  [failed]="!!history.error()"
+  [empty]="items().length === 0"
+  emptyTitle="Aún no tenés pedidos"
+  emptyDescription="Cuando hagas tu primer pedido aparecerá acá."
+  (retry)="history.reload()"
+>
+  <ul class="grid max-w-4xl gap-3">
+    @for (order of items(); track order.id) {
+      <li class="rounded-box border border-base-300 bg-base-100 p-5">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p class="font-medium">Pedido {{ order.code }}</p>
+            <p class="text-sm text-base-content/55">
+              {{ order.createdAt | date: 'medium' }}
+            </p>
+          </div>
+          <span class="badge" [class]="statusBadge[order.status]">
+            {{ statusLabels[order.status] }}
+          </span>
+        </div>
+
+        <ul class="mt-4 grid gap-1 text-sm text-base-content/70">
+          @for (line of order.lines; track line.productId) {
+            <li class="flex justify-between gap-4">
+              <span>{{ line.quantity }} × {{ line.productName }}</span>
+              <span>{{ line.unitPrice * line.quantity | money }}</span>
+            </li>
+          }
+        </ul>
+
+        <p class="mt-4 border-t border-base-300 pt-3 text-end font-medium">
+          Total {{ order.total | money }}
+        </p>
+      </li>
+    }
+  </ul>
+
+  <a routerLink="/storefront" class="btn btn-ghost btn-sm mt-6">Seguir comprando</a>
+</app-resource-state>

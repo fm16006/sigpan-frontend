@@ -1,1 +1,55 @@
-<p>promotion-list works!</p>
+<app-page-header title="Promociones" subtitle="Descuentos vigentes y programados">
+  <button type="button" class="btn btn-sm" [disabled]="list.isLoading()" (click)="list.reload()">
+    Actualizar
+  </button>
+</app-page-header>
+
+<app-resource-state
+  [loading]="list.isLoading()"
+  [failed]="!!list.error()"
+  [empty]="items().length === 0"
+  emptyTitle="Sin promociones"
+  emptyDescription="Creá una promoción para aplicar descuentos automáticos en el catálogo."
+  (retry)="list.reload()"
+>
+  <div class="overflow-x-auto rounded-box border border-base-300 bg-base-100">
+    <table class="table">
+      <thead>
+        <tr>
+          <th scope="col">Promoción</th>
+          <th scope="col" class="text-end">Descuento</th>
+          <th scope="col">Vigencia</th>
+          <th scope="col">Estado</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (promotion of items(); track promotion.id) {
+          <tr>
+            <td>
+              <p class="font-medium">{{ promotion.name }}</p>
+              <p class="text-sm text-base-content/55">{{ promotion.description }}</p>
+            </td>
+            <td class="text-end font-medium">
+              @if (promotion.discountType === 'PERCENTAGE') {
+                {{ promotion.discountValue }}%
+              } @else {
+                {{ promotion.discountValue | money }}
+              }
+            </td>
+            <td class="text-sm text-base-content/70">
+              {{ promotion.startsAt | date: 'shortDate' }} —
+              {{ promotion.endsAt | date: 'shortDate' }}
+            </td>
+            <td>
+              @if (promotion.active) {
+                <span class="badge badge-success badge-sm">Activa</span>
+              } @else {
+                <span class="badge badge-ghost badge-sm">Inactiva</span>
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</app-resource-state>

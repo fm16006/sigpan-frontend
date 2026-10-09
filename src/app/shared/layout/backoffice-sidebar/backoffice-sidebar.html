@@ -1,17 +1,22 @@
-<aside class="w-56 bg-base-100 shadow-md min-h-screen p-4 flex flex-col gap-2">
-  <a routerLink="/backoffice" routerLinkActive="btn-active" [routerLinkActiveOptions]="{ exact: true }" class="btn btn-ghost justify-start">
-    Panel
+<aside class="flex w-56 shrink-0 flex-col border-e border-base-300 bg-base-100 xl:w-64">
+  <a routerLink="/" class="flex h-16 items-center border-b border-base-300 px-4" aria-label="Ver tienda">
+    <app-brand-mark [size]="1.75" label="SigPan" labelClass="text-base" />
   </a>
-  <a routerLink="/backoffice/inventory" routerLinkActive="btn-active" class="btn btn-ghost justify-start">
-    Inventario
-  </a>
-  <a routerLink="/backoffice/pos" routerLinkActive="btn-active" class="btn btn-ghost justify-start">
-    Punto de venta
-  </a>
-  <a routerLink="/backoffice/promotions" routerLinkActive="btn-active" class="btn btn-ghost justify-start">
-    Promociones
-  </a>
-  <a routerLink="/backoffice/recipes" routerLinkActive="btn-active" class="btn btn-ghost justify-start">
-    Recetas
-  </a>
+
+  <nav class="flex flex-1 flex-col gap-1 p-3" aria-label="Administración">
+    @for (item of menu.items(); track item.path) {
+      <a
+        [routerLink]="item.path"
+        routerLinkActive="bg-base-200 font-medium text-base-content"
+        [routerLinkActiveOptions]="{ exact: item.path === '/backoffice' }"
+        class="rounded-field px-3 py-2 text-sm text-base-content/70 hover:bg-base-200"
+      >
+        {{ item.label }}
+      </a>
+    }
+  </nav>
+
+  <div class="border-t border-base-300 p-3">
+    <a routerLink="/" class="btn btn-ghost btn-sm w-full justify-start">Ver tienda</a>
+  </div>
 </aside>
