@@ -1,0 +1,34 @@
+# Dependencias
+node_modules/
+
+# Compilación y caché de Angular
+dist/
+.angular/
+out-tsc/
+*.tsbuildinfo
+
+# Variables de entorno — nunca se comitean
+.env
+.env.*
+!.env.example
+
+# Pruebas
+coverage/
+playwright-report/
+test-results/
+__screenshots__/
+.vitest-attachments/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Logs y temporales
+npm-debug.log*
+yarn-error.log*
+*.log
+
+# Sistema operativo
+.DS_Store
+Thumbs.db

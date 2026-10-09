@@ -1,0 +1,8 @@
+# El repo guarda LF; cada máquina convierte según su core.autocrlf.
+* text=auto
+
+# Scripts que corren en Linux (Docker, CI)
+*.sh text eol=lf
+
+*.ico binary
+*.png binary

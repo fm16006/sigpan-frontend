@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+jobs:
+  gate-2:
+    name: Gate 2 (${{ matrix.tz }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        tz: ['America/El_Salvador', 'UTC']
+    env:
+      TZ: ${{ matrix.tz }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      # Vitest corre las pruebas de componente en Chromium real (vía @vitest/browser-playwright),
+      # no en jsdom, para que axe-core (RNF-10) pueda evaluar contraste de verdad.
+      - run: npx playwright install --with-deps chromium
+
+      - name: Pruebas unitarias y de componente
+        run: npm test -- --watch=false
+
+      - name: Verificación de tipos
+        # tsconfig.json es de solución (files:[] + references); tsc --noEmit sin -b
+        # revisa 0 archivos y siempre pasa. -b sigue las referencias y sí tipa.
+        run: npx tsc -b --noEmit
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build de producción
+        run: npm run build -- --configuration production
+
+  e2e:
+    name: Playwright (smoke)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+
+  api-contract:
+    name: src/app/api no editado a mano
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Regenera el cliente y compara contra lo comiteado
+        run: |
+          if [ ! -d src/app/api ]; then
+            echo "src/app/api todavía no existe: pendiente del primer esquema OpenAPI real de BOOT-BE."
+            exit 0
+          fi
+          npm run api:generate
+          git diff --exit-code -- src/app/api
