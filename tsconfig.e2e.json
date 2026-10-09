@@ -1,0 +1,8 @@
+/* Cubre e2e/ y la config de Playwright, que quedan fuera de tsconfig.app.json y tsconfig.spec.json. */
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"]
+  },
+  "include": ["e2e/**/*.ts", "playwright.config.ts"]
+}
