@@ -20,7 +20,7 @@ gobiernan, no lo que ya existe.
 | Lenguaje | TypeScript | Tipado estático; es lo que convierte un cambio del backend en un error de compilación |
 | Estilos | Tailwind CSS v4 | Interfaces adaptativas consistentes sin hojas de estilo extensas. Tiene guía oficial de integración con Angular |
 | Cliente de API | Generado desde OpenAPI | Ver la sección siguiente. **No se escribe a mano** |
-| Pruebas unitarias y de componente | Jasmine + Karma | Incluidos de fábrica en el andamiaje de Angular |
+| Pruebas unitarias y de componente | Vitest | Runner por defecto del andamiaje de Angular 22; Karma quedó deprecado por el propio equipo de Angular |
 | Accesibilidad | axe-core | Verifica el RNF-10 dentro de las pruebas de componente |
 | Aceptación | Playwright | Navegador real contra backend real, desde el Sprint 2 |
 
@@ -79,7 +79,7 @@ siguen en verde** y la aplicación queda rota entre ellas. Y no se manifiesta en
 manifiesta en pantalla, delante de quien esté usando el sistema.
 
 Generando el cliente, ese error deja de ser un fallo en producción y pasa a ser un **error de
-compilación** que `tsc --noEmit` atrapa en el Gate 2. Cuesta medio día de configuración una
+compilación** que `tsc -b --noEmit` atrapa en el Gate 2. Cuesta medio día de configuración una
 sola vez.
 
 ## Estructura
@@ -122,7 +122,7 @@ algo que debería venir de uno solo.
 ## Pruebas
 
 ```bash
-npm test                 # Jasmine + Karma
+npm test                 # Vitest
 npm run test:watch
 npx playwright test      # aceptación end-to-end
 ```
@@ -132,7 +132,7 @@ cada push. Las cuatro, no solo la primera:
 
 ```bash
 npm test -- --watch=false
-npx tsc --noEmit
+npx tsc -b --noEmit
 npm run lint
 npm run build -- --configuration production
 ```
