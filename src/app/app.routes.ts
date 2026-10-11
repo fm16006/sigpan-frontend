@@ -1,14 +1,15 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth-guard';
-import { cashierRedirectGuard } from './core/guards/cashier-redirect-guard';
 import { guestGuard } from './core/guards/guest-guard';
+import { publicSiteGuard } from './core/guards/public-site-guard';
 import { roleGuard } from './core/guards/role-guard';
-
-const STAFF_ROLES = ['ADMIN', 'CAJERO', 'PRODUCCION'] as const;
+import { roleHomeGuard } from './core/guards/role-home-guard';
+import { STAFF_ROLES } from './core/models/user.model';
 
 export const routes: Routes = [
   {
     path: '',
+    canActivate: [publicSiteGuard],
     loadComponent: () =>
       import('./shared/layout/customer-shell/customer-shell').then((m) => m.CustomerShell),
     children: [
@@ -38,38 +39,49 @@ export const routes: Routes = [
     children: [
       {
         path: '',
-        canActivate: [cashierRedirectGuard],
+        canActivate: [roleHomeGuard],
         loadChildren: () =>
           import('./features/dashboard/dashboard.routes').then((m) => m.DASHBOARD_ROUTES),
       },
       {
         path: 'pos',
-        canActivate: [roleGuard(['ADMIN', 'CAJERO'])],
+        canActivate: [roleGuard(['ADMINISTRADOR', 'CAJERO'])],
         loadChildren: () => import('./features/pos/pos.routes').then((m) => m.POS_ROUTES),
       },
       {
+        path: 'orders',
+        canActivate: [roleGuard(['ADMINISTRADOR', 'CAJERO', 'DESPACHADOR'])],
+        loadChildren: () =>
+          import('./features/dispatch/dispatch.routes').then((m) => m.DISPATCH_ROUTES),
+      },
+      {
+        path: 'products',
+        canActivate: [roleGuard(['ADMINISTRADOR', 'JEFE_PRODUCCION'])],
+        loadChildren: () =>
+          import('./features/products/products.routes').then((m) => m.PRODUCTS_ROUTES),
+      },
+      {
         path: 'inventory',
-        canActivate: [roleGuard(['ADMIN', 'PRODUCCION'])],
+        canActivate: [roleGuard(['ADMINISTRADOR', 'JEFE_PRODUCCION', 'BODEGUERO'])],
         loadChildren: () =>
           import('./features/inventory/inventory.routes').then((m) => m.INVENTORY_ROUTES),
       },
       {
         path: 'recipes',
-        canActivate: [roleGuard(['ADMIN', 'PRODUCCION'])],
+        canActivate: [roleGuard(['ADMINISTRADOR', 'JEFE_PRODUCCION'])],
         loadChildren: () =>
           import('./features/recipes/recipes.routes').then((m) => m.RECIPES_ROUTES),
       },
       {
-        path: 'products',
-        canActivate: [roleGuard(['ADMIN', 'PRODUCCION'])],
-        loadChildren: () =>
-          import('./features/products/products.routes').then((m) => m.PRODUCTS_ROUTES),
-      },
-      {
         path: 'promotions',
-        canActivate: [roleGuard(['ADMIN'])],
+        canActivate: [roleGuard(['ADMINISTRADOR'])],
         loadChildren: () =>
           import('./features/promotions/promotions.routes').then((m) => m.PROMOTIONS_ROUTES),
+      },
+      {
+        path: 'users',
+        canActivate: [roleGuard(['ADMINISTRADOR'])],
+        loadChildren: () => import('./features/users/users.routes').then((m) => m.USERS_ROUTES),
       },
     ],
   },

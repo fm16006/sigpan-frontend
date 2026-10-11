@@ -25,6 +25,10 @@ export class ProductAdminService {
     return this.api.post<CatalogProduct>(API_ENDPOINTS.productos.root, draft);
   }
 
+  update(id: Id, draft: CatalogProductDraft): Observable<CatalogProduct> {
+    return this.api.put<CatalogProduct>(API_ENDPOINTS.productos.byId(id), draft);
+  }
+
   remove(id: Id): Observable<void> {
     return this.api.delete<void>(API_ENDPOINTS.productos.byId(id));
   }

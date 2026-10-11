@@ -3,6 +3,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AppError } from '../../../../core/http/app-error';
 import { applyFieldErrors, firstErrorMessage } from '../../../../core/http/form-errors';
+import { ROLE_HOME } from '../../../../core/models/user.model';
 import { Auth } from '../../../../core/services/auth';
 import { AuthLayout } from '../../ui/auth-layout/auth-layout';
 import { safeReturnUrl } from '../../safe-return-url';
@@ -45,7 +46,8 @@ export class Login {
 
     this.auth.login(this.form.getRawValue()).subscribe({
       next: () => {
-        const home = this.auth.hasAnyRole(['ADMIN', 'CAJERO', 'PRODUCCION']) ? '/backoffice' : '/';
+        const role = this.auth.role();
+        const home = role ? ROLE_HOME[role] : '/';
         const target = safeReturnUrl(this.route.snapshot.queryParamMap.get('returnUrl'), home);
         void this.router.navigateByUrl(target);
       },

@@ -3,31 +3,31 @@
 <app-resource-state
   [loading]="history.isLoading()"
   [failed]="!!history.error()"
-  [empty]="items().length === 0"
+  [empty]="history.value().length === 0"
   emptyTitle="Aún no tenés pedidos"
   emptyDescription="Cuando hagas tu primer pedido aparecerá acá."
   (retry)="history.reload()"
 >
   <ul class="grid max-w-4xl gap-3">
-    @for (order of items(); track order.id) {
+    @for (order of history.value(); track order.id) {
       <li class="rounded-box border border-base-300 bg-base-100 p-5">
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p class="font-medium">Pedido {{ order.code }}</p>
+            <p class="font-medium">Pedido #{{ order.id }}</p>
             <p class="text-sm text-base-content/55">
-              {{ order.createdAt | date: 'medium' }}
+              {{ order.fecha | date: 'medium' }}
             </p>
           </div>
-          <span class="badge" [class]="statusBadge[order.status]">
-            {{ statusLabels[order.status] }}
+          <span class="badge" [class]="statusBadge[order.estado] ?? 'badge-ghost'">
+            {{ statusLabels[order.estado] ?? order.estado }}
           </span>
         </div>
 
         <ul class="mt-4 grid gap-1 text-sm text-base-content/70">
-          @for (line of order.lines; track line.productId) {
+          @for (line of order.detalles ?? []; track line.id) {
             <li class="flex justify-between gap-4">
-              <span>{{ line.quantity }} × {{ line.productName }}</span>
-              <span>{{ line.unitPrice * line.quantity | money }}</span>
+              <span>{{ line.cantidad }} × {{ line.producto }}</span>
+              <span>{{ line.subtotal | money }}</span>
             </li>
           }
         </ul>

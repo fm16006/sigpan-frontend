@@ -33,7 +33,7 @@ describe('authInterceptor', () => {
     session.set({
       accessToken: 'token-de-prueba',
       expiresIn: 900,
-      user: { id: 1, name: 'Nilson', email: 'nilson@sigpan.test', role: 'ADMIN' },
+      user: { id: 1, name: 'Nilson', email: 'nilson@sigpan.test', role: 'ADMINISTRADOR' },
     });
   });
 

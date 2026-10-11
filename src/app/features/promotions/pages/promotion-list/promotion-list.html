@@ -7,7 +7,7 @@
 <app-resource-state
   [loading]="list.isLoading()"
   [failed]="!!list.error()"
-  [empty]="items().length === 0"
+  [empty]="list.value().length === 0"
   emptyTitle="Sin promociones"
   emptyDescription="Creá una promoción para aplicar descuentos automáticos en el catálogo."
   (retry)="list.reload()"
@@ -23,25 +23,25 @@
         </tr>
       </thead>
       <tbody>
-        @for (promotion of items(); track promotion.id) {
+        @for (promotion of list.value(); track promotion.id) {
           <tr>
             <td>
-              <p class="font-medium">{{ promotion.name }}</p>
-              <p class="text-sm text-base-content/55">{{ promotion.description }}</p>
+              <p class="font-medium">{{ promotion.nombre }}</p>
+              <p class="text-sm text-base-content/55">{{ promotion.descripcion }}</p>
             </td>
             <td class="text-end font-medium">
-              @if (promotion.discountType === 'PERCENTAGE') {
-                {{ promotion.discountValue }}%
+              @if (isPercentage(promotion)) {
+                {{ promotion.valorDescuento }}%
               } @else {
-                {{ promotion.discountValue | money }}
+                {{ promotion.valorDescuento | money }}
               }
             </td>
             <td class="text-sm text-base-content/70">
-              {{ promotion.startsAt | date: 'shortDate' }} —
-              {{ promotion.endsAt | date: 'shortDate' }}
+              {{ promotion.fechaInicio | date: 'shortDate' }} —
+              {{ promotion.fechaFin | date: 'shortDate' }}
             </td>
             <td>
-              @if (promotion.active) {
+              @if (promotion.activo) {
                 <span class="badge badge-success badge-sm">Activa</span>
               } @else {
                 <span class="badge badge-ghost badge-sm">Inactiva</span>

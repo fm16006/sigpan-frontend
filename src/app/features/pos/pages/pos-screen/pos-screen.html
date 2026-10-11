@@ -1,87 +1,224 @@
-<app-page-header title="Punto de venta" subtitle="Registro de ventas en mostrador" />
-
-<div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
-  <section aria-label="Productos disponibles">
-    <app-resource-state
-      [loading]="catalog.isLoading()"
-      [failed]="!!catalog.error()"
-      [empty]="available().length === 0"
-      emptyTitle="Sin productos disponibles"
-      [skeletonCount]="8"
-      (retry)="catalog.reload()"
+<app-page-header title="Punto de venta" subtitle="Ventas en mostrador">
+  <div class="join">
+    <button
+      type="button"
+      class="btn btn-sm join-item"
+      [class.btn-active]="tab() === 'venta'"
+      (click)="tab.set('venta')"
     >
-      <ul class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
-        @for (product of available(); track product.id) {
-          <li>
-            <button
-              type="button"
-              class="flex h-full w-full flex-col items-start gap-1 rounded-box border border-base-300 bg-base-100 p-4 text-start transition-colors hover:border-primary hover:bg-base-200"
-              (click)="add(product)"
-            >
-              <span class="font-medium leading-snug">{{ product.name }}</span>
-              <span class="text-sm text-primary">{{ product.price | money }}</span>
-            </button>
-          </li>
-        }
-      </ul>
-    </app-resource-state>
-  </section>
+      Venta
+    </button>
+    <button
+      type="button"
+      class="btn btn-sm join-item"
+      [class.btn-active]="tab() === 'corte'"
+      (click)="showCut()"
+    >
+      Corte del día
+    </button>
+  </div>
+</app-page-header>
 
-  <aside class="h-fit rounded-box border border-base-300 bg-base-100 p-5" aria-label="Ticket actual">
-    <h2 class="text-base font-semibold">Ticket</h2>
+@if (tab() === 'venta') {
+  <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
+    <section aria-label="Productos disponibles">
+      <div class="mb-4 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+        <input
+          #term
+          type="search"
+          class="input input-bordered w-full"
+          placeholder="Buscar producto por nombre o código"
+          aria-label="Buscar producto"
+          (input)="search.set(term.value.trim())"
+        />
+        <form class="join" (submit)="$event.preventDefault(); addByCode(code, qty)">
+          <input
+            #code
+            type="text"
+            inputmode="numeric"
+            class="input input-bordered join-item w-28"
+            placeholder="Código"
+            aria-label="Código de producto"
+          />
+          <input
+            #qty
+            type="number"
+            min="1"
+            value="1"
+            class="input input-bordered join-item w-20"
+            aria-label="Cantidad"
+          />
+          <button type="submit" class="btn join-item">Agregar</button>
+        </form>
+      </div>
 
-    @if (lines().length === 0) {
-      <p class="mt-6 text-center text-sm text-base-content/50">
-        Tocá un producto para agregarlo.
-      </p>
-    } @else {
-      <ul class="mt-4 grid gap-2">
-        @for (line of lines(); track line.product.id) {
-          <li class="flex items-center gap-2 text-sm">
-            <span class="flex-1 truncate">{{ line.product.name }}</span>
-            <button
-              type="button"
-              class="btn btn-ghost btn-xs"
-              [attr.aria-label]="'Quitar uno de ' + line.product.name"
-              (click)="decrease(line.product.id)"
-            >
-              −
-            </button>
-            <span class="w-6 text-center tabular-nums">{{ line.quantity }}</span>
-            <button
-              type="button"
-              class="btn btn-ghost btn-xs"
-              [attr.aria-label]="'Agregar uno de ' + line.product.name"
-              (click)="add(line.product)"
-            >
-              +
-            </button>
-            <span class="w-20 text-end tabular-nums">
-              {{ line.product.price * line.quantity | money }}
-            </span>
-          </li>
-        }
-      </ul>
-
-      <dl class="mt-5 flex items-baseline justify-between border-t border-base-300 pt-4">
-        <dt class="text-sm text-base-content/60">Total</dt>
-        <dd class="font-serif text-2xl font-semibold">{{ total() | money }}</dd>
-      </dl>
-
-      <button
-        type="button"
-        class="btn btn-primary mt-4 w-full"
-        [disabled]="submitting()"
-        (click)="charge()"
+      <app-resource-state
+        [loading]="catalog.isLoading()"
+        [failed]="!!catalog.error()"
+        [empty]="visible().length === 0"
+        emptyTitle="Sin productos"
+        emptyDescription="No hay productos que coincidan con la búsqueda."
+        [skeletonCount]="8"
+        (retry)="catalog.reload()"
       >
-        @if (submitting()) {
-          <span class="loading loading-spinner loading-sm"></span>
-        }
-        Cobrar
-      </button>
-      <button type="button" class="btn btn-ghost btn-sm mt-2 w-full" (click)="clear()">
-        Cancelar ticket
-      </button>
+        <ul class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+          @for (product of visible(); track product.id) {
+            <li>
+              <button
+                type="button"
+                class="flex h-full w-full flex-col items-start gap-1 rounded-box border border-base-300 bg-base-100 p-4 text-start transition-colors hover:border-primary hover:bg-base-200"
+                (click)="add(product)"
+              >
+                <span class="text-xs text-base-content/50">Código {{ product.id }}</span>
+                <span class="font-medium leading-snug">{{ product.nombre }}</span>
+                <span class="text-sm text-primary">{{ product.precio | money }}</span>
+              </button>
+            </li>
+          }
+        </ul>
+      </app-resource-state>
+    </section>
+
+    <aside class="h-fit rounded-box border border-base-300 bg-base-100 p-5" aria-label="Ticket actual">
+      <div class="flex items-center justify-between">
+        <h2 class="text-base font-semibold">Ticket</h2>
+        <span class="text-sm text-base-content/55">{{ itemCount() }} artículo(s)</span>
+      </div>
+
+      @if (lines().length === 0) {
+        <p class="mt-6 text-center text-sm text-base-content/50">
+          Tocá un producto o ingresá su código.
+        </p>
+      } @else {
+        <ul class="mt-4 grid gap-2">
+          @for (line of lines(); track line.product.id) {
+            <li class="flex items-center gap-2 text-sm">
+              <span class="flex-1 truncate">{{ line.product.nombre }}</span>
+              <button
+                type="button"
+                class="btn btn-ghost btn-xs"
+                [attr.aria-label]="'Quitar uno de ' + line.product.nombre"
+                (click)="decrease(line.product.id)"
+              >
+                −
+              </button>
+              <span class="w-6 text-center tabular-nums">{{ line.quantity }}</span>
+              <button
+                type="button"
+                class="btn btn-ghost btn-xs"
+                [attr.aria-label]="'Agregar uno de ' + line.product.nombre"
+                (click)="add(line.product)"
+              >
+                +
+              </button>
+              <span class="w-20 text-end tabular-nums">
+                {{ line.product.precio * line.quantity | money }}
+              </span>
+              <button
+                type="button"
+                class="btn btn-ghost btn-xs text-error"
+                [attr.aria-label]="'Eliminar ' + line.product.nombre"
+                (click)="removeLine(line.product.id)"
+              >
+                ✕
+              </button>
+            </li>
+          }
+        </ul>
+
+        <dl class="mt-5 flex items-baseline justify-between border-t border-base-300 pt-4">
+          <dt class="text-sm text-base-content/60">Total</dt>
+          <dd class="font-serif text-2xl font-semibold">{{ total() | money }}</dd>
+        </dl>
+
+        <button
+          type="button"
+          class="btn btn-primary mt-4 w-full"
+          [disabled]="submitting()"
+          (click)="charge()"
+        >
+          @if (submitting()) {
+            <span class="loading loading-spinner loading-sm"></span>
+          }
+          Cobrar
+        </button>
+        <button type="button" class="btn btn-ghost btn-sm mt-2 w-full" (click)="clear()">
+          Cancelar ticket
+        </button>
+      }
+    </aside>
+  </div>
+} @else {
+  <section aria-label="Corte del día">
+    <div class="mb-4 flex flex-wrap items-end gap-3">
+      <label class="grid gap-1 text-sm">
+        <span class="text-base-content/60">Fecha</span>
+        <input
+          #date
+          type="date"
+          class="input input-bordered input-sm"
+          [value]="cutDate()"
+          (change)="cutDate.set(date.value)"
+        />
+      </label>
+      <button type="button" class="btn btn-sm" (click)="cut.reload()">Actualizar</button>
+    </div>
+
+    @if (cut.isLoading()) {
+      <div class="h-24 animate-pulse rounded-box bg-base-200"></div>
+    } @else if (cut.error()) {
+      <div role="alert" class="alert alert-error">
+        <span>No pudimos calcular el corte.</span>
+        <button type="button" class="btn btn-sm" (click)="cut.reload()">Reintentar</button>
+      </div>
+    } @else if (cut.value(); as corte) {
+      <div class="stats stats-vertical w-full border border-base-300 bg-base-100 sm:stats-horizontal">
+        <div class="stat">
+          <div class="stat-title">Ventas</div>
+          <div class="stat-value text-2xl">{{ corte.cantidadVentas }}</div>
+        </div>
+        <div class="stat">
+          <div class="stat-title">Productos vendidos</div>
+          <div class="stat-value text-2xl">{{ corte.productosVendidos }}</div>
+        </div>
+        <div class="stat">
+          <div class="stat-title">Total del día</div>
+          <div class="stat-value text-2xl text-primary">{{ corte.total | money }}</div>
+        </div>
+      </div>
+
+      @if (corte.ventas.length > 0) {
+        <div class="mt-4 overflow-x-auto rounded-box border border-base-300 bg-base-100">
+          <table class="table table-sm">
+            <thead>
+              <tr>
+                <th scope="col">Venta</th>
+                <th scope="col">Hora</th>
+                <th scope="col">Cajero</th>
+                <th scope="col">Productos</th>
+                <th scope="col" class="text-end">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (venta of corte.ventas; track venta.id) {
+                <tr>
+                  <td>#{{ venta.id }}</td>
+                  <td>{{ venta.fecha | date: 'shortTime' }}</td>
+                  <td>{{ venta.usuario }}</td>
+                  <td class="text-sm text-base-content/70">
+                    @for (linea of venta.detalles ?? []; track linea.id; let last = $last) {
+                      {{ linea.cantidad }} × {{ linea.producto }}{{ last ? '' : ', ' }}
+                    }
+                  </td>
+                  <td class="text-end font-medium">{{ venta.total | money }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <p class="mt-6 text-center text-sm text-base-content/50">No hay ventas registradas en esta fecha.</p>
+      }
     }
-  </aside>
-</div>
+  </section>
+}

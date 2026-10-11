@@ -2,8 +2,8 @@ import { Injectable, computed, effect, inject, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { PLATFORM_ID } from '@angular/core';
 import { Id } from '../models/api.model';
-import { OrderRequest } from '../models/order.model';
-import { Product } from '../models/product.model';
+import { CatalogProduct } from '../models/catalog.model';
+import { SaleRequest } from '../models/order.model';
 
 export interface CartLine {
   readonly productId: Id;
@@ -40,7 +40,7 @@ export class CartStore {
     });
   }
 
-  add(product: Product, quantity = 1): void {
+  add(product: CatalogProduct, quantity = 1): void {
     this.items.update((lines) => {
       const existing = lines.find((line) => line.productId === product.id);
       if (existing) {
@@ -54,8 +54,8 @@ export class CartStore {
         ...lines,
         {
           productId: product.id,
-          name: product.name,
-          unitPrice: product.price,
+          name: product.nombre,
+          unitPrice: Number(product.precio),
           quantity: clamp(quantity),
         },
       ];
@@ -83,10 +83,12 @@ export class CartStore {
   }
 
   /** Solo producto y cantidad, que es lo que espera el backend. */
-  toOrderRequest(notes?: string): OrderRequest {
+  toOrderRequest(): SaleRequest {
     return {
-      lines: this.items().map(({ productId, quantity }) => ({ productId, quantity })),
-      notes,
+      lineas: this.items().map(({ productId, quantity }) => ({
+        productoId: productId,
+        cantidad: quantity,
+      })),
     };
   }
 

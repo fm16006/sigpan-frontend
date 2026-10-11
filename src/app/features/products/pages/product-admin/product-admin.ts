@@ -27,7 +27,10 @@ export class ProductAdmin {
   private readonly notifications = inject(Notifications);
   private readonly fb = inject(FormBuilder).nonNullable;
 
-  protected readonly canManage = inject(Auth).hasAnyRole(['ADMIN']);
+  private readonly auth = inject(Auth);
+
+  protected readonly isAdmin = this.auth.hasAnyRole(['ADMINISTRADOR']);
+  protected readonly canEdit = this.auth.hasAnyRole(['ADMINISTRADOR', 'JEFE_PRODUCCION']);
   protected readonly maxImageMb = MAX_IMAGE_MB;
   protected readonly acceptedTypes = IMAGE_TYPES.join(',');
 
@@ -50,6 +53,7 @@ export class ProductAdmin {
   protected readonly newCategory = this.fb.control('', [Validators.required, Validators.minLength(3)]);
 
   protected readonly showForm = signal(false);
+  protected readonly editingId = signal<Id | null>(null);
   protected readonly saving = signal(false);
   protected readonly savingCategory = signal(false);
   protected readonly busyId = signal<Id | null>(null);
@@ -63,10 +67,39 @@ export class ProductAdmin {
   }
 
   protected toggleForm(): void {
-    this.showForm.update((visible) => !visible);
+    if (this.showForm()) {
+      this.closeForm();
+      return;
+    }
+    this.editingId.set(null);
+    this.form.reset();
+    this.form.controls.precio.enable();
+    this.showForm.set(true);
   }
 
-  protected create(): void {
+  protected startEdit(product: CatalogProduct): void {
+    this.editingId.set(product.id);
+    this.form.setValue({
+      nombre: product.nombre,
+      descripcion: product.descripcion ?? '',
+      precio: Number(product.precio),
+      categoriaId: product.categoriaId,
+    });
+    if (this.isAdmin) {
+      this.form.controls.precio.enable();
+    } else {
+      this.form.controls.precio.disable();
+    }
+    this.showForm.set(true);
+  }
+
+  protected closeForm(): void {
+    this.showForm.set(false);
+    this.editingId.set(null);
+    this.form.reset();
+  }
+
+  protected save(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
@@ -74,15 +107,17 @@ export class ProductAdmin {
 
     this.saving.set(true);
     const value = this.form.getRawValue();
+    const draft = { ...value, nombre: value.nombre.trim(), descripcion: value.descripcion.trim() };
+    const id = this.editingId();
+    const request = id === null ? this.service.create(draft) : this.service.update(id, draft);
 
-    this.service
-      .create({ ...value, nombre: value.nombre.trim(), descripcion: value.descripcion.trim() })
-      .subscribe({
+    request.subscribe({
         next: (product) => {
           this.saving.set(false);
-          this.form.reset();
-          this.showForm.set(false);
-          this.notifications.success(`Producto "${product.nombre}" creado.`);
+          this.closeForm();
+          this.notifications.success(
+            `Producto "${product.nombre}" ${id === null ? 'creado' : 'actualizado'}.`,
+          );
           this.products.reload();
         },
         error: (error: AppError) => {

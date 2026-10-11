@@ -1,21 +1,16 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { API_ENDPOINTS } from '../../../core/constants/api-endpoints';
-import { CrudClient } from '../../../core/http/crud-client';
-import { PageQuery } from '../../../core/models/api.model';
-import { Product, ProductCategory, ProductDraft } from '../../../core/models/product.model';
-
-export interface CatalogQuery extends PageQuery {
-  readonly category?: ProductCategory;
-}
+import { ApiClient } from '../../../core/http/api-client';
 
 @Injectable({ providedIn: 'root' })
-export class ProductService extends CrudClient<Product, ProductDraft> {
-  constructor() {
-    super(API_ENDPOINTS.products);
+export class ProductService {
+  private readonly api = inject(ApiClient);
+
+  activeUrl(): string {
+    return this.api.url(API_ENDPOINTS.productos.activos);
   }
 
-  /** Catálogo público, sin autenticación. */
-  catalogUrl(query: CatalogQuery): string {
-    return this.api.url(API_ENDPOINTS.products.public, { ...query });
+  categoriesUrl(): string {
+    return this.api.url(API_ENDPOINTS.categorias.root);
   }
 }

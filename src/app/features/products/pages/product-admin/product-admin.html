@@ -7,16 +7,17 @@
   >
     Actualizar
   </button>
-  @if (canManage) {
+  @if (isAdmin) {
     <button type="button" class="btn btn-sm btn-primary" (click)="toggleForm()">
       {{ showForm() ? 'Cerrar' : 'Nuevo producto' }}
     </button>
   }
 </app-page-header>
 
-@if (canManage && showForm()) {
+@if (canEdit && showForm()) {
   <section class="mb-6 rounded-box border border-base-300 bg-base-100 p-4">
-    <form class="grid gap-4 md:grid-cols-2" [formGroup]="form" (ngSubmit)="create()">
+    <h2 class="mb-3 font-semibold">{{ editingId() === null ? 'Nuevo producto' : 'Editar producto' }}</h2>
+    <form class="grid gap-4 md:grid-cols-2" [formGroup]="form" (ngSubmit)="save()">
       <div>
         <label class="label" for="nombre"><span class="label-text">Nombre</span></label>
         <input
@@ -44,6 +45,8 @@
         />
         @if (errorFor('precio'); as message) {
           <p class="mt-1 text-xs text-error">{{ message }}</p>
+        } @else if (!isAdmin) {
+          <p class="mt-1 text-xs text-base-content/50">Solo administración cambia precios.</p>
         }
       </div>
 
@@ -96,7 +99,8 @@
         </div>
       </div>
 
-      <div class="md:col-span-2 flex justify-end">
+      <div class="md:col-span-2 flex justify-end gap-2">
+        <button type="button" class="btn btn-ghost" (click)="closeForm()">Cancelar</button>
         <button type="submit" class="btn btn-primary" [disabled]="saving()">
           @if (saving()) {
             <span class="loading loading-spinner loading-sm"></span>
@@ -120,11 +124,12 @@
     <table class="table">
       <thead>
         <tr>
+          <th scope="col">Código</th>
           <th scope="col">Imagen</th>
           <th scope="col">Producto</th>
           <th scope="col">Categoría</th>
           <th scope="col" class="text-end">Precio</th>
-          @if (canManage) {
+          @if (canEdit) {
             <th scope="col" class="text-end">Acciones</th>
           }
         </tr>
@@ -132,6 +137,7 @@
       <tbody>
         @for (product of items(); track product.id) {
           <tr>
+            <td class="tabular-nums text-base-content/60">{{ product.id }}</td>
             <td>
               @if (product.imagenUrl) {
                 <img
@@ -156,12 +162,15 @@
             </td>
             <td class="text-sm">{{ product.categoria }}</td>
             <td class="text-end font-medium">{{ product.precio | money }}</td>
-            @if (canManage) {
+            @if (canEdit) {
               <td>
                 <div class="flex flex-wrap justify-end gap-2">
                   @if (busyId() === product.id) {
                     <span class="loading loading-spinner loading-sm"></span>
                   } @else {
+                    <button type="button" class="btn btn-xs" (click)="startEdit(product)">
+                      Editar
+                    </button>
                     <label class="btn btn-xs">
                       {{ product.imagenUrl ? 'Cambiar foto' : 'Subir foto' }}
                       <input
@@ -176,15 +185,17 @@
                         Quitar foto
                       </button>
                     }
-                    <button
-                      type="button"
-                      class="btn btn-xs"
-                      [class.btn-error]="confirmDeleteId() === product.id"
-                      [class.btn-ghost]="confirmDeleteId() !== product.id"
-                      (click)="remove(product)"
-                    >
-                      {{ confirmDeleteId() === product.id ? '¿Confirmar?' : 'Eliminar' }}
-                    </button>
+                    @if (isAdmin) {
+                      <button
+                        type="button"
+                        class="btn btn-xs"
+                        [class.btn-error]="confirmDeleteId() === product.id"
+                        [class.btn-ghost]="confirmDeleteId() !== product.id"
+                        (click)="remove(product)"
+                      >
+                        {{ confirmDeleteId() === product.id ? '¿Confirmar?' : 'Eliminar' }}
+                      </button>
+                    }
                   }
                 </div>
               </td>
@@ -194,7 +205,7 @@
       </tbody>
     </table>
   </div>
-  @if (canManage) {
+  @if (canEdit) {
     <p class="mt-2 text-xs text-base-content/50">
       Fotos en JPG, PNG o WEBP de hasta {{ maxImageMb }} MB.
     </p>

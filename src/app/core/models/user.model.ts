@@ -1,6 +1,13 @@
 import { Id } from './api.model';
 
-export const USER_ROLES = ['ADMIN', 'CAJERO', 'PRODUCCION', 'CLIENTE'] as const;
+export const USER_ROLES = [
+  'ADMINISTRADOR',
+  'JEFE_PRODUCCION',
+  'BODEGUERO',
+  'CAJERO',
+  'DESPACHADOR',
+  'CLIENTE',
+] as const;
 
 export type UserRole = (typeof USER_ROLES)[number];
 
@@ -57,4 +64,35 @@ export interface AuthSession {
   /** Segundos de vida del access token. */
   readonly expiresIn: number;
   readonly user: User;
+}
+
+export const STAFF_ROLES: readonly UserRole[] = [
+  'ADMINISTRADOR',
+  'JEFE_PRODUCCION',
+  'BODEGUERO',
+  'CAJERO',
+  'DESPACHADOR',
+];
+
+export const ROLE_LABELS: Readonly<Record<UserRole, string>> = {
+  ADMINISTRADOR: 'Administración',
+  JEFE_PRODUCCION: 'Jefe de producción',
+  BODEGUERO: 'Bodega',
+  CAJERO: 'Caja',
+  DESPACHADOR: 'Despacho',
+  CLIENTE: 'Cliente',
+};
+
+// Pantalla de inicio de cada rol después del login.
+export const ROLE_HOME: Readonly<Record<UserRole, string>> = {
+  ADMINISTRADOR: '/backoffice',
+  JEFE_PRODUCCION: '/backoffice/products',
+  BODEGUERO: '/backoffice/inventory',
+  CAJERO: '/backoffice/pos',
+  DESPACHADOR: '/backoffice/orders',
+  CLIENTE: '/',
+};
+
+export function canSeePublicSite(role: UserRole | null): boolean {
+  return role === null || role === 'CLIENTE' || role === 'ADMINISTRADOR';
 }

@@ -37,10 +37,10 @@ export class Cart {
 
     this.submitting.set(true);
     // Solo producto y cantidad: el backend fija precios y promociones.
-    this.orders.create(this.cart.toOrderRequest()).subscribe({
+    this.orders.placeOrder(this.cart.toOrderRequest()).subscribe({
       next: (order) => {
         this.cart.clear();
-        this.notifications.success(`Pedido ${order.code} confirmado.`);
+        this.notifications.success(`Pedido #${order.id} confirmado.`);
         void this.router.navigate(['/storefront/orders']);
       },
       error: () => this.submitting.set(false),
