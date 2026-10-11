@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  AZURE_WEBAPP_NAME: app-sigpan-igf115
+  AZURE_WEBAPP_NAME: frontend-sigpan-igf115
   DIST: dist/proyecto-panaderia-igf115
 
 jobs:
