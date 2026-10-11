@@ -33,7 +33,7 @@
               "entry": "src/server.ts"
             },
             "security": {
-              "allowedHosts": ["localhost", "student-ues.me", "www.student-ues.me", "*.azurewebsites.net"]
+              "allowedHosts": ["localhost", "student-ues.me", "*.student-ues.me", "*.azurewebsites.net"]
             }
           },
           "configurations": {

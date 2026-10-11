@@ -10,7 +10,9 @@ import { join } from 'node:path';
 const browserDistFolder = join(import.meta.dirname, '../browser');
 
 const app = express();
-const angularApp = new AngularNodeAppEngine();
+const angularApp = new AngularNodeAppEngine({
+  trustProxyHeaders: ['x-forwarded-for', 'x-forwarded-proto', 'x-forwarded-tlsversion'],
+});
 
 app.disable('x-powered-by');
 
@@ -25,6 +27,10 @@ app.use((_req, res, next) => {
   // Requiere que el proxy de producción termine en TLS.
   res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   next();
+});
+
+app.get('/robots933456.txt', (_req, res) => {
+  res.type('text/plain').send('');
 });
 
 /**
