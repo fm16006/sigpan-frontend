@@ -7,9 +7,9 @@ import { BackofficeMenu } from '../backoffice-menu';
 
 const ROLE_LABELS: Readonly<Record<UserRole, string>> = {
   ADMIN: 'Administración',
-  CASHIER: 'Caja',
-  PRODUCTION: 'Producción',
-  CUSTOMER: 'Cliente',
+  CAJERO: 'Caja',
+  PRODUCCION: 'Producción',
+  CLIENTE: 'Cliente',
 };
 
 @Component({

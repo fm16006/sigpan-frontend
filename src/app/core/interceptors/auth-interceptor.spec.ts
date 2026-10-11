@@ -3,6 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { API_CONFIG, ApiConfig } from '../config/api.config';
 import { SessionStore } from '../services/session-store';
+import { API_ENDPOINTS } from '../constants/api-endpoints';
 import { authInterceptor } from './auth-interceptor';
 
 const CONFIG: ApiConfig = {
@@ -58,9 +59,9 @@ describe('authInterceptor', () => {
   });
 
   it('omite el token en los endpoints públicos', () => {
-    http.post(`${CONFIG.baseUrl}/auth/login`, {}).subscribe();
+    http.post(`${CONFIG.baseUrl}${API_ENDPOINTS.auth.login}`, {}).subscribe();
 
-    const request = httpMock.expectOne(`${CONFIG.baseUrl}/auth/login`);
+    const request = httpMock.expectOne(`${CONFIG.baseUrl}${API_ENDPOINTS.auth.login}`);
     expect(request.request.headers.has('Authorization')).toBe(false);
     request.flush({});
   });

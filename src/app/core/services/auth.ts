@@ -1,9 +1,17 @@
 import { Injectable, inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { Observable, catchError, finalize, of, shareReplay, tap } from 'rxjs';
+import { Observable, catchError, finalize, map, of, shareReplay, tap } from 'rxjs';
 import { API_ENDPOINTS } from '../constants/api-endpoints';
 import { ApiClient } from '../http/api-client';
-import { AuthSession, Credentials, RegisterPayload, UserRole } from '../models/user.model';
+import {
+  ApiSession,
+  ApiUser,
+  AuthSession,
+  Credentials,
+  RegisterPayload,
+  UserRole,
+  toAuthSession,
+} from '../models/user.model';
 import { SessionStore } from './session-store';
 
 @Injectable({ providedIn: 'root' })
@@ -21,20 +29,24 @@ export class Auth {
   readonly role = this.session.role;
 
   login(credentials: Credentials): Observable<AuthSession> {
-    return this.api
-      .post<AuthSession>(API_ENDPOINTS.auth.login, credentials)
-      .pipe(tap((session) => this.session.set(session)));
+    return this.api.post<ApiSession>(API_ENDPOINTS.auth.login, credentials).pipe(
+      map(toAuthSession),
+      tap((session) => this.session.set(session)),
+    );
   }
 
-  register(payload: RegisterPayload): Observable<AuthSession> {
-    return this.api
-      .post<AuthSession>(API_ENDPOINTS.auth.register, payload)
-      .pipe(tap((session) => this.session.set(session)));
+  register(payload: RegisterPayload): Observable<ApiUser> {
+    return this.api.post<ApiUser>(API_ENDPOINTS.auth.register, payload);
+  }
+
+  resendVerification(email: string): Observable<void> {
+    return this.api.post<void>(API_ENDPOINTS.auth.resendVerification, { email });
   }
 
   /** Canjea la cookie de refresh por un token nuevo. Devuelve null si ya no vale. */
   refresh(): Observable<AuthSession | null> {
-    this.refreshInFlight ??= this.api.post<AuthSession>(API_ENDPOINTS.auth.refresh).pipe(
+    this.refreshInFlight ??= this.api.post<ApiSession>(API_ENDPOINTS.auth.refresh).pipe(
+      map(toAuthSession),
       tap((session) => this.session.set(session)),
       catchError(() => {
         this.session.clear();

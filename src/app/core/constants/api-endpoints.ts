@@ -3,12 +3,21 @@ import { Id } from '../models/api.model';
 // Rutas del backend.
 export const API_ENDPOINTS = {
   auth: {
-    login: '/auth/login',
-    register: '/auth/register',
+    login: '/usuarios/login',
+    register: '/usuarios',
+    resendVerification: '/usuarios/reenviar-verificacion',
     /** Canjea la cookie de refresh por un access token nuevo. */
-    refresh: '/auth/refresh',
-    logout: '/auth/logout',
-    me: '/auth/me',
+    refresh: '/usuarios/renovar-token',
+    logout: '/usuarios/logout',
+    me: '/usuarios/perfil',
+  },
+  productos: {
+    root: '/productos',
+    byId: (id: Id) => `/productos/${id}`,
+    imagen: (id: Id) => `/productos/${id}/imagen`,
+  },
+  categorias: {
+    root: '/categorias',
   },
   products: {
     root: '/products',
@@ -44,7 +53,7 @@ export const API_ENDPOINTS = {
 // Rutas sin Authorization. Se comparan contra el path, no la URL completa.
 export const PUBLIC_API_PATHS: readonly string[] = [
   API_ENDPOINTS.auth.login,
-  API_ENDPOINTS.auth.register,
+  API_ENDPOINTS.auth.resendVerification,
   API_ENDPOINTS.auth.refresh,
   API_ENDPOINTS.products.public,
 ];

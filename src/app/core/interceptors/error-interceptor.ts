@@ -13,7 +13,7 @@ const RETRIED = new HttpContextToken<boolean>(() => false);
 // Un 401 aquí es la respuesta esperada, no un token caducado.
 const AUTH_PATHS: readonly string[] = [
   API_ENDPOINTS.auth.login,
-  API_ENDPOINTS.auth.register,
+  API_ENDPOINTS.auth.resendVerification,
   API_ENDPOINTS.auth.refresh,
 ];
 
@@ -26,7 +26,10 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
   const router = inject(Router);
   const notifications = inject(Notifications);
 
-  const isAuthEndpoint = AUTH_PATHS.some((path) => req.url.includes(path));
+  const path = pathnameOf(req.url);
+  const isAuthEndpoint =
+    AUTH_PATHS.some((authPath) => path.endsWith(authPath)) ||
+    (req.method === 'POST' && path.endsWith(API_ENDPOINTS.auth.register));
 
   return next(req).pipe(
     catchError((response: HttpErrorResponse) => {
@@ -66,3 +69,11 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
     }),
   );
 };
+
+function pathnameOf(url: string): string {
+  try {
+    return new URL(url, 'http://localhost').pathname;
+  } catch {
+    return url;
+  }
+}

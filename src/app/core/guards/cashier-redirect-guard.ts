@@ -7,5 +7,5 @@ export const cashierRedirectGuard: CanActivateFn = () => {
   const session = inject(SessionStore);
   const router = inject(Router);
 
-  return session.role() === 'CASHIER' ? router.createUrlTree(['/backoffice/pos']) : true;
+  return session.role() === 'CAJERO' ? router.createUrlTree(['/backoffice/pos']) : true;
 };

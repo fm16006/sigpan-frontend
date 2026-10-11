@@ -4,7 +4,7 @@ import { cashierRedirectGuard } from './core/guards/cashier-redirect-guard';
 import { guestGuard } from './core/guards/guest-guard';
 import { roleGuard } from './core/guards/role-guard';
 
-const STAFF_ROLES = ['ADMIN', 'CASHIER', 'PRODUCTION'] as const;
+const STAFF_ROLES = ['ADMIN', 'CAJERO', 'PRODUCCION'] as const;
 
 export const routes: Routes = [
   {
@@ -44,20 +44,26 @@ export const routes: Routes = [
       },
       {
         path: 'pos',
-        canActivate: [roleGuard(['ADMIN', 'CASHIER'])],
+        canActivate: [roleGuard(['ADMIN', 'CAJERO'])],
         loadChildren: () => import('./features/pos/pos.routes').then((m) => m.POS_ROUTES),
       },
       {
         path: 'inventory',
-        canActivate: [roleGuard(['ADMIN', 'PRODUCTION'])],
+        canActivate: [roleGuard(['ADMIN', 'PRODUCCION'])],
         loadChildren: () =>
           import('./features/inventory/inventory.routes').then((m) => m.INVENTORY_ROUTES),
       },
       {
         path: 'recipes',
-        canActivate: [roleGuard(['ADMIN', 'PRODUCTION'])],
+        canActivate: [roleGuard(['ADMIN', 'PRODUCCION'])],
         loadChildren: () =>
           import('./features/recipes/recipes.routes').then((m) => m.RECIPES_ROUTES),
+      },
+      {
+        path: 'products',
+        canActivate: [roleGuard(['ADMIN', 'PRODUCCION'])],
+        loadChildren: () =>
+          import('./features/products/products.routes').then((m) => m.PRODUCTS_ROUTES),
       },
       {
         path: 'promotions',

@@ -24,6 +24,9 @@ export class Login {
 
   protected readonly submitting = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
+  protected readonly verified = this.route.snapshot.queryParamMap.get('verificado') === '1';
+  protected readonly unconfirmedEmail = signal<string | null>(null);
+  protected readonly resendStatus = signal<'idle' | 'sending' | 'sent' | 'error'>('idle');
 
   protected errorFor(field: string): string | null {
     return firstErrorMessage(this.form, field);
@@ -37,15 +40,21 @@ export class Login {
 
     this.submitting.set(true);
     this.errorMessage.set(null);
+    this.unconfirmedEmail.set(null);
+    this.resendStatus.set('idle');
 
     this.auth.login(this.form.getRawValue()).subscribe({
       next: () => {
-        const target = safeReturnUrl(this.route.snapshot.queryParamMap.get('returnUrl'));
+        const home = this.auth.hasAnyRole(['ADMIN', 'CAJERO', 'PRODUCCION']) ? '/backoffice' : '/';
+        const target = safeReturnUrl(this.route.snapshot.queryParamMap.get('returnUrl'), home);
         void this.router.navigateByUrl(target);
       },
       error: (error: AppError) => {
         this.submitting.set(false);
         applyFieldErrors(this.form, error);
+        if (error.kind === 'forbidden') {
+          this.unconfirmedEmail.set(this.form.getRawValue().email);
+        }
         // Mensaje genérico para no revelar si el correo existe.
         this.errorMessage.set(
           error.kind === 'auth' || error.kind === 'validation'
@@ -53,6 +62,19 @@ export class Login {
             : error.message,
         );
       },
+    });
+  }
+
+  protected resend(): void {
+    const email = this.unconfirmedEmail();
+    if (!email || this.resendStatus() === 'sending') {
+      return;
+    }
+
+    this.resendStatus.set('sending');
+    this.auth.resendVerification(email).subscribe({
+      next: () => this.resendStatus.set('sent'),
+      error: () => this.resendStatus.set('error'),
     });
   }
 }

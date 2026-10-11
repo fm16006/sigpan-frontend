@@ -31,6 +31,9 @@
             "outputMode": "server",
             "ssr": {
               "entry": "src/server.ts"
+            },
+            "security": {
+              "allowedHosts": ["localhost", "student-ues.me", "www.student-ues.me", "*.azurewebsites.net"]
             }
           },
           "configurations": {

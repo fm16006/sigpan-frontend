@@ -1,7 +1,14 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ApiErrorBody } from '../models/api.model';
 
-export type AppErrorKind = 'network' | 'validation' | 'auth' | 'forbidden' | 'notFound' | 'server';
+export type AppErrorKind =
+  | 'network'
+  | 'validation'
+  | 'auth'
+  | 'forbidden'
+  | 'notFound'
+  | 'conflict'
+  | 'server';
 
 /** Error ya interpretado, listo para mostrar en pantalla. */
 export interface AppError {
@@ -18,6 +25,7 @@ const MESSAGES: Readonly<Record<AppErrorKind, string>> = {
   auth: 'Tu sesión expiró. Vuelve a iniciar sesión.',
   forbidden: 'No tienes permisos para realizar esta acción.',
   notFound: 'No encontramos el recurso solicitado.',
+  conflict: 'El registro ya existe.',
   server: 'Ocurrió un error inesperado. Inténtalo más tarde.',
 };
 
@@ -26,6 +34,7 @@ function kindFor(status: number): AppErrorKind {
   if (status === 401) return 'auth';
   if (status === 403) return 'forbidden';
   if (status === 404) return 'notFound';
+  if (status === 409) return 'conflict';
   if (status === 400 || status === 422) return 'validation';
   return 'server';
 }

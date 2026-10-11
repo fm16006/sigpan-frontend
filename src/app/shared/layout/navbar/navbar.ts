@@ -16,6 +16,6 @@ export class Navbar {
 
   /** Solo el personal ve el acceso al panel. */
   protected readonly canEnterBackoffice = computed(() =>
-    this.auth.hasAnyRole(['ADMIN', 'CASHIER', 'PRODUCTION']),
+    this.auth.hasAnyRole(['ADMIN', 'CAJERO', 'PRODUCCION']),
   );
 }
