@@ -1,8 +1,56 @@
-<footer class="mt-auto border-t border-base-300 bg-base-200">
-  <div
-    class="container-page flex flex-wrap items-center justify-between gap-2 py-6 text-sm text-base-content/60"
-  >
-    <span>© {{ anio }} Panadería SigPan · Pan de masa madre horneado cada mañana</span>
-    <span>Proyecto IGF115 — Grupo 3</span>
+<footer class="mt-auto bg-neutral text-neutral-content">
+  <div class="container-page grid gap-10 py-12 sm:grid-cols-2 lg:grid-cols-4">
+    <div class="sm:col-span-2 lg:col-span-1">
+      <app-brand-mark
+        [size]="2.5"
+        labelClass="text-xl text-neutral-content!"
+        class="[&>span]:text-accent"
+      />
+      <p class="mt-3 max-w-xs text-sm text-neutral-content/70">
+        Pan de masa madre, pan dulce y repostería horneados cada mañana en {{ business.direccion }}.
+      </p>
+    </div>
+
+    <nav aria-label="Tienda">
+      <h2 class="text-sm font-semibold uppercase tracking-widest text-accent">Tienda</h2>
+      <ul class="mt-4 grid gap-2 text-sm text-neutral-content/75">
+        <li><a routerLink="/" class="hover:text-neutral-content">Inicio</a></li>
+        <li><a routerLink="/storefront" class="hover:text-neutral-content">Menú</a></li>
+        <li><a routerLink="/storefront/cart" class="hover:text-neutral-content">Carrito</a></li>
+        <li>
+          <a routerLink="/storefront/orders" class="hover:text-neutral-content">Mis pedidos</a>
+        </li>
+      </ul>
+    </nav>
+
+    <div>
+      <h2 class="text-sm font-semibold uppercase tracking-widest text-accent">Horario</h2>
+      <dl class="mt-4 grid gap-2 text-sm text-neutral-content/75">
+        @for (slot of business.horario; track slot.dias) {
+          <div>
+            <dt class="font-medium text-neutral-content">{{ slot.dias }}</dt>
+            <dd>{{ slot.horas }}</dd>
+          </div>
+        }
+      </dl>
+    </div>
+
+    <div>
+      <h2 class="text-sm font-semibold uppercase tracking-widest text-accent">Tu cuenta</h2>
+      <ul class="mt-4 grid gap-2 text-sm text-neutral-content/75">
+        <li><a routerLink="/auth/login" class="hover:text-neutral-content">Ingresar</a></li>
+        <li><a routerLink="/auth/register" class="hover:text-neutral-content">Crear cuenta</a></li>
+      </ul>
+      <p class="mt-6 text-sm text-neutral-content/75">Aceptamos efectivo y tarjetas.</p>
+    </div>
+  </div>
+
+  <div class="border-t border-neutral-content/10">
+    <div
+      class="container-page flex flex-wrap items-center justify-between gap-2 py-5 text-xs text-neutral-content/55"
+    >
+      <span>© {{ anio }} {{ business.razonSocial }}</span>
+      <span>Proyecto IGF115 — Grupo 3</span>
+    </div>
   </div>
 </footer>

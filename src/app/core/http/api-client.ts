@@ -30,8 +30,8 @@ export class ApiClient {
     return this.http.put<T>(this.url(path), body);
   }
 
-  patch<T>(path: string, body: unknown): Observable<T> {
-    return this.http.patch<T>(this.url(path), body);
+  patch<T>(path: string, body: unknown, params?: QueryParams): Observable<T> {
+    return this.http.patch<T>(this.url(path), body, { params: toHttpParams(params) });
   }
 
   delete<T>(path: string): Observable<T> {

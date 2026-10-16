@@ -35,6 +35,13 @@ export class Auth {
     );
   }
 
+  loginWithGoogle(credencial: string): Observable<AuthSession> {
+    return this.api.post<ApiSession>(API_ENDPOINTS.auth.google, { credencial }).pipe(
+      map(toAuthSession),
+      tap((session) => this.session.set(session)),
+    );
+  }
+
   register(payload: RegisterPayload): Observable<ApiUser> {
     return this.api.post<ApiUser>(API_ENDPOINTS.auth.register, payload);
   }

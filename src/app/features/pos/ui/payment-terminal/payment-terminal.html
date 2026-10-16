@@ -1,0 +1,224 @@
+<div
+  class="mx-auto w-full rounded-[1.75rem] bg-neutral p-3 pb-5 text-neutral-content shadow-xl ring-1 ring-black/10"
+  [class.max-w-64]="size() === 'sm'"
+  [class.max-w-80]="size() === 'lg'"
+>
+  <div class="mb-2 flex items-center justify-between px-2 text-[10px] uppercase tracking-[0.2em]">
+    <span class="font-semibold opacity-70">Terminal POS</span>
+    <span class="flex items-center gap-1.5 opacity-70">
+      <span
+        class="size-1.5 rounded-full"
+        [class.bg-success]="online()"
+        [class.bg-error]="!online()"
+      ></span>
+      {{ online() ? 'En línea' : 'Sin conexión' }}
+    </span>
+  </div>
+
+  <div class="mb-3 flex justify-center gap-2" aria-hidden="true">
+    @for (led of leds; track led) {
+      <span
+        class="led h-1.5 w-7 rounded-full bg-neutral-content/15"
+        [class.led-parpadeo]="ledMode() === 'parpadeo' && led === 0"
+        [class.led-secuencia]="ledMode() === 'secuencia'"
+        [class.led-encendido]="ledMode() === 'encendido'"
+        [class.led-error]="ledMode() === 'error'"
+        [style.animation-delay.ms]="led * 180"
+      ></span>
+    }
+  </div>
+
+  <div
+    class="screen relative flex flex-col items-center justify-center gap-1.5 overflow-hidden rounded-xl bg-base-100 px-4 py-5 text-center text-base-content shadow-inner"
+    [class.min-h-44]="size() === 'sm'"
+    [class.min-h-60]="size() === 'lg'"
+    role="status"
+    aria-live="polite"
+  >
+    @switch (kind()) {
+      @case ('sin-pos') {
+        <svg
+          class="size-10 text-base-content/40"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          aria-hidden="true"
+        >
+          <path
+            d="M9 7V3M15 7V3M7 7h10v4a5 5 0 0 1-10 0V7ZM12 16v5"
+            stroke-width="1.6"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+          <path d="M4 4l16 16" stroke-width="1.6" stroke-linecap="round" />
+        </svg>
+        <p class="font-semibold">No hay POS conectado</p>
+        @if (message(); as detail) {
+          <p class="text-xs text-base-content/60">{{ detail }}</p>
+        }
+      }
+
+      @case ('conectando') {
+        <span class="loading loading-dots loading-md text-primary"></span>
+        <p class="font-semibold">Conectando con POS…</p>
+        <p class="text-xs text-base-content/60">Verificando terminal</p>
+      }
+
+      @case ('listo') {
+        <p class="text-[11px] uppercase tracking-widest text-base-content/50">Venta</p>
+        <p class="text-3xl font-bold tabular-nums">{{ amount() | money }}</p>
+        <p class="mt-1 text-xs text-base-content/60">Terminal lista</p>
+      }
+
+      @case ('presentar') {
+        <p class="text-[11px] uppercase tracking-widest text-base-content/50">Total a pagar</p>
+        <p class="text-3xl font-bold tabular-nums">{{ amount() | money }}</p>
+        <svg
+          class="contactless my-1 size-14 text-primary"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          aria-hidden="true"
+        >
+          <path class="onda" d="M7 9a4.5 4.5 0 0 1 0 6" stroke-width="1.8" stroke-linecap="round" />
+          <path
+            class="onda"
+            d="M10.5 6.5a8.5 8.5 0 0 1 0 11"
+            stroke-width="1.8"
+            stroke-linecap="round"
+          />
+          <path
+            class="onda"
+            d="M14 4a12.5 12.5 0 0 1 0 16"
+            stroke-width="1.8"
+            stroke-linecap="round"
+          />
+          <path
+            class="onda"
+            d="M17.5 1.5a16.5 16.5 0 0 1 0 21"
+            stroke-width="1.8"
+            stroke-linecap="round"
+          />
+        </svg>
+        <p class="text-sm font-medium">Acerque, inserte o deslice su tarjeta</p>
+      }
+
+      @case ('leyendo') {
+        <svg
+          class="size-12 text-primary"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          aria-hidden="true"
+        >
+          <rect x="3" y="5.5" width="18" height="13" rx="2" stroke-width="1.6" />
+          <path d="M3 10h18" stroke-width="1.6" />
+        </svg>
+        <p class="font-semibold">Leyendo tarjeta…</p>
+        <p class="text-xs text-base-content/60">No retire la tarjeta</p>
+        <progress class="progress progress-primary mt-2 w-3/4"></progress>
+      }
+
+      @case ('autorizando') {
+        <span class="loading loading-spinner loading-lg text-primary"></span>
+        <p class="font-semibold">Procesando</p>
+        @for (step of [message()]; track step) {
+          <p class="paso text-xs text-base-content/60">{{ step }}</p>
+        }
+        <p class="mt-1 text-sm font-medium tabular-nums">{{ amount() | money }}</p>
+      }
+
+      @case ('aprobada') {
+        <svg
+          class="pop size-16 text-success"
+          viewBox="0 0 52 52"
+          fill="none"
+          stroke="currentColor"
+          aria-hidden="true"
+        >
+          <circle cx="26" cy="26" r="24" stroke-width="3" />
+          <path
+            class="trazo"
+            d="M15 27l7 7 15-16"
+            stroke-width="4"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+        <p class="text-xl font-bold tracking-wide text-success">APROBADA</p>
+        @if (payment(); as card) {
+          <p class="text-sm font-medium">{{ card.marca }} •••• {{ card.ultimos }}</p>
+          <p class="text-xs text-base-content/60">Autorización {{ card.autorizacion }}</p>
+        }
+        <p class="mt-1 text-xs text-base-content/60">Retire su tarjeta</p>
+      }
+
+      @case ('declinada') {
+        <svg
+          class="sacudir size-16 text-error"
+          viewBox="0 0 52 52"
+          fill="none"
+          stroke="currentColor"
+          aria-hidden="true"
+        >
+          <circle cx="26" cy="26" r="24" stroke-width="3" />
+          <path d="M18 18l16 16M34 18L18 34" stroke-width="4" stroke-linecap="round" />
+        </svg>
+        <p class="text-xl font-bold tracking-wide text-error">DECLINADA</p>
+        <p class="text-sm text-base-content/70">{{ message() }}</p>
+      }
+
+      @case ('no-procesada') {
+        <svg
+          class="sacudir size-16 text-warning"
+          viewBox="0 0 52 52"
+          fill="none"
+          stroke="currentColor"
+          aria-hidden="true"
+        >
+          <circle cx="26" cy="26" r="24" stroke-width="3" />
+          <path
+            d="M33 19.5a10 10 0 1 0 2.5 9.5M33 13v6.5h-6.5"
+            stroke-width="3.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+        <p class="text-xl font-bold tracking-wide text-warning">NO PROCESADA</p>
+        <p class="text-sm text-base-content/70">{{ message() }}</p>
+      }
+
+      @case ('anulada') {
+        <svg
+          class="sacudir size-16 text-warning"
+          viewBox="0 0 52 52"
+          fill="none"
+          stroke="currentColor"
+          aria-hidden="true"
+        >
+          <circle cx="26" cy="26" r="24" stroke-width="3" />
+          <path d="M16 26h20" stroke-width="4" stroke-linecap="round" />
+        </svg>
+        <p class="text-lg font-bold tracking-wide text-warning">TRANSACCIÓN ANULADA</p>
+        <p class="text-sm text-base-content/70">{{ message() }}</p>
+      }
+
+      @default {
+        <svg
+          class="sacudir size-14 text-warning"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          aria-hidden="true"
+        >
+          <path d="M12 3.5 2.5 20h19L12 3.5Z" stroke-width="1.6" stroke-linejoin="round" />
+          <path d="M12 10v4.5M12 17.2v.3" stroke-width="1.8" stroke-linecap="round" />
+        </svg>
+        <p class="font-semibold">Operación no completada</p>
+        <p class="text-sm text-base-content/70">{{ message() }}</p>
+      }
+    }
+  </div>
+
+  <div class="mx-auto mt-4 h-1 w-20 rounded-full bg-black/40" aria-hidden="true"></div>
+</div>

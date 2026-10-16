@@ -23,7 +23,8 @@ app.use((_req, res, next) => {
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Permissions-Policy', 'geolocation=(), camera=(), microphone=()');
-  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  // Google Identity Services abre una ventana emergente que debe poder responder.
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
   // Requiere que el proxy de producción termine en TLS.
   res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   next();

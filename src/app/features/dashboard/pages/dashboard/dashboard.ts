@@ -25,16 +25,14 @@ export class Dashboard {
     defaultValue: [],
   });
   protected readonly materials = httpResource<RawMaterial[]>(
-    () => this.api.url(API_ENDPOINTS.materiasPrimas.root),
+    () => this.api.url(API_ENDPOINTS.materiasPrimas.stockBajo),
     { defaultValue: [] },
   );
 
   protected readonly pendingOrders = computed(
     () => this.orders.value().filter((order) => ['PENDIENTE', 'EN_PREPARACION', 'LISTO'].includes(order.estado)).length,
   );
-  protected readonly lowStock = computed(
-    () => this.materials.value().filter((item) => Number(item.stock) <= Number(item.stockMinimo)).length,
-  );
+  protected readonly lowStock = computed(() => this.materials.value().length);
   protected readonly loading = computed(
     () => this.cut.isLoading() || this.orders.isLoading() || this.materials.isLoading(),
   );

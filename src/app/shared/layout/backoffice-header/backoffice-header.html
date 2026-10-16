@@ -3,7 +3,12 @@
 >
   <!-- La barra lateral se oculta en móvil, así que aquí va la navegación -->
   <div class="dropdown lg:hidden">
-    <button type="button" class="btn btn-ghost btn-sm btn-circle" aria-haspopup="menu" aria-label="Abrir menú">
+    <button
+      type="button"
+      class="btn btn-ghost btn-sm btn-circle"
+      aria-haspopup="menu"
+      aria-label="Abrir menú"
+    >
       <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
         <path d="M4 7h16M4 12h16M4 17h16" stroke-width="1.8" stroke-linecap="round" />
       </svg>
@@ -13,7 +18,9 @@
       role="menu"
     >
       @for (item of menu.items(); track item.path) {
-        <li><a [routerLink]="item.path">{{ item.label }}</a></li>
+        <li>
+          <a [routerLink]="item.path">{{ item.label }}</a>
+        </li>
       }
       @if (menu.showStore()) {
         <li class="mt-1 border-t border-base-300 pt-1"><a routerLink="/">Ver tienda</a></li>

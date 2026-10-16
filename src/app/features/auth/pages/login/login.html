@@ -69,6 +69,11 @@
     </button>
   </form>
 
+  @if (googleEnabled) {
+    <div class="divider text-xs text-base-content/60">o</div>
+    <app-google-button text="signin_with" (credential)="loginWithGoogle($event)" />
+  }
+
   <ng-container authFooter>
     ¿No tenés cuenta?
     <a routerLink="/auth/register" class="link link-primary">Registrate</a>

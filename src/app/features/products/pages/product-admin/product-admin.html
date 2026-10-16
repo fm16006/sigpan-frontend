@@ -50,6 +50,24 @@
         }
       </div>
 
+      <div>
+        <label class="label" for="stockMinimo"><span class="label-text">Stock mínimo</span></label>
+        <input
+          id="stockMinimo"
+          type="number"
+          step="1"
+          min="0"
+          formControlName="stockMinimo"
+          class="input input-bordered w-full"
+          [class.input-error]="!!errorFor('stockMinimo')"
+        />
+        @if (errorFor('stockMinimo'); as message) {
+          <p class="mt-1 text-xs text-error">{{ message }}</p>
+        } @else {
+          <p class="mt-1 text-xs text-base-content/50">Debajo de este nivel el inventario avisa reabastecer.</p>
+        }
+      </div>
+
       <div class="md:col-span-2">
         <label class="label" for="descripcion"><span class="label-text">Descripción</span></label>
         <textarea

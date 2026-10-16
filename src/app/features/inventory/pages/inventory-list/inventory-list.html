@@ -1,54 +1,264 @@
-<app-page-header title="Inventario" [subtitle]="lowCount() + ' insumo(s) en o bajo el mínimo'">
+<app-page-header
+  title="Inventario"
+  [subtitle]="
+    kind() === 'materia-prima'
+      ? lowMaterials() + ' insumo(s) en o bajo el mínimo'
+      : lowProducts() + ' producto(s) en o bajo el mínimo'
+  "
+>
   <label class="label cursor-pointer gap-2 text-sm">
-    <input type="checkbox" class="toggle toggle-sm" [checked]="onlyLow()" (change)="onlyLow.set(!onlyLow())" />
+    <input
+      type="checkbox"
+      class="toggle toggle-sm"
+      [checked]="onlyLow()"
+      (change)="onlyLow.set(!onlyLow())"
+    />
     Solo stock bajo
   </label>
-  <button type="button" class="btn btn-sm" [disabled]="materials.isLoading()" (click)="materials.reload()">
+  <button type="button" class="btn btn-sm" [disabled]="loading()" (click)="reload()">
     Actualizar
   </button>
 </app-page-header>
 
+<div role="tablist" class="tabs tabs-box mb-4 w-fit">
+  <button
+    type="button"
+    role="tab"
+    class="tab"
+    [class.tab-active]="kind() === 'materia-prima'"
+    [attr.aria-selected]="kind() === 'materia-prima'"
+    (click)="selectKind('materia-prima')"
+  >
+    Insumos
+    @if (lowMaterials() > 0) {
+      <span class="badge badge-warning badge-xs ms-2">{{ lowMaterials() }}</span>
+    }
+  </button>
+  <button
+    type="button"
+    role="tab"
+    class="tab"
+    [class.tab-active]="kind() === 'producto'"
+    [attr.aria-selected]="kind() === 'producto'"
+    (click)="selectKind('producto')"
+  >
+    Productos
+    @if (lowProducts() > 0) {
+      <span class="badge badge-warning badge-xs ms-2">{{ lowProducts() }}</span>
+    }
+  </button>
+</div>
+
+@if (canMove && movingRow(); as row) {
+  <section class="mb-6 rounded-box border border-base-300 bg-base-100 p-4">
+    <h2 class="font-semibold">Registrar movimiento</h2>
+    <p class="mb-3 text-sm text-base-content/60">
+      {{ row.nombre }} · existencia actual {{ row.cantidad | number: '1.0-3' }} {{ row.unidad }}
+    </p>
+    <form class="grid gap-4 md:grid-cols-2" [formGroup]="form" (ngSubmit)="saveMovement()">
+      <div>
+        <label class="label" for="tipo"><span class="label-text">Tipo</span></label>
+        <select id="tipo" formControlName="tipo" class="select select-bordered w-full">
+          <option value="ENTRADA">Entrada</option>
+          <option value="SALIDA">Salida</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="label" for="cantidad"
+          ><span class="label-text">Cantidad ({{ row.unidad }})</span></label
+        >
+        <input
+          id="cantidad"
+          type="number"
+          step="0.001"
+          min="0"
+          formControlName="cantidad"
+          class="input input-bordered w-full"
+          [class.input-error]="!!errorFor('cantidad')"
+        />
+        @if (errorFor('cantidad'); as message) {
+          <p class="mt-1 text-xs text-error">{{ message }}</p>
+        }
+      </div>
+
+      <div>
+        <label class="label" for="costoInicial"
+          ><span class="label-text">Costo unitario</span></label
+        >
+        <input
+          id="costoInicial"
+          type="number"
+          step="0.0001"
+          min="0"
+          formControlName="costoInicial"
+          class="input input-bordered w-full"
+          [class.input-error]="!!errorFor('costoInicial')"
+        />
+        @if (errorFor('costoInicial'); as message) {
+          <p class="mt-1 text-xs text-error">{{ message }}</p>
+        } @else if (form.controls.tipo.value === 'SALIDA') {
+          <p class="mt-1 text-xs text-base-content/50">
+            Las salidas usan el costo promedio vigente.
+          </p>
+        }
+      </div>
+
+      <div>
+        <label class="label" for="motivo"><span class="label-text">Motivo</span></label>
+        <input
+          id="motivo"
+          type="text"
+          placeholder="Ej. Compra a proveedor"
+          formControlName="motivo"
+          class="input input-bordered w-full"
+          [class.input-error]="!!errorFor('motivo')"
+        />
+        @if (errorFor('motivo'); as message) {
+          <p class="mt-1 text-xs text-error">{{ message }}</p>
+        }
+      </div>
+
+      <div class="md:col-span-2 flex justify-end gap-2">
+        <button type="button" class="btn btn-ghost" (click)="closeMovement()">Cancelar</button>
+        <button type="submit" class="btn btn-primary" [disabled]="saving()">
+          @if (saving()) {
+            <span class="loading loading-spinner loading-sm"></span>
+          }
+          Guardar movimiento
+        </button>
+      </div>
+    </form>
+  </section>
+}
+
 <app-resource-state
-  [loading]="materials.isLoading()"
-  [failed]="!!materials.error()"
-  [empty]="items().length === 0"
-  emptyTitle="Sin insumos"
-  emptyDescription="Los insumos registrados aparecen aquí con su existencia."
-  (retry)="materials.reload()"
+  [loading]="loading()"
+  [failed]="failed()"
+  [empty]="rows().length === 0"
+  [emptyTitle]="kind() === 'materia-prima' ? 'Sin insumos' : 'Sin productos'"
+  emptyDescription="Los registros aparecen aquí con su existencia."
+  (retry)="reload()"
 >
   <div class="overflow-x-auto rounded-box border border-base-300 bg-base-100">
     <table class="table">
       <thead>
         <tr>
-          <th scope="col">Insumo</th>
+          <th scope="col">{{ kind() === 'materia-prima' ? 'Insumo' : 'Producto' }}</th>
           <th scope="col">Unidad</th>
           <th scope="col" class="text-end">Existencia</th>
           <th scope="col" class="text-end">Mínimo</th>
-          <th scope="col" class="text-end">Costo</th>
           <th scope="col">Estado</th>
+          <th scope="col" class="text-end">Acciones</th>
         </tr>
       </thead>
       <tbody>
-        @for (item of items(); track item.id) {
+        @for (row of rows(); track row.itemId) {
           <tr>
             <td>
-              <p class="font-medium">{{ item.nombre }}</p>
-              @if (item.descripcion) {
-                <p class="text-sm text-base-content/55">{{ item.descripcion }}</p>
+              <p class="font-medium">{{ row.nombre }}</p>
+              @if (row.descripcion) {
+                <p class="text-sm text-base-content/55">{{ row.descripcion }}</p>
               }
             </td>
-            <td class="text-sm">{{ item.unidadMedida }}</td>
-            <td class="text-end tabular-nums">{{ item.stock | number: '1.0-3' }}</td>
-            <td class="text-end tabular-nums text-base-content/60">{{ item.stockMinimo | number: '1.0-3' }}</td>
-            <td class="text-end">{{ item.precio | money }}</td>
+            <td class="text-sm">{{ row.unidad }}</td>
+            <td class="text-end tabular-nums">
+              {{ row.inventarioId === null ? '—' : (row.cantidad | number: '1.0-3') }}
+            </td>
+            <td class="text-end tabular-nums text-base-content/60">
+              {{ row.minimo | number: '1.0-3' }}
+            </td>
             <td>
-              @if (isLow(item)) {
+              @if (row.inventarioId === null) {
+                <span class="badge badge-ghost badge-sm">Sin inventario</span>
+              } @else if (isLow(row)) {
                 <span class="badge badge-warning badge-sm">Reabastecer</span>
               } @else {
                 <span class="badge badge-success badge-sm">Suficiente</span>
               }
             </td>
+            <td>
+              <div class="flex flex-wrap justify-end gap-2">
+                @if (row.inventarioId === null) {
+                  @if (canMove) {
+                    @if (openingId() === row.itemId) {
+                      <span class="loading loading-spinner loading-sm"></span>
+                    } @else {
+                      <button type="button" class="btn btn-xs" (click)="openStock(row)">
+                        Habilitar inventario
+                      </button>
+                    }
+                  }
+                } @else {
+                  @if (canMove) {
+                    <button type="button" class="btn btn-xs" (click)="startMovement(row)">
+                      Movimiento
+                    </button>
+                  }
+                  <button
+                    type="button"
+                    class="btn btn-xs btn-ghost"
+                    [attr.aria-expanded]="isHistoryOpen(row)"
+                    (click)="toggleHistory(row)"
+                  >
+                    {{ isHistoryOpen(row) ? 'Ocultar historial' : 'Historial' }}
+                  </button>
+                }
+              </div>
+            </td>
           </tr>
+          @if (isHistoryOpen(row)) {
+            <tr>
+              <td colspan="6" class="bg-base-200/40">
+                @if (movements.isLoading()) {
+                  <span class="loading loading-spinner loading-sm"></span>
+                } @else if (movements.error()) {
+                  <p class="text-sm text-error">No pudimos cargar el historial.</p>
+                } @else if (history().length === 0) {
+                  <p class="text-sm text-base-content/50">
+                    Este registro aún no tiene movimientos.
+                  </p>
+                } @else {
+                  <div class="overflow-x-auto">
+                    <table class="table table-sm">
+                      <thead>
+                        <tr>
+                          <th scope="col">Fecha</th>
+                          <th scope="col">Tipo</th>
+                          <th scope="col" class="text-end">Cantidad</th>
+                          <th scope="col" class="text-end">Costo unitario</th>
+                          <th scope="col" class="text-end">Costo promedio</th>
+                          <th scope="col">Motivo</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (movement of history(); track movement.id) {
+                          <tr>
+                            <td class="text-sm">{{ movement.fecha | date: 'short' }}</td>
+                            <td>
+                              <span
+                                class="badge badge-sm"
+                                [class.badge-success]="movement.tipo === 'ENTRADA'"
+                                [class.badge-error]="movement.tipo === 'SALIDA'"
+                              >
+                                {{ movement.tipo === 'ENTRADA' ? 'Entrada' : 'Salida' }}
+                              </span>
+                            </td>
+                            <td class="text-end tabular-nums">
+                              {{ movement.cantidad | number: '1.0-3' }}
+                            </td>
+                            <td class="text-end">{{ movement.costoInicial | money }}</td>
+                            <td class="text-end">{{ movement.costoFinal | money }}</td>
+                            <td class="text-sm">{{ movement.motivo }}</td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                }
+              </td>
+            </tr>
+          }
         }
       </tbody>
     </table>

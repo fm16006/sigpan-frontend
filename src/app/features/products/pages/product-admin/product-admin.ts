@@ -49,6 +49,7 @@ export class ProductAdmin {
     descripcion: [''],
     precio: [0, [Validators.required, Validators.min(0.01)]],
     categoriaId: [0, [Validators.required, Validators.min(1)]],
+    stockMinimo: [0, [Validators.required, Validators.min(0)]],
   });
   protected readonly newCategory = this.fb.control('', [Validators.required, Validators.minLength(3)]);
 
@@ -62,6 +63,9 @@ export class ProductAdmin {
   protected errorFor(field: string): string | null {
     if (field === 'categoriaId' && this.form.controls.categoriaId.hasError('min')) {
       return this.form.controls.categoriaId.touched ? 'Elegí una categoría.' : null;
+    }
+    if (field === 'stockMinimo' && this.form.controls.stockMinimo.hasError('min')) {
+      return this.form.controls.stockMinimo.touched ? 'No puede ser negativo.' : null;
     }
     return firstErrorMessage(this.form, field);
   }
@@ -84,6 +88,7 @@ export class ProductAdmin {
       descripcion: product.descripcion ?? '',
       precio: Number(product.precio),
       categoriaId: product.categoriaId,
+      stockMinimo: Number(product.stockMinimo ?? 0),
     });
     if (this.isAdmin) {
       this.form.controls.precio.enable();

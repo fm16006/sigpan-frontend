@@ -31,6 +31,11 @@ export const routes: Routes = [
     loadChildren: () => import('./features/auth/auth.routes').then((m) => m.AUTH_ROUTES),
   },
   {
+    path: 'backoffice/pos',
+    canActivate: [authGuard, roleGuard(['ADMINISTRADOR', 'CAJERO'])],
+    loadChildren: () => import('./features/pos/pos.routes').then((m) => m.POS_ROUTES),
+  },
+  {
     path: 'backoffice',
     // authGuard antes que roleGuard: sin sesión el destino es el login, no un 403.
     canActivate: [authGuard, roleGuard(STAFF_ROLES)],
@@ -44,13 +49,8 @@ export const routes: Routes = [
           import('./features/dashboard/dashboard.routes').then((m) => m.DASHBOARD_ROUTES),
       },
       {
-        path: 'pos',
-        canActivate: [roleGuard(['ADMINISTRADOR', 'CAJERO'])],
-        loadChildren: () => import('./features/pos/pos.routes').then((m) => m.POS_ROUTES),
-      },
-      {
         path: 'orders',
-        canActivate: [roleGuard(['ADMINISTRADOR', 'CAJERO', 'DESPACHADOR'])],
+        canActivate: [roleGuard(['ADMINISTRADOR', 'DESPACHADOR'])],
         loadChildren: () =>
           import('./features/dispatch/dispatch.routes').then((m) => m.DISPATCH_ROUTES),
       },
@@ -67,6 +67,12 @@ export const routes: Routes = [
           import('./features/inventory/inventory.routes').then((m) => m.INVENTORY_ROUTES),
       },
       {
+        path: 'production',
+        canActivate: [roleGuard(['ADMINISTRADOR', 'JEFE_PRODUCCION'])],
+        loadChildren: () =>
+          import('./features/production/production.routes').then((m) => m.PRODUCTION_ROUTES),
+      },
+      {
         path: 'recipes',
         canActivate: [roleGuard(['ADMINISTRADOR', 'JEFE_PRODUCCION'])],
         loadChildren: () =>
@@ -77,6 +83,11 @@ export const routes: Routes = [
         canActivate: [roleGuard(['ADMINISTRADOR'])],
         loadChildren: () =>
           import('./features/promotions/promotions.routes').then((m) => m.PROMOTIONS_ROUTES),
+      },
+      {
+        path: 'audit',
+        canActivate: [roleGuard(['ADMINISTRADOR'])],
+        loadChildren: () => import('./features/audit/audit.routes').then((m) => m.AUDIT_ROUTES),
       },
       {
         path: 'users',

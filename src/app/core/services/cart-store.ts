@@ -62,6 +62,10 @@ export class CartStore {
     });
   }
 
+  quantityOf(productId: Id): number {
+    return this.items().find((line) => line.productId === productId)?.quantity ?? 0;
+  }
+
   setQuantity(productId: Id, quantity: number): void {
     if (quantity <= 0) {
       this.remove(productId);
@@ -98,7 +102,9 @@ export class CartStore {
 
     try {
       const raw: unknown = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]');
-      return Array.isArray(raw) ? raw.filter(isCartLine).map((l) => ({ ...l, quantity: clamp(l.quantity) })) : [];
+      return Array.isArray(raw)
+        ? raw.filter(isCartLine).map((l) => ({ ...l, quantity: clamp(l.quantity) }))
+        : [];
     } catch {
       return [];
     }

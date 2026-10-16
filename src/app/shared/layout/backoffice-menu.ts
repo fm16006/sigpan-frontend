@@ -8,6 +8,8 @@ import { BACKOFFICE_NAV } from './nav.model';
 export class BackofficeMenu {
   private readonly auth = inject(Auth);
 
-  readonly items = computed(() => BACKOFFICE_NAV.filter((item) => this.auth.hasAnyRole(item.roles)));
+  readonly items = computed(() =>
+    BACKOFFICE_NAV.filter((item) => this.auth.hasAnyRole(item.roles)),
+  );
   readonly showStore = computed(() => canSeePublicSite(this.auth.role()));
 }

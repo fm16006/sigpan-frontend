@@ -14,7 +14,13 @@ import { ThemeStore } from '../../../core/services/theme-store';
     >
       @if (theme.isDark()) {
         <!-- Pasa al tema claro -->
-        <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+        <svg
+          class="size-5"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          aria-hidden="true"
+        >
           <circle cx="12" cy="12" r="4.2" stroke-width="1.6" />
           <path
             d="M12 3v2m0 14v2M3 12h2m14 0h2M5.6 5.6 7 7m10 10 1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4"
@@ -24,7 +30,13 @@ import { ThemeStore } from '../../../core/services/theme-store';
         </svg>
       } @else {
         <!-- Pasa al tema oscuro -->
-        <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+        <svg
+          class="size-5"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          aria-hidden="true"
+        >
           <path
             d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z"
             stroke-width="1.6"

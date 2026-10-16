@@ -9,6 +9,8 @@ export interface CatalogProduct {
   readonly categoria: string;
   readonly activo: boolean;
   readonly imagenUrl: string | null;
+  readonly stockMinimo: number | null;
+  readonly disponible?: number | null;
 }
 
 export interface CatalogProductDraft {
@@ -16,6 +18,7 @@ export interface CatalogProductDraft {
   readonly descripcion: string;
   readonly precio: number;
   readonly categoriaId: Id;
+  readonly stockMinimo: number;
 }
 
 export interface Category {

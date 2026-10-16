@@ -1,0 +1,105 @@
+<app-page-header title="Bitácora" [subtitle]="items().length + ' registro(s) en el periodo'">
+  <button type="button" class="btn btn-sm" [disabled]="logs.isLoading()" (click)="logs.reload()">
+    Actualizar
+  </button>
+</app-page-header>
+
+<section class="mb-4 flex flex-wrap items-end gap-3">
+  <label class="grid gap-1 text-sm">
+    Desde
+    <input
+      #fromInput
+      type="date"
+      class="input input-bordered input-sm"
+      [value]="from()"
+      (change)="setRange(fromInput.value, toInput.value)"
+    />
+  </label>
+  <label class="grid gap-1 text-sm">
+    Hasta
+    <input
+      #toInput
+      type="date"
+      class="input input-bordered input-sm"
+      [value]="to()"
+      (change)="setRange(fromInput.value, toInput.value)"
+    />
+  </label>
+  <label class="grid gap-1 text-sm">
+    Evento
+    <select
+      #eventInput
+      class="select select-bordered select-sm"
+      (change)="eventFilter.set(eventInput.value)"
+    >
+      <option value="">Todos</option>
+      @for (option of events.value(); track option.id) {
+        <option [value]="option.titulo">{{ option.titulo }}</option>
+      }
+    </select>
+  </label>
+  <input
+    #search
+    type="search"
+    class="input input-bordered input-sm w-56"
+    placeholder="Buscar en el mensaje"
+    aria-label="Buscar en la bitácora"
+    (input)="term.set(search.value.trim())"
+  />
+</section>
+
+<app-resource-state
+  [loading]="logs.isLoading() && logs.value().length === 0"
+  [failed]="!!logs.error()"
+  [empty]="items().length === 0"
+  emptyTitle="Sin registros"
+  emptyDescription="Las operaciones del sistema en el periodo elegido aparecen aquí."
+  (retry)="logs.reload()"
+>
+  <div class="overflow-x-auto rounded-box border border-base-300 bg-base-100">
+    <table class="table">
+      <thead>
+        <tr>
+          <th scope="col">Fecha</th>
+          <th scope="col">Evento</th>
+          <th scope="col">Mensaje</th>
+          <th scope="col">Usuario</th>
+          <th scope="col" class="text-end">Detalle</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (log of items(); track log.id) {
+          <tr>
+            <td class="whitespace-nowrap text-sm">{{ log.fecha | date: 'short' }}</td>
+            <td>
+              <span class="badge badge-ghost badge-sm">{{ log.eventoTitulo ?? 'Sin evento' }}</span>
+            </td>
+            <td class="text-sm">{{ log.mensaje }}</td>
+            <td class="tabular-nums text-sm text-base-content/60">
+              {{ log.usuarioId ?? 'Sistema' }}
+            </td>
+            <td class="text-end">
+              <button
+                type="button"
+                class="btn btn-ghost btn-xs"
+                [attr.aria-expanded]="openId() === log.id"
+                (click)="toggle(log.id)"
+              >
+                {{ openId() === log.id ? 'Ocultar' : 'Ver' }}
+              </button>
+            </td>
+          </tr>
+          @if (openId() === log.id) {
+            <tr>
+              <td colspan="5" class="bg-base-200/40">
+                <pre class="max-h-80 overflow-auto whitespace-pre-wrap text-xs">{{
+                  detail(log)
+                }}</pre>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+</app-resource-state>

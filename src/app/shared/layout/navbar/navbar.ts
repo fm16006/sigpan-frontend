@@ -15,7 +15,5 @@ export class Navbar {
   protected readonly cart = inject(CartStore);
 
   /** Solo el personal ve el acceso al panel. */
-  protected readonly canEnterBackoffice = computed(() =>
-    this.auth.hasAnyRole(['ADMINISTRADOR']),
-  );
+  protected readonly canEnterBackoffice = computed(() => this.auth.hasAnyRole(['ADMINISTRADOR']));
 }

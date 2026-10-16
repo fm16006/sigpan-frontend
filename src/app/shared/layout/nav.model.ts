@@ -13,7 +13,7 @@ export const BACKOFFICE_NAV: readonly NavItem[] = [
   {
     label: 'Pedidos en línea',
     path: '/backoffice/orders',
-    roles: ['ADMINISTRADOR', 'CAJERO', 'DESPACHADOR'],
+    roles: ['ADMINISTRADOR', 'DESPACHADOR'],
   },
   { label: 'Productos', path: '/backoffice/products', roles: ['ADMINISTRADOR', 'JEFE_PRODUCCION'] },
   {
@@ -21,7 +21,13 @@ export const BACKOFFICE_NAV: readonly NavItem[] = [
     path: '/backoffice/inventory',
     roles: ['ADMINISTRADOR', 'JEFE_PRODUCCION', 'BODEGUERO'],
   },
+  {
+    label: 'Producción',
+    path: '/backoffice/production',
+    roles: ['ADMINISTRADOR', 'JEFE_PRODUCCION'],
+  },
   { label: 'Recetas', path: '/backoffice/recipes', roles: ['ADMINISTRADOR', 'JEFE_PRODUCCION'] },
   { label: 'Promociones', path: '/backoffice/promotions', roles: ['ADMINISTRADOR'] },
   { label: 'Usuarios', path: '/backoffice/users', roles: ['ADMINISTRADOR'] },
+  { label: 'Bitácora', path: '/backoffice/audit', roles: ['ADMINISTRADOR'] },
 ];

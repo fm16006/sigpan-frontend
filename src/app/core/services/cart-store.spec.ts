@@ -11,6 +11,7 @@ const pan: CatalogProduct = {
   categoria: 'Pan',
   activo: true,
   imagenUrl: null,
+  stockMinimo: 1,
 };
 
 describe('CartStore', () => {
