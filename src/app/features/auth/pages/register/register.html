@@ -2,65 +2,95 @@
   title="Crear cuenta"
   subtitle="Para hacer pedidos y seguir su preparación."
 >
-  <form class="grid gap-4" [formGroup]="form" (ngSubmit)="submit()">
-    @if (errorMessage()) {
-      <div role="alert" class="alert alert-error py-2 text-sm">{{ errorMessage() }}</div>
+  @if (registeredEmail(); as email) {
+    <div class="grid gap-4 text-sm">
+      <div role="status" class="alert alert-success">
+        <span>Te enviamos un enlace a <strong>{{ email }}</strong>. Abrilo para activar tu cuenta.</span>
+      </div>
+      <p class="text-base-content/70">
+        Si no lo ves en unos minutos, revisá la carpeta de spam o pedí uno nuevo.
+      </p>
+      <button
+        type="button"
+        class="btn btn-outline"
+        [disabled]="resendStatus() === 'sending' || resendStatus() === 'sent'"
+        (click)="resend()"
+      >
+        @if (resendStatus() === 'sending') {
+          <span class="loading loading-spinner loading-sm"></span>
+        }
+        {{ resendStatus() === 'sent' ? 'Enlace reenviado' : 'Reenviar enlace' }}
+      </button>
+      @if (resendStatus() === 'error') {
+        <p role="alert" class="text-xs text-error">No pudimos reenviar el enlace. Intentá más tarde.</p>
+      }
+    </div>
+  } @else {
+    <form class="grid gap-4" [formGroup]="form" (ngSubmit)="submit()">
+      @if (errorMessage()) {
+        <div role="alert" class="alert alert-error py-2 text-sm">{{ errorMessage() }}</div>
+      }
+
+      <div>
+        <label class="label" for="nombre"><span class="label-text">Nombre</span></label>
+        <input
+          id="nombre"
+          type="text"
+          formControlName="nombre"
+          autocomplete="name"
+          class="input input-bordered w-full"
+          [class.input-error]="!!errorFor('nombre')"
+        />
+        @if (errorFor('nombre'); as message) {
+          <p class="mt-1 text-xs text-error">{{ message }}</p>
+        }
+      </div>
+
+      <div>
+        <label class="label" for="email"><span class="label-text">Correo electrónico</span></label>
+        <input
+          id="email"
+          type="email"
+          formControlName="email"
+          autocomplete="email"
+          class="input input-bordered w-full"
+          [class.input-error]="!!errorFor('email')"
+        />
+        @if (errorFor('email'); as message) {
+          <p class="mt-1 text-xs text-error">{{ message }}</p>
+        }
+      </div>
+
+      <div>
+        <label class="label" for="password"><span class="label-text">Contraseña</span></label>
+        <input
+          id="password"
+          type="password"
+          formControlName="password"
+          autocomplete="new-password"
+          class="input input-bordered w-full"
+          [class.input-error]="!!errorFor('password')"
+        />
+        @if (errorFor('password'); as message) {
+          <p class="mt-1 text-xs text-error">{{ message }}</p>
+        } @else {
+          <p class="mt-1 text-xs text-base-content/50">Mínimo {{ minLength }} caracteres.</p>
+        }
+      </div>
+
+      <button type="submit" class="btn btn-primary mt-2" [disabled]="submitting()">
+        @if (submitting()) {
+          <span class="loading loading-spinner loading-sm"></span>
+        }
+        Crear cuenta
+      </button>
+    </form>
+
+    @if (googleEnabled) {
+      <div class="divider text-xs text-base-content/60">o</div>
+      <app-google-button text="signup_with" (credential)="registerWithGoogle($event)" />
     }
-
-    <div>
-      <label class="label" for="name"><span class="label-text">Nombre</span></label>
-      <input
-        id="name"
-        type="text"
-        formControlName="name"
-        autocomplete="name"
-        class="input input-bordered w-full"
-        [class.input-error]="!!errorFor('name')"
-      />
-      @if (errorFor('name'); as message) {
-        <p class="mt-1 text-xs text-error">{{ message }}</p>
-      }
-    </div>
-
-    <div>
-      <label class="label" for="email"><span class="label-text">Correo electrónico</span></label>
-      <input
-        id="email"
-        type="email"
-        formControlName="email"
-        autocomplete="email"
-        class="input input-bordered w-full"
-        [class.input-error]="!!errorFor('email')"
-      />
-      @if (errorFor('email'); as message) {
-        <p class="mt-1 text-xs text-error">{{ message }}</p>
-      }
-    </div>
-
-    <div>
-      <label class="label" for="password"><span class="label-text">Contraseña</span></label>
-      <input
-        id="password"
-        type="password"
-        formControlName="password"
-        autocomplete="new-password"
-        class="input input-bordered w-full"
-        [class.input-error]="!!errorFor('password')"
-      />
-      @if (errorFor('password'); as message) {
-        <p class="mt-1 text-xs text-error">{{ message }}</p>
-      } @else {
-        <p class="mt-1 text-xs text-base-content/50">Mínimo {{ minLength }} caracteres.</p>
-      }
-    </div>
-
-    <button type="submit" class="btn btn-primary mt-2" [disabled]="submitting()">
-      @if (submitting()) {
-        <span class="loading loading-spinner loading-sm"></span>
-      }
-      Crear cuenta
-    </button>
-  </form>
+  }
 
   <ng-container authFooter>
     ¿Ya tenés cuenta?

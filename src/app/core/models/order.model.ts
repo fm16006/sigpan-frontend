@@ -1,44 +1,71 @@
 import { Id } from './api.model';
 
-export const ORDER_STATUSES = ['PENDING', 'PREPARING', 'READY', 'DELIVERED', 'CANCELLED'] as const;
+export const ORDER_STATUSES = [
+  'PENDIENTE',
+  'EN_PREPARACION',
+  'LISTO',
+  'ENTREGADO',
+  'CANCELADO',
+] as const;
 
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 
-export interface OrderLine {
-  readonly productId: Id;
-  readonly productName: string;
-  readonly quantity: number;
-  readonly unitPrice: number;
-}
-
-export interface Order {
+export interface SaleLine {
   readonly id: Id;
-  readonly code: string;
-  readonly status: OrderStatus;
-  readonly lines: readonly OrderLine[];
+  readonly productoId: Id;
+  readonly producto: string;
+  readonly cantidad: number;
+  readonly precio: number;
+  readonly descuento: number;
+  readonly subtotal: number;
+}
+
+export interface Sale {
+  readonly id: Id;
+  readonly usuarioId: Id | null;
+  readonly usuario: string | null;
+  readonly tipo: string;
+  readonly estado: string;
+  readonly fecha: string;
+  readonly subtotal: number;
+  readonly descuento: number;
   readonly total: number;
-  readonly createdAt: string;
+  readonly detalles: readonly SaleLine[] | null;
 }
 
-/** Sin totales: los calcula el backend con los precios vigentes. */
-export interface OrderRequest {
-  readonly lines: readonly { readonly productId: Id; readonly quantity: number }[];
-  readonly notes?: string;
+export interface SaleRequest {
+  readonly lineas: readonly { readonly productoId: Id; readonly cantidad: number }[];
 }
 
-export const ORDER_STATUS_LABELS: Readonly<Record<OrderStatus, string>> = {
-  PENDING: 'Pendiente',
-  PREPARING: 'En preparación',
-  READY: 'Listo',
-  DELIVERED: 'Entregado',
-  CANCELLED: 'Cancelado',
+export interface CashCut {
+  readonly fecha: string;
+  readonly cantidadVentas: number;
+  readonly productosVendidos: number;
+  readonly total: number;
+  readonly ventas: readonly Sale[];
+}
+
+export const ORDER_STATUS_LABELS: Readonly<Partial<Record<string, string>>> = {
+  PENDIENTE: 'Pendiente',
+  EN_PREPARACION: 'En preparación',
+  LISTO: 'Listo para entregar',
+  ENTREGADO: 'Entregado',
+  CANCELADO: 'Cancelado',
+  COMPLETADA: 'Completada',
 };
 
-/** Clase del badge por estado, para no repetir el mapeo en cada vista. */
-export const ORDER_STATUS_BADGE: Readonly<Record<OrderStatus, string>> = {
-  PENDING: 'badge-ghost',
-  PREPARING: 'badge-warning',
-  READY: 'badge-info',
-  DELIVERED: 'badge-success',
-  CANCELLED: 'badge-error',
+export const ORDER_STATUS_BADGE: Readonly<Partial<Record<string, string>>> = {
+  PENDIENTE: 'badge-ghost',
+  EN_PREPARACION: 'badge-warning',
+  LISTO: 'badge-info',
+  ENTREGADO: 'badge-success',
+  CANCELADO: 'badge-error',
+  COMPLETADA: 'badge-success',
+};
+
+// Siguiente paso del pedido en la cola de despacho.
+export const NEXT_STATUS: Readonly<Partial<Record<OrderStatus, OrderStatus>>> = {
+  PENDIENTE: 'EN_PREPARACION',
+  EN_PREPARACION: 'LISTO',
+  LISTO: 'ENTREGADO',
 };

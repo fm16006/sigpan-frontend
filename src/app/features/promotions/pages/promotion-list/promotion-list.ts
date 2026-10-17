@@ -1,12 +1,12 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { httpResource } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
-import { EMPTY_PAGE, Page } from '../../../../core/models/api.model';
-import { Promotion } from '../../../../core/models/promotion.model';
+import { API_ENDPOINTS } from '../../../../core/constants/api-endpoints';
+import { ApiClient } from '../../../../core/http/api-client';
+import { Promotion } from '../../../../core/models/production.model';
 import { MoneyPipe } from '../../../../shared/pipes/money.pipe';
 import { PageHeader } from '../../../../shared/ui/page-header/page-header';
 import { ResourceState } from '../../../../shared/ui/resource-state/resource-state';
-import { PromotionService } from '../../services/promotion.service';
 
 @Component({
   selector: 'app-promotion-list',
@@ -14,12 +14,13 @@ import { PromotionService } from '../../services/promotion.service';
   templateUrl: './promotion-list.html',
 })
 export class PromotionList {
-  private readonly promotions = inject(PromotionService);
+  private readonly api = inject(ApiClient);
 
-  protected readonly list = httpResource<Page<Promotion>>(
-    () => this.promotions.listUrl({ size: 50, sort: '-startsAt' }),
-    { defaultValue: EMPTY_PAGE },
-  );
+  protected readonly list = httpResource<Promotion[]>(() => this.api.url(API_ENDPOINTS.promociones.root), {
+    defaultValue: [],
+  });
 
-  protected readonly items = computed(() => this.list.value().content);
+  protected isPercentage(promotion: Promotion): boolean {
+    return promotion.tipoDescuento?.toUpperCase().startsWith('PORC') ?? false;
+  }
 }

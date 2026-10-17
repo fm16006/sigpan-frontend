@@ -10,7 +10,9 @@ import { join } from 'node:path';
 const browserDistFolder = join(import.meta.dirname, '../browser');
 
 const app = express();
-const angularApp = new AngularNodeAppEngine();
+const angularApp = new AngularNodeAppEngine({
+  trustProxyHeaders: ['x-forwarded-for', 'x-forwarded-proto', 'x-forwarded-tlsversion'],
+});
 
 app.disable('x-powered-by');
 
@@ -21,10 +23,15 @@ app.use((_req, res, next) => {
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Permissions-Policy', 'geolocation=(), camera=(), microphone=()');
-  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  // Google Identity Services abre una ventana emergente que debe poder responder.
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
   // Requiere que el proxy de producción termine en TLS.
   res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   next();
+});
+
+app.get('/robots933456.txt', (_req, res) => {
+  res.type('text/plain').send('');
 });
 
 /**

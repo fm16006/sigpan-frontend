@@ -3,48 +3,78 @@ import { Id } from '../models/api.model';
 // Rutas del backend.
 export const API_ENDPOINTS = {
   auth: {
-    login: '/auth/login',
-    register: '/auth/register',
+    login: '/usuarios/login',
+    google: '/usuarios/login/google',
+    register: '/usuarios',
+    resendVerification: '/usuarios/reenviar-verificacion',
     /** Canjea la cookie de refresh por un access token nuevo. */
-    refresh: '/auth/refresh',
-    logout: '/auth/logout',
-    me: '/auth/me',
+    refresh: '/usuarios/renovar-token',
+    logout: '/usuarios/logout',
+    me: '/usuarios/perfil',
   },
-  products: {
-    root: '/products',
-    byId: (id: Id) => `/products/${id}`,
-    /** Visible sin autenticación. */
-    public: '/products/public',
+  productos: {
+    root: '/productos',
+    activos: '/productos/activos',
+    byId: (id: Id) => `/productos/${id}`,
+    imagen: (id: Id) => `/productos/${id}/imagen`,
+  },
+  categorias: {
+    root: '/categorias',
+  },
+  usuarios: {
+    root: '/usuarios',
+    byId: (id: Id) => `/usuarios/${id}`,
+  },
+  roles: {
+    root: '/roles',
+  },
+  materiasPrimas: {
+    root: '/materias-primas',
+    stockBajo: '/materias-primas/stock-bajo',
+  },
+  inventarios: {
+    materiasPrimas: '/inventarios/materia-prima',
+    productos: '/inventarios/producto',
+  },
+  movimientos: {
+    materiasPrimas: '/movimientos-inventario/materia-prima',
+    byMateriaPrima: (id: Id) => `/movimientos-inventario/materia-prima/${id}`,
+    productos: '/movimientos-inventario/producto',
+    byProducto: (id: Id) => `/movimientos-inventario/producto/${id}`,
+  },
+  formulas: {
+    root: '/formulas',
+  },
+  formulaDetalles: {
+    byFormula: (id: Id) => `/formula-detalles/formula/${id}`,
+  },
+  producciones: {
+    root: '/producciones',
+    status: (id: Id) => `/producciones/${id}/estado`,
+  },
+  logs: {
+    root: '/logs',
+  },
+  eventos: {
+    root: '/eventos',
+  },
+  promociones: {
+    root: '/promociones',
   },
   orders: {
-    root: '/orders',
-    byId: (id: Id) => `/orders/${id}`,
-    mine: '/orders/me',
-    status: (id: Id) => `/orders/${id}/status`,
-  },
-  inventory: {
-    root: '/inventory',
-    byId: (id: Id) => `/inventory/${id}`,
-    lowStock: '/inventory/low-stock',
-  },
-  promotions: {
-    root: '/promotions',
-    byId: (id: Id) => `/promotions/${id}`,
-    active: '/promotions/active',
-  },
-  recipes: {
-    root: '/recipes',
-    byId: (id: Id) => `/recipes/${id}`,
-  },
-  reports: {
-    summary: '/reports/summary',
+    place: '/ventas/pedido',
+    counter: '/ventas/mostrador',
+    mine: '/ventas/mis-pedidos',
+    queue: '/ventas/pedidos',
+    cashCut: '/ventas/corte',
+    status: (id: Id) => `/ventas/${id}/estado`,
   },
 } as const;
 
 // Rutas sin Authorization. Se comparan contra el path, no la URL completa.
 export const PUBLIC_API_PATHS: readonly string[] = [
   API_ENDPOINTS.auth.login,
-  API_ENDPOINTS.auth.register,
+  API_ENDPOINTS.auth.google,
+  API_ENDPOINTS.auth.resendVerification,
   API_ENDPOINTS.auth.refresh,
-  API_ENDPOINTS.products.public,
 ];

@@ -1,4 +1,6 @@
 import { Routes } from '@angular/router';
+import { authGuard } from '../../core/guards/auth-guard';
+import { roleGuard } from '../../core/guards/role-guard';
 
 export const STOREFRONT_ROUTES: Routes = [
   {
@@ -13,6 +15,7 @@ export const STOREFRONT_ROUTES: Routes = [
   },
   {
     path: 'orders',
+    canActivate: [authGuard, roleGuard(['CLIENTE', 'ADMINISTRADOR'])],
     loadComponent: () => import('./pages/orders/orders').then((m) => m.Orders),
     title: 'Mis pedidos',
   },

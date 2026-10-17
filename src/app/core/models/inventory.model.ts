@@ -1,21 +1,60 @@
 import { Id } from './api.model';
 
-export const STOCK_UNITS = ['KG', 'G', 'L', 'ML', 'UNIDAD'] as const;
+export const STOCK_KINDS = ['materia-prima', 'producto'] as const;
 
-export type StockUnit = (typeof STOCK_UNITS)[number];
+export type StockKind = (typeof STOCK_KINDS)[number];
 
-export interface InventoryItem {
+export const MOVEMENT_TYPES = ['ENTRADA', 'SALIDA'] as const;
+
+export type MovementType = (typeof MOVEMENT_TYPES)[number];
+
+export interface RawMaterialStock {
   readonly id: Id;
-  readonly name: string;
-  readonly unit: StockUnit;
-  readonly quantity: number;
-  /** Por debajo de esto hay que reponer. */
-  readonly reorderLevel: number;
-  readonly updatedAt: string;
+  readonly materiaPrimaId: Id;
+  readonly materiaPrima: string;
+  readonly cantidad: number;
+  readonly fechaActualizacion: string | null;
 }
 
-export type InventoryItemDraft = Omit<InventoryItem, 'id' | 'updatedAt'>;
+export interface ProductStock {
+  readonly id: Id;
+  readonly productoId: Id;
+  readonly producto: string;
+  readonly cantidad: number;
+  readonly fechaActualizacion: string | null;
+}
 
-export function isLowStock(item: InventoryItem): boolean {
-  return item.quantity <= item.reorderLevel;
+export interface StockMovement {
+  readonly id: Id;
+  readonly inventarioId: Id;
+  readonly tipo: MovementType;
+  readonly cantidad: number;
+  readonly fecha: string;
+  readonly motivo: string | null;
+  readonly costoInicial: number | null;
+  readonly costoFinal: number | null;
+}
+
+export interface StockMovementDraft {
+  readonly inventarioId: Id;
+  readonly tipo: MovementType;
+  readonly cantidad: number;
+  readonly motivo: string;
+  readonly costoInicial?: number;
+}
+
+export interface StockRow {
+  readonly kind: StockKind;
+  readonly itemId: Id;
+  readonly inventarioId: Id | null;
+  readonly nombre: string;
+  readonly descripcion: string | null;
+  readonly unidad: string;
+  readonly cantidad: number;
+  readonly minimo: number;
+  readonly fechaActualizacion: string | null;
+}
+
+export function isLowStock(row: StockRow): boolean {
+  return row.inventarioId !== null && Number(row.cantidad) <= Number(row.minimo);
 }

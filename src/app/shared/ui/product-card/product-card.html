@@ -1,0 +1,64 @@
+<article
+  class="group flex h-full flex-col overflow-hidden rounded-box border border-base-300 bg-base-100 transition duration-300 hover:-translate-y-1 hover:shadow-lg"
+  [class.opacity-70]="soldOut()"
+>
+  <div class="relative aspect-4/3 overflow-hidden">
+    @if (product().imagenUrl; as image) {
+      <img
+        [src]="image"
+        [alt]="product().nombre"
+        loading="lazy"
+        class="size-full object-cover transition duration-500 group-hover:scale-105"
+      />
+    } @else {
+      <div class="grid size-full place-items-center {{ tone() }}">
+        <app-category-icon
+          [name]="kindText()"
+          class="size-16 opacity-70 transition duration-500 group-hover:scale-110 group-hover:-rotate-6"
+        />
+      </div>
+    }
+
+    @if (soldOut()) {
+      <span class="badge badge-error absolute start-3 top-3 shadow-sm">Agotado</span>
+    } @else if (fewLeft()) {
+      <span class="badge badge-warning absolute start-3 top-3 shadow-sm">
+        ¡Quedan {{ product().disponible }}!
+      </span>
+    }
+  </div>
+
+  <div class="flex flex-1 flex-col gap-1 p-4">
+    <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary/80">
+      {{ product().categoria }}
+    </p>
+    <h3 class="text-lg font-semibold leading-snug text-base-content">{{ product().nombre }}</h3>
+    @if (product().descripcion) {
+      <p class="line-clamp-2 text-sm text-base-content/60">{{ product().descripcion }}</p>
+    }
+
+    <div class="mt-auto flex items-center justify-between gap-2 pt-3">
+      <span class="text-xl font-bold tabular-nums text-base-content">
+        {{ product().precio | money }}
+      </span>
+      <button
+        type="button"
+        class="btn btn-primary btn-sm gap-1 rounded-full"
+        [disabled]="soldOut()"
+        [attr.aria-label]="'Agregar ' + product().nombre + ' al carrito'"
+        (click)="added.emit(product())"
+      >
+        <svg
+          class="size-4"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          aria-hidden="true"
+        >
+          <path d="M12 5v14M5 12h14" stroke-width="2" stroke-linecap="round" />
+        </svg>
+        {{ soldOut() ? 'Agotado' : 'Agregar' }}
+      </button>
+    </div>
+  </div>
+</article>

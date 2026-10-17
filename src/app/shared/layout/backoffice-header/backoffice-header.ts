@@ -1,16 +1,9 @@
 import { Component, computed, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { UserRole } from '../../../core/models/user.model';
+import { ROLE_LABELS } from '../../../core/models/user.model';
 import { Auth } from '../../../core/services/auth';
 import { ThemeToggle } from '../../ui/theme-toggle/theme-toggle';
 import { BackofficeMenu } from '../backoffice-menu';
-
-const ROLE_LABELS: Readonly<Record<UserRole, string>> = {
-  ADMIN: 'Administración',
-  CASHIER: 'Caja',
-  PRODUCTION: 'Producción',
-  CUSTOMER: 'Cliente',
-};
 
 @Component({
   selector: 'app-backoffice-header',

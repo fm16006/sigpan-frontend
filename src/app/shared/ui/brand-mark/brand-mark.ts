@@ -37,7 +37,10 @@ import { Component, input } from '@angular/core';
       </svg>
 
       @if (label()) {
-        <span class="font-serif font-semibold tracking-tight text-base-content" [class]="labelClass()">
+        <span
+          class="font-serif font-semibold tracking-tight text-base-content"
+          [class]="labelClass()"
+        >
           {{ label() }}
         </span>
       }

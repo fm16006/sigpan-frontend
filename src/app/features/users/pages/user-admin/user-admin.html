@@ -1,0 +1,80 @@
+<app-page-header title="Usuarios" subtitle="Roles y acceso de cada cuenta">
+  <input
+    #term
+    type="search"
+    class="input input-bordered input-sm w-56"
+    placeholder="Buscar por nombre o correo"
+    aria-label="Buscar usuario"
+    (input)="filter.set(term.value.trim())"
+  />
+  <button type="button" class="btn btn-sm" [disabled]="users.isLoading()" (click)="users.reload()">
+    Actualizar
+  </button>
+</app-page-header>
+
+<app-resource-state
+  [loading]="users.isLoading() && users.value().length === 0"
+  [failed]="!!users.error()"
+  [empty]="items().length === 0"
+  emptyTitle="Sin usuarios"
+  (retry)="users.reload()"
+>
+  <div class="overflow-x-auto rounded-box border border-base-300 bg-base-100">
+    <table class="table">
+      <thead>
+        <tr>
+          <th scope="col">Usuario</th>
+          <th scope="col">Rol</th>
+          <th scope="col">Estado</th>
+          <th scope="col" class="text-end">Acción</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (user of items(); track user.id) {
+          <tr>
+            <td>
+              <p class="font-medium">
+                {{ user.nombre }}
+                @if (isSelf(user)) {
+                  <span class="badge badge-ghost badge-sm ms-1">Tú</span>
+                }
+              </p>
+              <p class="text-sm text-base-content/55">{{ user.email }}</p>
+            </td>
+            <td>
+              <select
+                #role
+                class="select select-bordered select-sm"
+                [disabled]="isSelf(user) || busyId() === user.id"
+                (change)="changeRole(user, role.value)"
+                [attr.aria-label]="'Rol de ' + user.nombre"
+              >
+                @for (option of roles.value(); track option.id) {
+                  <option [value]="option.id" [selected]="option.id === user.rolId">
+                    {{ roleLabels[option.nombre] }}
+                  </option>
+                }
+              </select>
+            </td>
+            <td>
+              @if (user.activo) {
+                <span class="badge badge-success badge-sm">Activo</span>
+              } @else {
+                <span class="badge badge-ghost badge-sm">Inactivo</span>
+              }
+            </td>
+            <td class="text-end">
+              @if (busyId() === user.id) {
+                <span class="loading loading-spinner loading-sm"></span>
+              } @else if (!isSelf(user)) {
+                <button type="button" class="btn btn-ghost btn-xs" (click)="toggleActive(user)">
+                  {{ user.activo ? 'Desactivar' : 'Activar' }}
+                </button>
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</app-resource-state>

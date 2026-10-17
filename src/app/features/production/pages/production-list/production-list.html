@@ -1,0 +1,169 @@
+<app-page-header title="Producción" subtitle="Órdenes de producción por receta">
+  <button
+    type="button"
+    class="btn btn-sm"
+    [disabled]="productions.isLoading()"
+    (click)="productions.reload()"
+  >
+    Actualizar
+  </button>
+  <button type="button" class="btn btn-sm btn-primary" (click)="toggleForm()">
+    {{ showForm() ? 'Cerrar' : 'Nueva producción' }}
+  </button>
+</app-page-header>
+
+@if (showForm()) {
+  <section class="mb-6 rounded-box border border-base-300 bg-base-100 p-4">
+    <h2 class="mb-3 font-semibold">Nueva producción</h2>
+    <form class="grid gap-4 md:grid-cols-2" [formGroup]="form" (ngSubmit)="save()">
+      <div>
+        <label class="label" for="productoId"><span class="label-text">Producto</span></label>
+        <select
+          id="productoId"
+          formControlName="productoId"
+          class="select select-bordered w-full"
+          [class.select-error]="!!errorFor('productoId')"
+        >
+          <option [ngValue]="0" disabled>Elegí un producto</option>
+          @for (product of products.value(); track product.id) {
+            <option [ngValue]="product.id">{{ product.nombre }}</option>
+          }
+        </select>
+        @if (errorFor('productoId'); as message) {
+          <p class="mt-1 text-xs text-error">{{ message }}</p>
+        }
+      </div>
+
+      <div>
+        <label class="label" for="formulaId"><span class="label-text">Receta</span></label>
+        <select
+          id="formulaId"
+          formControlName="formulaId"
+          class="select select-bordered w-full"
+          [class.select-error]="!!errorFor('formulaId')"
+        >
+          <option [ngValue]="0" disabled>Elegí una receta</option>
+          @for (formula of productFormulas(); track formula.id) {
+            <option [ngValue]="formula.id">
+              {{ formula.nombre }} · rinde {{ formula.cantidadProduccion | number: '1.0-2' }}
+            </option>
+          }
+        </select>
+        @if (errorFor('formulaId'); as message) {
+          <p class="mt-1 text-xs text-error">{{ message }}</p>
+        } @else if (form.controls.productoId.value && productFormulas().length === 0) {
+          <p class="mt-1 text-xs text-base-content/50">Este producto aún no tiene recetas.</p>
+        }
+      </div>
+
+      <div>
+        <label class="label" for="cantidad"><span class="label-text">Lotes</span></label>
+        <input
+          id="cantidad"
+          type="number"
+          step="1"
+          min="1"
+          formControlName="cantidad"
+          class="input input-bordered w-full"
+          [class.input-error]="!!errorFor('cantidad')"
+        />
+        @if (errorFor('cantidad'); as message) {
+          <p class="mt-1 text-xs text-error">{{ message }}</p>
+        } @else if (expectedUnits() !== null) {
+          <p class="mt-1 text-xs text-base-content/50">
+            Se obtendrán {{ expectedUnits() | number: '1.0-2' }} unidades.
+          </p>
+        }
+      </div>
+
+      <div>
+        <label class="label" for="comentario"><span class="label-text">Comentario</span></label>
+        <input
+          id="comentario"
+          type="text"
+          formControlName="comentario"
+          class="input input-bordered w-full"
+        />
+      </div>
+
+      <div class="md:col-span-2 flex justify-end gap-2">
+        <button type="button" class="btn btn-ghost" (click)="toggleForm()">Cancelar</button>
+        <button type="submit" class="btn btn-primary" [disabled]="saving()">
+          @if (saving()) {
+            <span class="loading loading-spinner loading-sm"></span>
+          }
+          Registrar producción
+        </button>
+      </div>
+    </form>
+  </section>
+}
+
+<app-resource-state
+  [loading]="productions.isLoading()"
+  [failed]="!!productions.error()"
+  [empty]="items().length === 0"
+  emptyTitle="Sin producciones"
+  emptyDescription="Registrá una producción para descontar insumos y sumar producto terminado."
+  (retry)="productions.reload()"
+>
+  <div class="overflow-x-auto rounded-box border border-base-300 bg-base-100">
+    <table class="table">
+      <thead>
+        <tr>
+          <th scope="col">Código</th>
+          <th scope="col">Producto</th>
+          <th scope="col">Receta</th>
+          <th scope="col" class="text-end">Lotes</th>
+          <th scope="col">Fecha</th>
+          <th scope="col">Estado</th>
+          <th scope="col" class="text-end">Acción</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (production of items(); track production.id) {
+          <tr>
+            <td class="tabular-nums text-base-content/60">{{ production.id }}</td>
+            <td>
+              <p class="font-medium">{{ production.producto }}</p>
+              @if (production.comentario) {
+                <p class="text-sm text-base-content/55">{{ production.comentario }}</p>
+              }
+            </td>
+            <td class="text-sm">{{ production.formula }}</td>
+            <td class="text-end tabular-nums">{{ production.cantidad }}</td>
+            <td class="text-sm">{{ production.fecha | date: 'short' }}</td>
+            <td>
+              <span
+                class="badge badge-sm"
+                [class.badge-success]="production.estado === 'TERMINADO'"
+                [class.badge-ghost]="production.estado === 'CANCELADO'"
+                [class.badge-info]="!isClosed(production)"
+              >
+                {{ statusLabels[production.estado] }}
+              </span>
+            </td>
+            <td class="text-end">
+              @if (busyId() === production.id) {
+                <span class="loading loading-spinner loading-sm"></span>
+              } @else if (!isClosed(production)) {
+                <button
+                  type="button"
+                  class="btn btn-xs"
+                  [class.btn-success]="confirmFinishId() === production.id"
+                  (click)="finish(production)"
+                >
+                  {{ confirmFinishId() === production.id ? '¿Confirmar?' : 'Terminar' }}
+                </button>
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <p class="mt-2 text-xs text-base-content/50">
+    Al terminar una producción se descuentan los insumos de la receta y se suma el producto al
+    inventario.
+  </p>
+</app-resource-state>

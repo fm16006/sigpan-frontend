@@ -2,31 +2,16 @@
   title="Panel"
   [subtitle]="'Resumen de la jornada · ' + (auth.user()?.name ?? '')"
 >
-  <button type="button" class="btn btn-sm" [disabled]="summary.isLoading()" (click)="summary.reload()">
+  <button type="button" class="btn btn-sm" [disabled]="loading()" (click)="reload()">
     Actualizar
   </button>
 </app-page-header>
 
-@if (summary.error()) {
-  <div role="alert" class="alert alert-error mb-6">
-    <span>No pudimos cargar los indicadores.</span>
-    <button type="button" class="btn btn-sm" (click)="summary.reload()">Reintentar</button>
-  </div>
-}
-
-<section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" [attr.aria-busy]="summary.isLoading()">
-  <app-stat-card label="Ventas de hoy" [value]="summary.value().salesToday | money" />
-  <app-stat-card label="Pedidos de hoy" [value]="summary.value().ordersToday" />
-  <app-stat-card
-    label="Pedidos pendientes"
-    [value]="summary.value().pendingOrders"
-    hint="Esperando preparación"
-  />
-  <app-stat-card
-    label="Insumos en mínimo"
-    [value]="summary.value().lowStockItems"
-    hint="Requieren reposición"
-  />
+<section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" [attr.aria-busy]="loading()">
+  <app-stat-card label="Ventas de mostrador hoy" [value]="(cut.value()?.total ?? 0) | money" />
+  <app-stat-card label="Tickets de hoy" [value]="cut.value()?.cantidadVentas ?? 0" />
+  <app-stat-card label="Pedidos en línea por atender" [value]="pendingOrders()" hint="Pendientes, en preparación o listos" />
+  <app-stat-card label="Insumos en mínimo" [value]="lowStock()" hint="Requieren reposición" />
 </section>
 
 <section class="mt-8 grid gap-4 sm:grid-cols-3">
@@ -45,10 +30,10 @@
     <p class="mt-1 text-sm text-base-content/60">Existencias y niveles de reposición.</p>
   </a>
   <a
-    routerLink="/backoffice/recipes"
+    routerLink="/backoffice/users"
     class="rounded-box border border-base-300 bg-base-100 p-5 transition-colors hover:bg-base-200"
   >
-    <h2 class="text-base font-semibold">Recetas de producción</h2>
-    <p class="mt-1 text-sm text-base-content/60">Rendimiento e insumos por tanda.</p>
+    <h2 class="text-base font-semibold">Usuarios y roles</h2>
+    <p class="mt-1 text-sm text-base-content/60">Asignar roles y activar cuentas.</p>
   </a>
 </section>
