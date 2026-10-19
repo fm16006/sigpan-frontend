@@ -1,7 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { httpResource } from '@angular/common/http';
 import { DOCUMENT, DatePipe } from '@angular/common';
-import { BUSINESS_INFO } from '../../../../core/config/business.config';
+import { CompanyStore } from '../../../../core/services/company-store';
 import { valueOr } from '../../../../core/http/resource-value';
 import { CashCut, Sale } from '../../../../core/models/order.model';
 import { Auth } from '../../../../core/services/auth';
@@ -51,6 +51,7 @@ function upperFirst(text: string): string {
 export class PosHistorial {
   private readonly orders = inject(OrderService);
   private readonly page = inject(DOCUMENT);
+  private readonly company = inject(CompanyStore);
 
   protected readonly isAdmin = inject(Auth).hasAnyRole(['ADMINISTRADOR']);
 
@@ -81,7 +82,7 @@ export class PosHistorial {
   /** El ticket de la venta abierta; es lo que se ve en pantalla y lo que sale al imprimir. */
   protected readonly receiptText = computed(() => {
     const sale = this.selected();
-    return sale ? formatReceipt(saleToReceipt(sale), BUSINESS_INFO).join('\n') : '';
+    return sale ? formatReceipt(saleToReceipt(sale), this.company.info()).join('\n') : '';
   });
 
   protected readonly isCancelled = isCancelled;
