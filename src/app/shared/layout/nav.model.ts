@@ -1,40 +1,74 @@
 import { UserRole } from '../../core/models/user.model';
+import { IconName } from '../ui/icon/icon';
 
 export interface NavItem {
   readonly label: string;
   readonly path: string;
+  readonly icon: IconName;
   readonly roles: readonly UserRole[];
+  /** Marca el enlace activo solo con la ruta exacta (el Panel, que es prefijo de todo). */
+  readonly exact?: boolean;
 }
 
+export interface NavGroup {
+  readonly label: string;
+  readonly items: readonly NavItem[];
+}
+
+const ADMIN_JEFE: readonly UserRole[] = ['ADMINISTRADOR', 'JEFE_PRODUCCION'];
+const INVENTARIO: readonly UserRole[] = ['ADMINISTRADOR', 'JEFE_PRODUCCION', 'BODEGUERO'];
+
 // Los roles de aquí deben coincidir con los roleGuard de app.routes.ts.
-export const BACKOFFICE_NAV: readonly NavItem[] = [
-  { label: 'Panel', path: '/backoffice', roles: ['ADMINISTRADOR'] },
-  { label: 'Punto de venta', path: '/backoffice/pos', roles: ['ADMINISTRADOR', 'CAJERO'] },
+export const BACKOFFICE_NAV_GROUPS: readonly NavGroup[] = [
   {
-    label: 'Pedidos en línea',
-    path: '/backoffice/orders',
-    roles: ['ADMINISTRADOR', 'DESPACHADOR'],
+    label: 'Inicio',
+    items: [
+      { label: 'Panel', path: '/backoffice', icon: 'home', roles: ['ADMINISTRADOR'], exact: true },
+    ],
   },
-  { label: 'Productos', path: '/backoffice/products', roles: ['ADMINISTRADOR', 'JEFE_PRODUCCION'] },
+  {
+    label: 'Ventas',
+    items: [
+      { label: 'Punto de venta', path: '/backoffice/pos', icon: 'pos', roles: ['ADMINISTRADOR', 'CAJERO'] },
+      {
+        label: 'Pedidos en línea',
+        path: '/backoffice/orders',
+        icon: 'bag',
+        roles: ['ADMINISTRADOR', 'DESPACHADOR'],
+      },
+    ],
+  },
   {
     label: 'Inventario',
-    path: '/backoffice/inventory',
-    roles: ['ADMINISTRADOR', 'JEFE_PRODUCCION', 'BODEGUERO'],
+    items: [
+      { label: 'Productos', path: '/backoffice/products', icon: 'bread', roles: ADMIN_JEFE },
+      { label: 'Materia prima', path: '/backoffice/raw-materials', icon: 'sack', roles: INVENTARIO },
+      { label: 'Combos', path: '/backoffice/combos', icon: 'combo', roles: ['ADMINISTRADOR'] },
+      { label: 'Movimientos', path: '/backoffice/movements', icon: 'movements', roles: INVENTARIO },
+    ],
   },
   {
     label: 'Producción',
-    path: '/backoffice/production',
-    roles: ['ADMINISTRADOR', 'JEFE_PRODUCCION'],
+    items: [
+      { label: 'Órdenes', path: '/backoffice/production', icon: 'order', roles: ADMIN_JEFE },
+      { label: 'Recetas', path: '/backoffice/recipes', icon: 'recipe', roles: ADMIN_JEFE },
+    ],
   },
-  { label: 'Recetas', path: '/backoffice/recipes', roles: ['ADMINISTRADOR', 'JEFE_PRODUCCION'] },
   {
-    label: 'Explosión de materiales',
-    path: '/backoffice/recipes/explosion',
-    roles: ['ADMINISTRADOR', 'JEFE_PRODUCCION'],
+    label: 'Precios',
+    items: [
+      { label: 'Promociones', path: '/backoffice/promotions', icon: 'tag', roles: ['ADMINISTRADOR'] },
+      { label: 'Mayoreo', path: '/backoffice/wholesale', icon: 'scale', roles: ['ADMINISTRADOR'] },
+    ],
   },
-  { label: 'Promociones', path: '/backoffice/promotions', roles: ['ADMINISTRADOR'] },
-  { label: 'Combos', path: '/backoffice/combos', roles: ['ADMINISTRADOR'] },
-  { label: 'Mayoreo', path: '/backoffice/wholesale', roles: ['ADMINISTRADOR'] },
-  { label: 'Usuarios', path: '/backoffice/users', roles: ['ADMINISTRADOR'] },
-  { label: 'Bitácora', path: '/backoffice/audit', roles: ['ADMINISTRADOR'] },
+  {
+    label: 'Administración',
+    items: [
+      { label: 'Usuarios', path: '/backoffice/users', icon: 'users', roles: ['ADMINISTRADOR'] },
+      { label: 'Bitácora', path: '/backoffice/audit', icon: 'clock', roles: ['ADMINISTRADOR'] },
+    ],
+  },
 ];
+
+/** Lista plana, para el desplegable móvil y el menú del punto de venta. */
+export const BACKOFFICE_NAV: readonly NavItem[] = BACKOFFICE_NAV_GROUPS.flatMap((g) => g.items);
