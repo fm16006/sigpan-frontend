@@ -14,16 +14,13 @@
 
   <div class="ms-auto flex items-center gap-2">
     @if (hasPanel()) {
-      <label
-        for="pos-menu"
+      <button
+        type="button"
         class="btn btn-sm btn-ghost border border-neutral-content/30 text-neutral-content hover:bg-neutral-content/10"
-        role="button"
-        tabindex="0"
-        aria-label="Abrir el menú del panel"
-        (keydown.enter)="$any($event.currentTarget).click()"
+        (click)="panel.emit()"
       >
         Ir al panel
-      </label>
+      </button>
     }
     <button type="button" class="btn btn-sm btn-error" (click)="logout.emit()">
       Cerrar sesión

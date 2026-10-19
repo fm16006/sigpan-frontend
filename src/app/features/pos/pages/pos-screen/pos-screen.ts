@@ -104,7 +104,7 @@ const ROLE_NAMES: Readonly<Record<string, string>> = {
   ],
   templateUrl: './pos-screen.html',
   host: {
-    class: 'drawer block h-dvh bg-base-200',
+    class: 'block h-dvh bg-base-200',
     '(document:keydown)': 'onKeydown($event)',
   },
 })
@@ -182,7 +182,6 @@ export class PosScreen {
   protected readonly adminLinks = computed(() =>
     this.menu.items().filter((item) => item.path !== POS_PATH),
   );
-  protected readonly showStore = this.menu.showStore;
   /** Enlaces del menú del cajero: solo los que su rol puede ver. */
   protected readonly panelLink = computed(() =>
     this.adminLinks().find((item) => item.path === PANEL_PATH),
@@ -432,6 +431,8 @@ export class PosScreen {
     this.sheetOpen.set(false);
     this.closing.set(false);
     this.viewingOrders.set(false);
+    // Con la caja cerrada no queda nada que hacer en el punto de venta: quien tiene panel vuelve a él.
+    if (this.panelLink()) this.goToPanel();
   }
 
   protected requestLogout(): void {
