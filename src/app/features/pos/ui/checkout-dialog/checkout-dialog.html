@@ -1,10 +1,10 @@
 <div class="modal modal-open" role="dialog" aria-modal="true" aria-labelledby="checkout-title">
   <div
-    class="modal-box max-w-3xl overflow-y-auto p-0 max-md:h-dvh max-md:max-h-dvh max-md:w-full max-md:max-w-none max-md:rounded-none max-md:overflow-x-hidden md:overflow-hidden"
+    class="modal-box max-w-3xl overflow-x-hidden overflow-y-auto p-0 max-md:h-dvh max-md:max-h-dvh max-md:w-full max-md:max-w-none max-md:rounded-none md:max-h-[calc(100dvh-2rem)]"
   >
     @if (phase() === 'pago' || phase() === 'tarjeta') {
       <div class="grid grid-cols-[minmax(0,1fr)] max-md:min-h-dvh md:grid-cols-2">
-        <div class="flex min-w-0 flex-col gap-4 border-base-300 p-4 md:border-e md:p-6">
+        <div class="flex min-w-0 flex-col gap-4 border-base-300 p-4 md:border-e md:p-6 [@media(max-height:760px)]:gap-3 [@media(max-height:760px)]:md:p-5">
           <div class="flex items-start justify-between gap-3">
             <div>
               <h2 id="checkout-title" class="font-serif text-2xl font-semibold">Cobrar</h2>
@@ -27,7 +27,7 @@
 
           <div>
             <p class="text-xs text-base-content/60">Total a cobrar</p>
-            <p class="font-serif text-4xl font-semibold leading-none tabular-nums md:text-5xl">
+            <p class="font-serif text-4xl font-semibold leading-none tabular-nums md:text-5xl [@media(max-height:760px)]:md:text-4xl">
               {{ total() | money }}
             </p>
           </div>
@@ -86,7 +86,7 @@
           </p>
         </div>
 
-        <div class="flex min-w-0 flex-col gap-4 bg-base-200/50 p-4 md:p-6">
+        <div class="flex min-w-0 flex-col gap-4 bg-base-200/50 p-4 md:p-6 [@media(max-height:760px)]:gap-3 [@media(max-height:760px)]:md:p-5">
           @if (phase() === 'tarjeta') {
             <div class="flex flex-1 flex-col items-center justify-center gap-4">
               <app-payment-terminal [screen]="cardScreen()" [amount]="total()" size="sm" />
@@ -114,7 +114,7 @@
               <div class="grid grid-cols-[minmax(0,1fr)] gap-3">
                 <label class="font-semibold" for="checkout-cash">Efectivo recibido</label>
                 <div
-                  class="flex h-14 items-center gap-1.5 rounded-box border-2 bg-base-100 px-3.5"
+                  class="flex h-14 items-center gap-1.5 rounded-box border-2 bg-base-100 px-3.5 focus-within:ring-2 focus-within:ring-primary/30"
                   [class.border-primary]="!short()"
                   [class.border-error]="short()"
                 >
@@ -125,7 +125,7 @@
                     type="text"
                     inputmode="decimal"
                     autocomplete="off"
-                    class="min-w-0 flex-1 bg-transparent font-serif text-3xl font-semibold tabular-nums outline-none"
+                    class="min-w-0 flex-1 bg-transparent font-serif text-3xl font-semibold tabular-nums outline-none focus-visible:outline-none"
                     placeholder="0.00"
                     [value]="cashText()"
                     (input)="typeCash(cashInput.value)"
