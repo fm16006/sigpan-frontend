@@ -14,6 +14,9 @@ import {
   ESPECIALIDAD_LABELS,
   ESPECIALIDADES,
   Especialidad,
+  PRODUCT_TYPES,
+  PRODUCT_TYPE_LABELS,
+  ProductType,
 } from '../../../../core/models/catalog.model';
 import { Auth } from '../../../../core/services/auth';
 import { Notifications } from '../../../../core/services/notifications';
@@ -43,6 +46,15 @@ export class ProductDrawer {
 
   /** Solo administración cambia precios. */
   protected readonly isAdmin = this.auth.hasAnyRole(['ADMINISTRADOR']);
+  protected readonly productTypes: readonly { value: ProductType; label: string; hint: string }[] =
+    PRODUCT_TYPES.map((value) => ({
+      value,
+      label: PRODUCT_TYPE_LABELS[value],
+      hint:
+        value === 'ELABORADO'
+          ? 'Se produce en la panadería con una receta.'
+          : 'Se compra ya hecho a un proveedor. No lleva receta ni órdenes de producción.',
+    }));
   protected readonly especialidades = ESPECIALIDADES.map((value) => ({
     value,
     label: ESPECIALIDAD_LABELS[value],
@@ -131,6 +143,11 @@ export class ProductDrawer {
       error: (error: AppError) => {
         this.saving.set(false);
         if (error.kind === 'conflict') {
+          if (current !== null && value.tipo !== (current.tipo ?? 'ELABORADO')) {
+            // 409 al cambiar el tipo: el producto ya tiene receta u órdenes de producción.
+            this.formError.set(error.message);
+            return;
+          }
           // 409: el código ya lo usa otro producto. Se muestra junto al campo.
           this.form.controls.codigo.setErrors({ server: error.message });
           this.form.controls.codigo.markAsTouched();
@@ -174,6 +191,7 @@ export class ProductDrawer {
         categoriaId: product.categoriaId,
         stockMinimo: Number(product.stockMinimo ?? 0),
         unidadVenta: product.unidadVenta,
+        tipo: product.tipo ?? 'ELABORADO',
         especialidad: product.especialidad,
         alergenos: product.alergenos ?? '',
       });

@@ -28,6 +28,12 @@
         <span class="rounded-md bg-base-200 px-2 py-0.5 text-xs font-medium text-base-content/80">
           {{ especialidadLabels[p.especialidad] }}
         </span>
+        <span
+          class="rounded-md px-2 py-0.5 text-xs font-medium text-base-content/80"
+          [class]="ctx.resale() ? 'bg-info/15' : 'bg-base-200'"
+        >
+          {{ typeLabels[p.tipo ?? 'ELABORADO'] }}
+        </span>
         @if (state(); as s) {
           <app-status-chip
             [label]="s === 'inactivo' ? chips[s].label : chips[s].label + ' · ' + (p.disponible ?? 0) + ' u'"
@@ -37,7 +43,16 @@
       </div>
 
       <div actions class="contents">
-        <a routerLink="/backoffice/production" class="btn">Planificar producción</a>
+        @if (ctx.resale()) {
+          @if (canBuy) {
+            <button type="button" class="btn" (click)="purchaseOpen.set(true)">
+              <app-icon name="plus" />
+              Registrar compra
+            </button>
+          }
+        } @else {
+          <a routerLink="/backoffice/production" class="btn">Planificar producción</a>
+        }
         @if (canEdit) {
           <button type="button" class="btn btn-primary" (click)="ctx.openEditor()">
             <app-icon name="edit" />
@@ -124,6 +139,15 @@
       (closed)="ctx.editing.set(false)"
       (saved)="onSaved()"
     />
+
+    @if (canBuy && ctx.resale()) {
+      <app-purchase-form-drawer
+        [open]="purchaseOpen()"
+        [presetItem]="purchasePreset()"
+        (closed)="purchaseOpen.set(false)"
+        (saved)="onPurchased()"
+      />
+    }
 
     <app-confirm-dialog
       [open]="confirmDelete()"

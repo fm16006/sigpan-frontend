@@ -72,6 +72,17 @@
       <option [value]="option.value">{{ option.label }}</option>
     }
   </select>
+  <select
+    class="select select-bordered"
+    aria-label="Tipo de producto"
+    [value]="tipo()"
+    (change)="setTipo($any($event.target).value)"
+  >
+    <option value="">Elaborados y reventa</option>
+    @for (option of productTypes; track option.value) {
+      <option [value]="option.value">{{ option.label }}</option>
+    }
+  </select>
 </div>
 
 <app-resource-state
@@ -119,7 +130,14 @@
           }
           <span class="flex min-w-0 flex-col">
             <span class="truncate font-semibold">{{ row.product.nombre }}</span>
-            <span class="font-mono text-xs text-base-content/60">{{ row.product.codigo }}</span>
+            <span class="flex items-center gap-1.5">
+              <span class="font-mono text-xs text-base-content/60">{{ row.product.codigo }}</span>
+              @if (isResale(row.product)) {
+                <span class="rounded-md bg-info/15 px-1.5 text-[0.65rem] font-semibold uppercase tracking-wide">
+                  Reventa
+                </span>
+              }
+            </span>
           </span>
         </span>
         <span class="text-sm text-base-content/80 max-md:hidden">{{ especialidadLabels[row.product.especialidad] }}</span>

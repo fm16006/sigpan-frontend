@@ -7,9 +7,11 @@
           <dt class="text-base-content/60">Código</dt>
           <dd class="font-mono text-[0.8rem] max-sm:mb-2">{{ p.codigo }}</dd>
           <dt class="text-base-content/60">Tipo</dt>
-          <!-- Pendiente backend: exponer si el producto es elaborado o de reventa -->
-          <dd class="text-base-content/50 max-sm:mb-2">
-            Próximamente: si es elaborado o de reventa.
+          <dd class="flex flex-wrap items-center gap-2 max-sm:mb-2">
+            <span class="font-semibold">{{ typeLabels[p.tipo ?? 'ELABORADO'] }}</span>
+            <span class="text-xs text-base-content/60">
+              {{ ctx.resale() ? 'Se compra ya hecho a un proveedor' : 'Se produce con receta' }}
+            </span>
           </dd>
           <dt class="text-base-content/60">Especialidad</dt>
           <dd class="max-sm:mb-2">{{ especialidadLabels[p.especialidad] }}</dd>
@@ -40,6 +42,51 @@
         </p>
       </section>
 
+      @if (ctx.resale()) {
+        <section class="panel" aria-labelledby="h-compras">
+          <div class="flex flex-wrap items-baseline justify-between gap-3">
+            <h2 id="h-compras" class="font-serif text-lg font-semibold">Últimas compras</h2>
+            <a [routerLink]="['/backoffice/products', p.id, 'compras']" class="text-sm font-semibold text-primary hover:underline">
+              Ver todas las compras →
+            </a>
+          </div>
+          @if (ctx.purchasesRes.isLoading() && !ctx.purchasesRes.hasValue()) {
+            <div class="h-16 animate-pulse rounded-lg bg-base-200" aria-busy="true"></div>
+          } @else if (ctx.purchasesRes.error()) {
+            <div role="alert" class="alert alert-error text-sm">
+              <span>No pudimos cargar las compras.</span>
+              <button type="button" class="btn btn-sm" (click)="ctx.purchasesRes.reload()">Reintentar</button>
+            </div>
+          } @else if (ctx.purchases().length === 0) {
+            <p class="rounded-lg bg-base-200 px-3.5 py-3 text-sm text-base-content/65">
+              Todavía no hay compras. La existencia de un producto de reventa sube cuando se registra una compra a un proveedor.
+            </p>
+          } @else {
+            <ul class="-mx-[1.375rem] -mb-5 overflow-hidden border-t border-base-300">
+              @for (item of ctx.purchases().slice(0, 3); track item.compraId + '-' + $index) {
+                <li>
+                  <a
+                    class="list-row grid-cols-[minmax(0,1fr)_auto_1rem] gap-y-0.5"
+                    [routerLink]="['/backoffice/purchases', item.compraId]"
+                  >
+                    <span class="flex min-w-0 flex-col">
+                      <span class="truncate text-sm font-medium">{{ item.proveedor }}</span>
+                      <span class="text-xs text-base-content/60">
+                        {{ docLabel(item) }} · {{ shortDate(item.fecha) }}
+                      </span>
+                    </span>
+                    <span class="flex flex-col items-end text-sm tabular-nums">
+                      <span class="font-semibold text-success">+{{ item.cantidad | number: '1.0-3' }} u</span>
+                      <span class="text-xs text-base-content/60">{{ item.costoUnitario | money }} c/u</span>
+                    </span>
+                    <app-icon name="chevron" class="text-base-content/40" />
+                  </a>
+                </li>
+              }
+            </ul>
+          }
+        </section>
+      } @else {
       <section class="panel" aria-labelledby="h-receta">
         <div class="flex flex-wrap items-baseline justify-between gap-3">
           <h2 id="h-receta" class="font-serif text-lg font-semibold">Receta</h2>
@@ -75,6 +122,7 @@
           </p>
         }
       </section>
+      }
     </div>
 
     <div class="flex min-w-0 flex-col gap-4">
@@ -128,7 +176,15 @@
         </div>
         @if (ctx.costoUnitario() === null) {
           <p class="rounded-lg bg-base-200 px-3 py-2.5 text-[0.8rem] leading-normal text-base-content/70">
-            El costo sale de la receta. Sin receta no hay costo ni margen.
+            @if (ctx.resale()) {
+              El costo es el promedio de sus compras. Sin compras no hay costo ni margen.
+            } @else {
+              El costo sale de la receta. Sin receta no hay costo ni margen.
+            }
+          </p>
+        } @else if (ctx.resale()) {
+          <p class="rounded-lg bg-base-200 px-3 py-2.5 text-[0.8rem] leading-normal text-base-content/70">
+            Costo promedio ponderado de sus compras.
           </p>
         }
         <a [routerLink]="['/backoffice/products', p.id, 'precios']" class="text-sm font-semibold text-primary hover:underline">
