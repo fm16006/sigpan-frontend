@@ -182,28 +182,32 @@
   animation: settle 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-html,
-body {
-  height: 100%;
-}
+/* Estilos base dentro de @layer base: así una clase utilitaria (font-sans,
+   outline-none…) puede sobrescribirlos. Fuera de una capa le ganarían a Tailwind. */
+@layer base {
+  html,
+  body {
+    height: 100%;
+  }
 
-body {
-  font-family: var(--font-sans);
-  -webkit-font-smoothing: antialiased;
-}
+  body {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
 
-/* Títulos en serif. */
-h1,
-h2,
-h3 {
-  font-family: var(--font-serif);
-  letter-spacing: -0.01em;
-}
+  /* Títulos en serif. */
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-serif);
+    letter-spacing: -0.01em;
+  }
 
-/* Foco visible y uniforme en todo lo interactivo. */
-:where(a, button, [role='button'], input, select, textarea, summary):focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  /* Foco visible y uniforme en todo lo interactivo. */
+  :where(a, button, [role='button'], input, select, textarea, summary):focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
