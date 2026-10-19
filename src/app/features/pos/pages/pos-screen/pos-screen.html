@@ -229,6 +229,7 @@
                     [class.ring-2]="selectedId() === product.id"
                     [class.ring-primary]="selectedId() === product.id"
                     [class.opacity-50]="soldOut(product)"
+                    [disabled]="soldOut(product)"
                     (click)="pick(product)"
                   >
                     <span class="flex items-start justify-between gap-1">

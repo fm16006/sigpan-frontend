@@ -8,6 +8,11 @@ export function applyFieldErrors(form: FormGroup, error: AppError): void {
   }
 }
 
+/** Mensaje general del backend (400/409 sin errores por campo), para mostrar arriba del formulario. */
+export function formLevelMessage(error: AppError): string | null {
+  return Object.keys(error.fieldErrors).length === 0 ? error.message : null;
+}
+
 /** Mensaje a mostrar en un control, sea validación local o del servidor. */
 export function firstErrorMessage(form: FormGroup, field: string): string | null {
   const control = form.get(field);
@@ -21,6 +26,9 @@ export function firstErrorMessage(form: FormGroup, field: string): string | null
   if (errors['email']) return 'Ingresá un correo válido.';
   if (errors['minlength']) {
     return `Debe tener al menos ${errors['minlength'].requiredLength} caracteres.`;
+  }
+  if (errors['maxlength']) {
+    return `No puede tener más de ${errors['maxlength'].requiredLength} caracteres.`;
   }
   return 'Valor inválido.';
 }

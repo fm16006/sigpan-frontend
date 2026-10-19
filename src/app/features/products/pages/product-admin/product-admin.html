@@ -17,7 +17,27 @@
 @if (canEdit && showForm()) {
   <section class="mb-6 rounded-box border border-base-300 bg-base-100 p-4">
     <h2 class="mb-3 font-semibold">{{ editingId() === null ? 'Nuevo producto' : 'Editar producto' }}</h2>
+    @if (formError(); as message) {
+      <div role="alert" class="alert alert-error mb-4 py-2 text-sm">{{ message }}</div>
+    }
     <form class="grid gap-4 md:grid-cols-2" [formGroup]="form" (ngSubmit)="save()">
+      <div>
+        <label class="label" for="codigo"><span class="label-text">Código</span></label>
+        <input
+          id="codigo"
+          type="text"
+          maxlength="30"
+          formControlName="codigo"
+          class="input input-bordered w-full"
+          [class.input-error]="!!errorFor('codigo')"
+        />
+        @if (errorFor('codigo'); as message) {
+          <p class="mt-1 text-xs text-error">{{ message }}</p>
+        } @else {
+          <p class="mt-1 text-xs text-base-content/50">Identificador único, p. ej. PF-001.</p>
+        }
+      </div>
+
       <div>
         <label class="label" for="nombre"><span class="label-text">Nombre</span></label>
         <input
@@ -65,6 +85,56 @@
           <p class="mt-1 text-xs text-error">{{ message }}</p>
         } @else {
           <p class="mt-1 text-xs text-base-content/50">Debajo de este nivel el inventario avisa reabastecer.</p>
+        }
+      </div>
+
+      <div>
+        <label class="label" for="unidadVenta"><span class="label-text">Unidad de venta</span></label>
+        <input
+          id="unidadVenta"
+          type="text"
+          placeholder="Ej. unidad, docena"
+          maxlength="30"
+          formControlName="unidadVenta"
+          class="input input-bordered w-full"
+          [class.input-error]="!!errorFor('unidadVenta')"
+        />
+        @if (errorFor('unidadVenta'); as message) {
+          <p class="mt-1 text-xs text-error">{{ message }}</p>
+        }
+      </div>
+
+      <div>
+        <label class="label" for="especialidad"><span class="label-text">Especialidad</span></label>
+        <select
+          id="especialidad"
+          formControlName="especialidad"
+          class="select select-bordered w-full"
+          [class.select-error]="!!errorFor('especialidad')"
+        >
+          <option value="" disabled>Elegí una especialidad</option>
+          @for (option of especialidades; track option.value) {
+            <option [value]="option.value">{{ option.label }}</option>
+          }
+        </select>
+        @if (errorFor('especialidad'); as message) {
+          <p class="mt-1 text-xs text-error">{{ message }}</p>
+        }
+      </div>
+
+      <div class="md:col-span-2">
+        <label class="label" for="alergenos"><span class="label-text">Alérgenos (opcional)</span></label>
+        <input
+          id="alergenos"
+          type="text"
+          placeholder="Ej. gluten, huevo, lácteos"
+          maxlength="255"
+          formControlName="alergenos"
+          class="input input-bordered w-full"
+          [class.input-error]="!!errorFor('alergenos')"
+        />
+        @if (errorFor('alergenos'); as message) {
+          <p class="mt-1 text-xs text-error">{{ message }}</p>
         }
       </div>
 
@@ -146,6 +216,7 @@
           <th scope="col">Imagen</th>
           <th scope="col">Producto</th>
           <th scope="col">Categoría</th>
+          <th scope="col">Especialidad</th>
           <th scope="col" class="text-end">Precio</th>
           @if (canEdit) {
             <th scope="col" class="text-end">Acciones</th>
@@ -155,7 +226,7 @@
       <tbody>
         @for (product of items(); track product.id) {
           <tr>
-            <td class="tabular-nums text-base-content/60">{{ product.id }}</td>
+            <td class="font-mono text-sm text-base-content/70">{{ product.codigo }}</td>
             <td>
               @if (product.imagenUrl) {
                 <img
@@ -177,8 +248,12 @@
               @if (product.descripcion) {
                 <p class="text-sm text-base-content/55">{{ product.descripcion }}</p>
               }
+              @if (product.alergenos) {
+                <p class="text-xs text-warning">Alérgenos: {{ product.alergenos }}</p>
+              }
             </td>
             <td class="text-sm">{{ product.categoria }}</td>
+            <td class="text-sm">{{ especialidadLabels[product.especialidad] }}</td>
             <td class="text-end font-medium">{{ product.precio | money }}</td>
             @if (canEdit) {
               <td>

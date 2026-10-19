@@ -24,6 +24,9 @@ export interface ProductStock {
   readonly fechaActualizacion: string | null;
 }
 
+/** Largo máximo del N.º de documento que pide el backend. */
+export const DOCUMENTO_MAX_LENGTH = 50;
+
 export interface StockMovement {
   readonly id: Id;
   readonly inventarioId: Id;
@@ -31,6 +34,7 @@ export interface StockMovement {
   readonly cantidad: number;
   readonly fecha: string;
   readonly motivo: string | null;
+  readonly documento: string | null;
   readonly costoInicial: number | null;
   readonly costoFinal: number | null;
 }
@@ -40,6 +44,8 @@ export interface StockMovementDraft {
   readonly tipo: MovementType;
   readonly cantidad: number;
   readonly motivo: string;
+  /** Obligatorio cuando tipo es ENTRADA. */
+  readonly documento?: string;
   readonly costoInicial?: number;
 }
 

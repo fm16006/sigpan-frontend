@@ -4,9 +4,14 @@ import { DatePipe, DecimalPipe } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AppError } from '../../../../core/http/app-error';
-import { applyFieldErrors, firstErrorMessage } from '../../../../core/http/form-errors';
+import {
+  applyFieldErrors,
+  firstErrorMessage,
+  formLevelMessage,
+} from '../../../../core/http/form-errors';
 import { CatalogProduct } from '../../../../core/models/catalog.model';
 import {
+  DOCUMENTO_MAX_LENGTH,
   MovementType,
   ProductStock,
   RawMaterialStock,
@@ -22,6 +27,7 @@ import { MoneyPipe } from '../../../../shared/pipes/money.pipe';
 import { PageHeader } from '../../../../shared/ui/page-header/page-header';
 import { ResourceState } from '../../../../shared/ui/resource-state/resource-state';
 import { InventoryService } from '../../services/inventory.service';
+import { documentoObligatorio } from './movement-document';
 
 @Component({
   selector: 'app-inventory-list',
@@ -125,11 +131,20 @@ export class InventoryList {
       : !!this.products.error() || !!this.productStock.error(),
   );
 
+  /** Error general del backend (400/409 sin campo), para mostrar arriba del formulario. */
+  protected readonly formError = signal<string | null>(null);
+
+  private readonly tipo = this.fb.control<MovementType>('ENTRADA', Validators.required);
+
   protected readonly form = this.fb.group({
-    tipo: ['ENTRADA' as MovementType, Validators.required],
+    tipo: this.tipo,
     cantidad: [0, [Validators.required, Validators.min(0.001)]],
     costoInicial: [0, [Validators.required, Validators.min(0)]],
     motivo: ['', [Validators.required, Validators.minLength(3)]],
+    documento: [
+      '',
+      [documentoObligatorio(() => this.tipo.value), Validators.maxLength(DOCUMENTO_MAX_LENGTH)],
+    ],
   });
 
   constructor() {
@@ -139,6 +154,7 @@ export class InventoryList {
       } else {
         this.form.controls.costoInicial.disable();
       }
+      this.form.controls.documento.updateValueAndValidity();
     });
   }
 
@@ -168,11 +184,13 @@ export class InventoryList {
 
   protected startMovement(row: StockRow): void {
     this.form.reset();
+    this.formError.set(null);
     this.movingRow.set(row);
   }
 
   protected closeMovement(): void {
     this.movingRow.set(null);
+    this.formError.set(null);
     this.form.reset();
   }
 
@@ -218,12 +236,15 @@ export class InventoryList {
     }
 
     this.saving.set(true);
+    this.formError.set(null);
+    const documento = value.documento.trim();
     this.service
       .registerMovement(row.kind, {
         inventarioId: row.inventarioId,
         tipo: value.tipo,
         cantidad: value.cantidad,
         motivo: value.motivo.trim(),
+        ...(documento ? { documento } : {}),
         ...(value.tipo === 'ENTRADA' ? { costoInicial: value.costoInicial } : {}),
       })
       .subscribe({
@@ -241,6 +262,7 @@ export class InventoryList {
         error: (error: AppError) => {
           this.saving.set(false);
           applyFieldErrors(this.form, error);
+          this.formError.set(formLevelMessage(error));
         },
       });
   }

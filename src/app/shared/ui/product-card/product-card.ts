@@ -19,7 +19,8 @@ export class ProductCard {
   );
   protected readonly tone = computed(() => KIND_TONES[categoryKind(this.kindText())]);
 
-  protected readonly soldOut = computed(() => this.product().disponible === 0);
+  /** Lo decide el backend: agotado es true cuando disponible <= 0. */
+  protected readonly soldOut = computed(() => this.product().agotado);
   protected readonly fewLeft = computed(() => {
     const { disponible, stockMinimo } = this.product();
     return disponible != null && disponible > 0 && disponible <= Math.max(stockMinimo ?? 0, 5);

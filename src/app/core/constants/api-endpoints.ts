@@ -44,8 +44,13 @@ export const API_ENDPOINTS = {
   },
   formulas: {
     root: '/formulas',
+    byId: (id: Id) => `/formulas/${id}`,
+    /** Costo unitario calculado por el backend (solo administración y jefe de producción). */
+    costoUnitario: (id: Id) => `/formulas/${id}/costo-unitario`,
   },
   formulaDetalles: {
+    root: '/formula-detalles',
+    byId: (id: Id) => `/formula-detalles/${id}`,
     byFormula: (id: Id) => `/formula-detalles/formula/${id}`,
   },
   producciones: {
