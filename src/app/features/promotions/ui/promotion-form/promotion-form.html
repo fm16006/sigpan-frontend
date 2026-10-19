@@ -1,0 +1,118 @@
+<form
+  [formGroup]="form"
+  (ngSubmit)="save()"
+  class="grid gap-4 rounded-box border border-base-300 bg-base-100 p-5"
+  aria-label="Formulario de promoción"
+>
+  <h2 class="text-base font-semibold">{{ isEdit() ? 'Editar promoción' : 'Nueva promoción' }}</h2>
+
+  @if (formError(); as message) {
+    <div role="alert" class="alert alert-error text-sm">{{ message }}</div>
+  }
+
+  <div class="grid gap-4 md:grid-cols-2">
+    <label class="form-control md:col-span-2">
+      <span class="label-text mb-1">Nombre</span>
+      <input type="text" formControlName="nombre" class="input input-bordered" />
+      @if (fieldError('nombre'); as message) {
+        <span class="mt-1 text-sm text-error">{{ message }}</span>
+      }
+    </label>
+
+    <label class="form-control md:col-span-2">
+      <span class="label-text mb-1">Descripción</span>
+      <textarea formControlName="descripcion" class="textarea textarea-bordered" rows="2"></textarea>
+    </label>
+
+    <label class="form-control">
+      <span class="label-text mb-1">Tipo de descuento</span>
+      <select formControlName="tipoDescuento" class="select select-bordered">
+        @for (type of types; track type) {
+          <option [value]="type">{{ typeLabels[type] }}</option>
+        }
+      </select>
+    </label>
+
+    <label class="form-control">
+      <span class="label-text mb-1">Valor</span>
+      <input type="number" step="0.01" min="0" formControlName="valorDescuento" class="input input-bordered" />
+      @if (fieldError('valorDescuento'); as message) {
+        <span class="mt-1 text-sm text-error">{{ message }}</span>
+      }
+    </label>
+
+    <fieldset class="md:col-span-2">
+      <legend class="label-text mb-1">Vigencia</legend>
+      <div class="flex flex-wrap gap-4">
+        <label class="label cursor-pointer gap-2">
+          <input type="radio" class="radio radio-sm" formControlName="vigencia" value="RANGO" />
+          <span>Rango de fechas</span>
+        </label>
+        <label class="label cursor-pointer gap-2">
+          <input type="radio" class="radio radio-sm" formControlName="vigencia" value="MES" />
+          <span>Mes completo</span>
+        </label>
+      </div>
+    </fieldset>
+
+    @if (form.controls.vigencia.value === 'MES') {
+      <label class="form-control md:col-span-2">
+        <span class="label-text mb-1">Mes</span>
+        <input type="month" formControlName="mes" class="input input-bordered" />
+        @if (fieldError('mes'); as message) {
+          <span class="mt-1 text-sm text-error">{{ message }}</span>
+        }
+      </label>
+    } @else {
+      <label class="form-control">
+        <span class="label-text mb-1">Inicio</span>
+        <input type="date" formControlName="fechaInicio" class="input input-bordered" />
+      </label>
+      <label class="form-control">
+        <span class="label-text mb-1">Fin</span>
+        <input type="date" formControlName="fechaFin" class="input input-bordered" />
+      </label>
+    }
+
+    <label class="form-control">
+      <span class="label-text mb-1">Prioridad</span>
+      <input type="number" min="0" step="1" formControlName="prioridad" class="input input-bordered" />
+      <span class="mt-1 text-xs text-base-content/55">
+        Desempata cuando dos promociones dejan el mismo total. Mayor valor gana.
+      </span>
+    </label>
+  </div>
+
+  <fieldset>
+    <legend class="label-text mb-2">Productos</legend>
+    <p class="mb-2 text-xs text-base-content/55">
+      Un producto es descuento individual. Varios productos forman un bloque.
+    </p>
+    @if (products.isLoading()) {
+      <span class="loading loading-spinner loading-sm"></span>
+    }
+    <div class="grid max-h-64 gap-1 overflow-y-auto rounded-box border border-base-300 p-3 sm:grid-cols-2">
+      @for (product of products.value(); track product.id) {
+        <label class="label cursor-pointer justify-start gap-3">
+          <input
+            type="checkbox"
+            class="checkbox checkbox-sm"
+            [checked]="isSelected(product.id)"
+            (change)="toggleProduct(product.id, $any($event.target).checked)"
+          />
+          <span class="text-sm">{{ product.nombre }}</span>
+        </label>
+      }
+    </div>
+  </fieldset>
+
+  <div class="flex justify-end gap-2">
+    <button type="button" class="btn btn-ghost" (click)="cancel()">Cancelar</button>
+    <button type="submit" class="btn btn-primary" [disabled]="saving()">
+      @if (saving()) {
+        <span class="loading loading-spinner loading-sm"></span>
+      }
+      Guardar
+    </button>
+  </div>
+</form>

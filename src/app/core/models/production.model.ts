@@ -15,6 +15,8 @@ export interface Formula {
   readonly nombre: string;
   readonly descripcion: string | null;
   readonly cantidadProduccion: number;
+  /** Merma esperada de proceso, en porcentaje (0 a 100). */
+  readonly porcentajeMerma: number;
   readonly productoId: Id;
   readonly producto: string;
 }
@@ -23,6 +25,7 @@ export interface FormulaDraft {
   readonly nombre: string;
   readonly descripcion: string;
   readonly cantidadProduccion: number;
+  readonly porcentajeMerma: number;
   readonly productoId: Id;
 }
 
@@ -59,6 +62,30 @@ export interface FormulaCost {
   readonly costoTotal: number;
   readonly costoUnitario: number;
   readonly insumos: readonly FormulaCostLine[];
+}
+
+export interface MaterialExplosionLine {
+  readonly materiaPrimaId: Id;
+  readonly nombre: string;
+  readonly unidadMedida: string;
+  /** Cantidad de la formula escalada, sin merma. */
+  readonly cantidadFormula: number;
+  /** Cantidad requerida: escalada, con merma y redondeada hacia arriba. */
+  readonly cantidadRequerida: number;
+  readonly existencia: number;
+  readonly suficiente: boolean;
+}
+
+/** Explosion de materiales calculada por el backend. El frontend solo la muestra. */
+export interface MaterialExplosion {
+  readonly formulaId: Id;
+  readonly productoId: Id;
+  readonly producto: string;
+  readonly cantidadAProducir: number;
+  readonly cantidadProduccion: number;
+  readonly porcentajeMerma: number;
+  readonly insumos: readonly MaterialExplosionLine[];
+  readonly alcanza: boolean;
 }
 
 export const PRODUCTION_STATUSES = [
@@ -102,15 +129,4 @@ export interface ProductionDraft {
   /** "YYYY-MM-DD", hoy o futura. */
   readonly fechaPlanificada: string;
   readonly comentario: string;
-}
-
-export interface Promotion {
-  readonly id: Id;
-  readonly nombre: string;
-  readonly descripcion: string | null;
-  readonly tipoDescuento: string;
-  readonly valorDescuento: number;
-  readonly fechaInicio: string | null;
-  readonly fechaFin: string | null;
-  readonly activo: boolean;
 }

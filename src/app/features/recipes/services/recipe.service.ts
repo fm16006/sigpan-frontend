@@ -34,6 +34,10 @@ export class RecipeService {
     return this.api.url(API_ENDPOINTS.formulas.costoUnitario(formulaId));
   }
 
+  explosionUrl(productoId: Id, cantidad: number): string {
+    return this.api.url(API_ENDPOINTS.formulas.explosion(productoId), { cantidad });
+  }
+
   createFormula(draft: FormulaDraft): Observable<Formula> {
     return this.api.post<Formula>(API_ENDPOINTS.formulas.root, draft);
   }

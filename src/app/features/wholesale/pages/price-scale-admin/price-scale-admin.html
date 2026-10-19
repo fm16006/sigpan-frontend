@@ -1,0 +1,117 @@
+<app-page-header title="Mayoreo" subtitle="Precio unitario según la cantidad comprada">
+  <button type="button" class="btn btn-sm" [disabled]="products.isLoading()" (click)="products.reload()">
+    Actualizar
+  </button>
+</app-page-header>
+
+<label class="form-control mb-6 max-w-md">
+  <span class="label-text mb-1">Producto</span>
+  <select class="select select-bordered" (change)="selectProduct($any($event.target).value)">
+    <option value="0">Seleccioná un producto</option>
+    @for (product of products.value(); track product.id) {
+      <option [value]="product.id" [selected]="productId() === product.id">{{ product.nombre }}</option>
+    }
+  </select>
+</label>
+
+@if (productId() !== null) {
+  <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
+    <section aria-label="Tramos del producto">
+      <app-resource-state
+        [loading]="tramos.isLoading()"
+        [failed]="!!tramos.error()"
+        [empty]="tramos.value().length === 0"
+        emptyTitle="Sin tramos"
+        emptyDescription="Agregá un tramo para ofrecer precio especial por cantidad."
+        (retry)="tramos.reload()"
+      >
+        <div class="overflow-x-auto rounded-box border border-base-300 bg-base-100">
+          <table class="table">
+            <thead>
+              <tr>
+                <th scope="col">Desde (unidades)</th>
+                <th scope="col" class="text-end">Precio unitario</th>
+                <th scope="col">Estado</th>
+                <th scope="col"><span class="sr-only">Acciones</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (tramo of tramos.value(); track tramo.id) {
+                <tr [class.bg-base-200]="editing()?.id === tramo.id">
+                  <td class="tabular-nums">{{ tramo.cantidadMinima }}</td>
+                  <td class="text-end font-medium">{{ tramo.precioUnitario | money }}</td>
+                  <td>
+                    @if (tramo.activo) {
+                      <span class="badge badge-success badge-sm">Activo</span>
+                    } @else {
+                      <span class="badge badge-ghost badge-sm">Inactivo</span>
+                    }
+                  </td>
+                  <td class="text-end whitespace-nowrap">
+                    <button type="button" class="btn btn-ghost btn-xs" (click)="startEdit(tramo)">Editar</button>
+                    <button
+                      type="button"
+                      class="btn btn-ghost btn-xs text-error"
+                      (click)="remove(tramo)"
+                    >
+                      Eliminar
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </app-resource-state>
+    </section>
+
+    <form
+      [formGroup]="form"
+      (ngSubmit)="save()"
+      class="grid h-fit gap-4 rounded-box border border-base-300 bg-base-100 p-5"
+      aria-label="Formulario de tramo de mayoreo"
+    >
+      <h2 class="text-base font-semibold">{{ editing() ? 'Editar tramo' : 'Nuevo tramo' }}</h2>
+
+      @if (formError(); as message) {
+        <div role="alert" class="alert alert-error text-sm">{{ message }}</div>
+      }
+
+      <label class="form-control">
+        <span class="label-text mb-1">Cantidad mínima</span>
+        <input type="number" min="1" step="1" formControlName="cantidadMinima" class="input input-bordered" />
+        @if (fieldError('cantidadMinima'); as message) {
+          <span class="mt-1 text-sm text-error">{{ message }}</span>
+        }
+      </label>
+
+      <label class="form-control">
+        <span class="label-text mb-1">Precio unitario</span>
+        <input type="number" min="0.01" step="0.01" formControlName="precioUnitario" class="input input-bordered" />
+        <span class="mt-1 text-xs text-base-content/55">
+          Debe ser menor que el del tramo anterior y mayor que el del siguiente.
+        </span>
+        @if (fieldError('precioUnitario'); as message) {
+          <span class="mt-1 text-sm text-error">{{ message }}</span>
+        }
+      </label>
+
+      <label class="label cursor-pointer justify-start gap-3">
+        <input type="checkbox" class="checkbox checkbox-sm" formControlName="activo" />
+        <span class="text-sm">Activo</span>
+      </label>
+
+      <div class="flex justify-end gap-2">
+        @if (editing()) {
+          <button type="button" class="btn btn-ghost" (click)="cancelEdit()">Cancelar</button>
+        }
+        <button type="submit" class="btn btn-primary" [disabled]="saving()">
+          @if (saving()) {
+            <span class="loading loading-spinner loading-sm"></span>
+          }
+          Guardar tramo
+        </button>
+      </div>
+    </form>
+  </div>
+}

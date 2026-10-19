@@ -1,0 +1,104 @@
+<app-page-header
+  title="Explosión de materiales"
+  subtitle="Insumos que necesita una producción, con la merma esperada y la existencia actual"
+/>
+
+<form
+  class="mb-6 grid max-w-3xl gap-4 rounded-box border border-base-300 bg-base-100 p-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto] md:items-end"
+  [formGroup]="form"
+  (ngSubmit)="calcular()"
+  aria-label="Calcular explosión de materiales"
+>
+  <div>
+    <label class="label" for="explosionProducto"><span class="label-text">Producto</span></label>
+    <select
+      id="explosionProducto"
+      formControlName="productoId"
+      class="select select-bordered w-full"
+      [class.select-error]="form.controls.productoId.touched && form.controls.productoId.invalid"
+    >
+      <option [ngValue]="0" disabled>Elegí un producto</option>
+      @for (product of products.value(); track product.id) {
+        <option [ngValue]="product.id">{{ product.nombre }}</option>
+      }
+    </select>
+    @if (form.controls.productoId.touched && form.controls.productoId.invalid) {
+      <p class="mt-1 text-xs text-error">Elegí un producto.</p>
+    }
+  </div>
+
+  <div>
+    <label class="label" for="explosionCantidad"><span class="label-text">Cantidad a producir</span></label>
+    <input
+      id="explosionCantidad"
+      type="number"
+      step="0.001"
+      min="0.001"
+      formControlName="cantidad"
+      class="input input-bordered w-full"
+      [class.input-error]="form.controls.cantidad.touched && form.controls.cantidad.invalid"
+    />
+    @if (form.controls.cantidad.touched && form.controls.cantidad.invalid) {
+      <p class="mt-1 text-xs text-error">Debe ser mayor que cero.</p>
+    }
+  </div>
+
+  <button type="submit" class="btn btn-primary" [disabled]="explosion.isLoading()">Calcular</button>
+</form>
+
+@if (mensajeError(); as mensaje) {
+  <div role="alert" class="alert alert-error max-w-4xl">{{ mensaje }}</div>
+} @else if (explosion.isLoading()) {
+  <span class="loading loading-spinner loading-md" aria-label="Calculando"></span>
+} @else if (explosion.value(); as resultado) {
+  <section class="max-w-4xl" aria-live="polite">
+    <div class="mb-4 flex flex-wrap items-center gap-3">
+      @if (resultado.alcanza) {
+        <span class="badge badge-success badge-lg">Alcanza</span>
+      } @else {
+        <span class="badge badge-error badge-lg">Faltan insumos ({{ faltantes().length }})</span>
+      }
+      <p class="text-sm text-base-content/70">
+        {{ resultado.producto }} · {{ resultado.cantidadAProducir | number: '1.0-3' }} unidades · el lote rinde
+        {{ resultado.cantidadProduccion | number: '1.0-2' }} · merma {{ resultado.porcentajeMerma | number: '1.0-2' }} %
+      </p>
+    </div>
+
+    <div class="overflow-x-auto rounded-box border border-base-300 bg-base-100">
+      <table class="table table-sm">
+        <thead>
+          <tr>
+            <th scope="col">Insumo</th>
+            <th scope="col" class="text-end">Según fórmula</th>
+            <th scope="col" class="text-end">Requerida (con merma)</th>
+            <th scope="col" class="text-end">Existencia</th>
+            <th scope="col">Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (insumo of resultado.insumos; track insumo.materiaPrimaId) {
+            <tr [class]="insumo.suficiente ? '' : 'bg-error/10'">
+              <td class="font-medium">{{ insumo.nombre }}</td>
+              <td class="text-end tabular-nums">{{ insumo.cantidadFormula | number: '1.0-3' }} {{ insumo.unidadMedida }}</td>
+              <td class="text-end tabular-nums">{{ insumo.cantidadRequerida | number: '1.0-3' }} {{ insumo.unidadMedida }}</td>
+              <td class="text-end tabular-nums">{{ insumo.existencia | number: '1.0-3' }} {{ insumo.unidadMedida }}</td>
+              <td>
+                @if (insumo.suficiente) {
+                  <span class="badge badge-success badge-sm">Suficiente</span>
+                } @else {
+                  <span class="badge badge-error badge-sm">
+                    No alcanza: faltan {{ faltante(insumo) | number: '1.0-3' }} {{ insumo.unidadMedida }}
+                  </span>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <p class="mt-3 text-xs text-base-content/55">
+      La cantidad requerida incluye la merma esperada y se redondea hacia arriba a 3 decimales.
+    </p>
+  </section>
+}
