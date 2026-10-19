@@ -8,6 +8,7 @@ import {
   CatalogProductDraft,
   Category,
 } from '../../../core/models/catalog.model';
+import { ProductChannelsChange } from '../product-channels';
 
 @Injectable({ providedIn: 'root' })
 export class ProductAdminService {
@@ -28,6 +29,11 @@ export class ProductAdminService {
 
   update(id: Id, draft: CatalogProductDraft): Observable<CatalogProduct> {
     return this.api.put<CatalogProduct>(API_ENDPOINTS.productos.byId(id), draft);
+  }
+
+  /** Interruptores manuales por canal; solo viaja lo que cambia. */
+  updateChannels(id: Id, cambios: ProductChannelsChange): Observable<CatalogProduct> {
+    return this.api.patch<CatalogProduct>(API_ENDPOINTS.productos.canales(id), cambios);
   }
 
   remove(id: Id): Observable<void> {

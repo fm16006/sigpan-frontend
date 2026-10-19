@@ -13,8 +13,11 @@ import { PriceScale } from '../../../../core/models/price-scale.model';
 import { Formula, FormulaCost, FormulaLine } from '../../../../core/models/production.model';
 import { Promotion, PromotionProductLink } from '../../../../core/models/promotion.model';
 import { ItemPurchase } from '../../../../core/models/purchase.model';
+import { Notifications } from '../../../../core/services/notifications';
 import { PurchaseService } from '../../../purchases/services/purchase.service';
 import { ProductInventory } from '../../models/product-detail.model';
+import { CHANNEL_LABELS, ChannelKey, isChannelOn } from '../../product-channels';
+import { ProductAdminService } from '../../services/product-admin.service';
 import { marginPercent } from '../../product-view';
 
 /**
@@ -28,6 +31,8 @@ export class ProductContext {
   private readonly api = inject(ApiClient);
   private readonly route = inject(ActivatedRoute);
   private readonly purchaseService = inject(PurchaseService);
+  private readonly productService = inject(ProductAdminService);
+  private readonly notifications = inject(Notifications);
   /** Sucursal cuyas existencias se ven (la del usuario por defecto). */
   readonly scope = inject(BranchScope);
 
@@ -37,6 +42,10 @@ export class ProductContext {
 
   /** La ficha pide abrir el panel de edición (lo usan también las pestañas). */
   readonly editing = signal(false);
+
+  /** Canales con un cambio en vuelo: su interruptor queda quieto hasta que responda el backend. */
+  private readonly pendingChannels = signal<ReadonlySet<ChannelKey>>(new Set());
+  readonly channelPending = (channel: ChannelKey): boolean => this.pendingChannels().has(channel);
 
   readonly productRes = httpResource<CatalogProduct>(() =>
     this.api.url(API_ENDPOINTS.productos.byId(this.id()), this.scope.params()),
@@ -159,6 +168,52 @@ export class ProductContext {
     }
     if (tipo === 'ESCALA') return 'Precio por mayoreo';
     return regla;
+  }
+
+  /**
+   * Habilita o deshabilita el producto en un canal. Actualiza la ficha al instante y, si el backend
+   * rechaza el cambio, vuelve al valor anterior (el aviso de error ya lo muestra el interceptor).
+   */
+  setChannel(channel: ChannelKey, enabled: boolean): void {
+    const product = this.product();
+    if (!product || this.channelPending(channel) || isChannelOn(product, channel) === enabled) {
+      return;
+    }
+    const previous = isChannelOn(product, channel);
+
+    this.patchChannel(channel, enabled);
+    this.pendingChannels.update((pending) => new Set(pending).add(channel));
+
+    this.productService.updateChannels(product.id, { [channel]: enabled }).subscribe({
+      next: (updated) => {
+        this.releaseChannel(channel);
+        // Se confirma con lo que guardó el backend, sin tocar la existencia de la sucursal que se ve.
+        this.patchChannel(channel, isChannelOn(updated, channel));
+        const label = CHANNEL_LABELS[channel].label;
+        this.notifications.success(
+          `${label}: «${product.nombre}» quedó ${enabled ? 'habilitado' : 'deshabilitado'}.`,
+        );
+      },
+      error: () => {
+        this.releaseChannel(channel);
+        this.patchChannel(channel, previous);
+      },
+    });
+  }
+
+  private patchChannel(channel: ChannelKey, value: boolean): void {
+    const current = this.product();
+    if (current) {
+      this.productRes.set({ ...current, [channel]: value });
+    }
+  }
+
+  private releaseChannel(channel: ChannelKey): void {
+    this.pendingChannels.update((pending) => {
+      const next = new Set(pending);
+      next.delete(channel);
+      return next;
+    });
   }
 
   openEditor(): void {

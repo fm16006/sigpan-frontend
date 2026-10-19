@@ -84,6 +84,17 @@
       <option [value]="option.value">{{ option.label }}</option>
     }
   </select>
+  <select
+    class="select select-bordered"
+    aria-label="Canal de venta"
+    [value]="canal()"
+    (change)="setCanal($any($event.target).value)"
+  >
+    <option value="">Todos los canales</option>
+    @for (option of channelFilters; track option.value) {
+      <option [value]="option.value">{{ option.label }}</option>
+    }
+  </select>
 </div>
 
 <app-resource-state
@@ -96,7 +107,7 @@
 >
   <section aria-label="Lista de productos" class="overflow-hidden rounded-box border border-base-300 bg-base-100">
     <div
-      class="grid items-center gap-x-4 px-5 py-3.5 max-md:hidden md:grid-cols-[minmax(0,2.2fr)_7rem_7rem_5rem_10rem_7.5rem_1rem]"
+      class="grid items-center gap-x-4 px-5 py-3.5 max-md:hidden md:grid-cols-[minmax(0,2.2fr)_7rem_7rem_5rem_10rem_7.5rem_9.5rem_1rem]"
     >
       <span class="list-th">Producto</span>
       <span class="list-th">Especialidad</span>
@@ -104,12 +115,13 @@
       <span class="list-th text-right">Precio</span>
       <span class="list-th">Disponible</span>
       <span class="list-th">Estado</span>
+      <span class="list-th">Canales</span>
       <span></span>
     </div>
 
     @for (row of rows(); track row.product.id) {
       <a
-        class="list-row grid-cols-2 gap-y-2 md:grid-cols-[minmax(0,2.2fr)_7rem_7rem_5rem_10rem_7.5rem_1rem]"
+        class="list-row grid-cols-2 gap-y-2 md:grid-cols-[minmax(0,2.2fr)_7rem_7rem_5rem_10rem_7.5rem_9.5rem_1rem]"
         [routerLink]="['/backoffice/products', row.product.id]"
         [attr.aria-label]="'Abrir ficha de ' + row.product.nombre"
       >
@@ -162,6 +174,17 @@
           [label]="chips[row.state].label"
           [tone]="chips[row.state].tone"
         />
+        <span class="flex flex-wrap gap-1 max-md:col-span-2" aria-label="Canales de venta">
+          @for (channel of channelKeys; track channel) {
+            <app-status-chip
+              [label]="channelLabels[channel].short"
+              [tone]="isChannelOn(row.product, channel) ? 'ok' : 'neutral'"
+              [attr.title]="
+                channelLabels[channel].label + (isChannelOn(row.product, channel) ? ': habilitado' : ': deshabilitado')
+              "
+            />
+          }
+        </span>
         <app-icon name="chevron" class="text-base-content/40 max-md:hidden" />
       </a>
     } @empty {

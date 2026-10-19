@@ -41,6 +41,10 @@ export interface CatalogProduct {
   readonly alergenos: string | null;
   readonly activo: boolean;
   readonly imagenUrl: string | null;
+  /** Interruptor manual del punto de venta. Ausente solo en respuestas viejas: se trata como habilitado. */
+  readonly disponiblePos?: boolean;
+  /** Interruptor manual de la tienda en línea. Ausente solo en respuestas viejas: se trata como habilitado. */
+  readonly disponibleTienda?: boolean;
   readonly stockMinimo: number | null;
   readonly disponible?: number | null;
   /** true cuando disponible <= 0. */
@@ -67,6 +71,8 @@ export interface CatalogProductDraft {
   readonly especialidad: Especialidad;
   readonly alergenos: string | null;
   readonly tipo: ProductType;
+  readonly disponiblePos: boolean;
+  readonly disponibleTienda: boolean;
 }
 
 export interface Category {

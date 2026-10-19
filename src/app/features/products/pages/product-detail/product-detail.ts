@@ -14,6 +14,7 @@ import { DetailHeader, DetailTab } from '../../../../shared/ui/detail-header/det
 import { Icon } from '../../../../shared/ui/icon/icon';
 import { ResourceState } from '../../../../shared/ui/resource-state/resource-state';
 import { StatusChip } from '../../../../shared/ui/status-chip/status-chip';
+import { CHANNEL_KEYS, CHANNEL_LABELS, ChannelKey, isChannelOn } from '../../product-channels';
 import { STOCK_CHIPS, stockState } from '../../product-view';
 import { PurchaseItemRef } from '../../../purchases/purchase-calc';
 import { PurchaseFormDrawer } from '../../../purchases/ui/purchase-form-drawer';
@@ -60,6 +61,9 @@ export class ProductDetail {
   protected readonly acceptedTypes = IMAGE_TYPES.join(',');
   protected readonly especialidadLabels = ESPECIALIDAD_LABELS;
   protected readonly chips = STOCK_CHIPS;
+  protected readonly channelKeys = CHANNEL_KEYS;
+  protected readonly channelLabels = CHANNEL_LABELS;
+  protected readonly isChannelOn = isChannelOn;
 
   protected readonly menuOpen = signal(false);
   protected readonly confirmDelete = signal(false);
@@ -99,6 +103,10 @@ export class ProductDetail {
       { label: 'Historial', path: 'historial' },
     ];
   });
+
+  protected toggleChannel(channel: ChannelKey, event: Event): void {
+    this.ctx.setChannel(channel, (event.target as HTMLInputElement).checked);
+  }
 
   protected onDocumentClick(event: Event): void {
     if (this.menuOpen() && !(event.target as HTMLElement).closest('[data-more-menu]')) {
