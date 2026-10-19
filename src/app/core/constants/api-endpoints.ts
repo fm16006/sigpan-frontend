@@ -17,6 +17,8 @@ export const API_ENDPOINTS = {
     activos: '/productos/activos',
     byId: (id: Id) => `/productos/${id}`,
     imagen: (id: Id) => `/productos/${id}/imagen`,
+    /** Habilita o deshabilita el producto en el punto de venta y/o la tienda en línea. */
+    canales: (id: Id) => `/productos/${id}/canales`,
   },
   categorias: {
     root: '/categorias',

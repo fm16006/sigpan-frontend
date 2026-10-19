@@ -20,5 +20,8 @@ export function createProductForm(
     tipo: ['ELABORADO' as ProductType, [Validators.required]],
     especialidad: ['' as Especialidad | '', [Validators.required]],
     alergenos: ['', [Validators.maxLength(PRODUCT_ALLERGENS_MAX)]],
+    // Interruptores manuales por canal: un producto nuevo sale habilitado en los dos.
+    disponiblePos: [true],
+    disponibleTienda: [true],
   });
 }

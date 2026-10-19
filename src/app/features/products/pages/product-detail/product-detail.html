@@ -43,6 +43,23 @@
       </div>
 
       <div actions class="contents">
+        <fieldset class="flex items-center gap-4 rounded-box border border-base-300 px-3 py-1.5">
+          <legend class="sr-only">Canales de venta</legend>
+          @for (channel of channelKeys; track channel) {
+            <label class="flex cursor-pointer items-center gap-2 text-sm font-medium">
+              <input
+                type="checkbox"
+                role="switch"
+                class="toggle toggle-sm toggle-success"
+                [attr.data-channel]="channel"
+                [checked]="isChannelOn(p, channel)"
+                [disabled]="!canEdit || !p.activo || ctx.channelPending(channel)"
+                (change)="toggleChannel(channel, $event)"
+              />
+              {{ channelLabels[channel].label }}
+            </label>
+          }
+        </fieldset>
         @if (ctx.resale()) {
           @if (canBuy) {
             <button type="button" class="btn" (click)="purchaseOpen.set(true)">

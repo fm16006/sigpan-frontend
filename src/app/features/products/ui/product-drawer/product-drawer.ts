@@ -22,6 +22,7 @@ import { Auth } from '../../../../core/services/auth';
 import { Notifications } from '../../../../core/services/notifications';
 import { FormDrawer } from '../../../../shared/ui/form-drawer/form-drawer';
 import { ProductAdminService } from '../../services/product-admin.service';
+import { isChannelOn } from '../../product-channels';
 import { createProductForm } from './product-form';
 
 /**
@@ -194,6 +195,8 @@ export class ProductDrawer {
         tipo: product.tipo ?? 'ELABORADO',
         especialidad: product.especialidad,
         alergenos: product.alergenos ?? '',
+        disponiblePos: isChannelOn(product, 'disponiblePos'),
+        disponibleTienda: isChannelOn(product, 'disponibleTienda'),
       });
     }
     if (this.isAdmin) {

@@ -1,6 +1,7 @@
 import { CatalogProduct, Especialidad, ProductType, isResale } from '../../core/models/catalog.model';
 import { ChipTone } from '../../shared/ui/status-chip/status-chip';
 import { ProductMovement } from './models/product-detail.model';
+import { ChannelFilter, matchesChannel } from './product-channels';
 
 /** Estado de existencia de un producto, el mismo en la lista y en la ficha. */
 export type StockState = 'disponible' | 'reabastecer' | 'agotado' | 'inactivo';
@@ -64,6 +65,8 @@ export interface ProductFilters {
   readonly especialidad: Especialidad | '';
   /** Vacío o ausente = todos los tipos. */
   readonly tipo?: ProductType | '';
+  /** Vacío o ausente = todos los canales. */
+  readonly canal?: ChannelFilter;
 }
 
 function normalize(text: string): string {
@@ -78,7 +81,7 @@ export function matchesSegment(product: StockFields, segment: StockSegment): boo
   return segment === 'todos' || stockState(product) === SEGMENT_STATE[segment];
 }
 
-/** Búsqueda por nombre o código, segmento de existencia, especialidad y tipo. Ordena por nombre. */
+/** Búsqueda por nombre o código, segmento de existencia, especialidad, tipo y canal. Ordena por nombre. */
 export function filterProducts(
   products: readonly CatalogProduct[],
   filters: ProductFilters,
@@ -90,6 +93,7 @@ export function filterProducts(
         matchesSegment(product, filters.segment) &&
         (!filters.especialidad || product.especialidad === filters.especialidad) &&
         (!filters.tipo || (isResale(product) ? 'REVENTA' : 'ELABORADO') === filters.tipo) &&
+        matchesChannel(product, filters.canal) &&
         (!query || normalize(`${product.nombre} ${product.codigo}`).includes(query)),
     )
     .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));

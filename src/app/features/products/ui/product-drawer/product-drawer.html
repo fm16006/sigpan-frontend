@@ -192,6 +192,23 @@
 
     <fieldset class="flex flex-col gap-3">
       <legend class="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.09em] text-base-content/55">
+        Canales de venta
+      </legend>
+      <label class="label cursor-pointer justify-start gap-3">
+        <input type="checkbox" class="checkbox checkbox-sm" formControlName="disponiblePos" />
+        <span class="text-sm">Disponible en punto de venta</span>
+      </label>
+      <label class="label cursor-pointer justify-start gap-3">
+        <input type="checkbox" class="checkbox checkbox-sm" formControlName="disponibleTienda" />
+        <span class="text-sm">Disponible en tienda en línea</span>
+      </label>
+      <p class="text-xs text-base-content/55">
+        Es un interruptor manual: no depende de la existencia. También se cambia al instante desde la ficha.
+      </p>
+    </fieldset>
+
+    <fieldset class="flex flex-col gap-3">
+      <legend class="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.09em] text-base-content/55">
         Ficha para el cliente
       </legend>
       <div>
