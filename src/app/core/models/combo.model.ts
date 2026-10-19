@@ -6,12 +6,39 @@ export interface Combo {
   readonly descripcion: string | null;
   readonly precio: number;
   readonly activo: boolean;
+  /** Categoría del combo en el punto de venta; null = va a «Combos». */
+  readonly categoriaId?: Id | null;
+  readonly categoria?: string | null;
 }
 
 export interface ComboDraft {
   readonly nombre: string;
   readonly descripcion: string | null;
   readonly precio: number;
+  readonly categoriaId: Id | null;
+}
+
+/** Línea de un combo vendible en el punto de venta. */
+export interface PosComboLine {
+  readonly productoId: Id;
+  readonly producto: string;
+  readonly cantidad: number;
+  /** Precio unitario regular del producto. */
+  readonly precio: number;
+}
+
+/** Combo activo que se puede vender en el POS, con cuántos alcanzan en la sucursal de la caja. */
+export interface PosCombo {
+  readonly id: Id;
+  readonly nombre: string;
+  readonly descripcion: string | null;
+  readonly precio: number;
+  readonly categoriaId: Id | null;
+  readonly categoria: string | null;
+  readonly sucursalId: Id | null;
+  /** Combos completos que alcanzan con la existencia de la sucursal. */
+  readonly disponible: number;
+  readonly lineas: readonly PosComboLine[];
 }
 
 /** Producto que integra un combo, con su cantidad. */

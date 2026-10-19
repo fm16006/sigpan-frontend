@@ -60,6 +60,13 @@ export const routes: Routes = [
         loadChildren: () =>
           import('./features/products/products.routes').then((m) => m.PRODUCTS_ROUTES),
       },
+      {
+        // Mismos roles que escriben categorías en el backend (administración y jefe de producción).
+        path: 'categories',
+        canActivate: [roleGuard(['ADMINISTRADOR', 'JEFE_PRODUCCION'])],
+        loadChildren: () =>
+          import('./features/categories/categories.routes').then((m) => m.CATEGORIES_ROUTES),
+      },
       // El inventario se repartió entre Materia prima y Movimientos; la ruta vieja redirige.
       { path: 'inventory', redirectTo: 'raw-materials', pathMatch: 'full' },
       {

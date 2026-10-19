@@ -1,0 +1,154 @@
+<app-page-header
+  title="Categorías"
+  subtitle="Agrupan productos y combos en el punto de venta y en la tienda. Una categoría puede tener solo combos."
+  [crumbs]="crumbs"
+>
+  <button type="button" class="btn btn-primary" (click)="create()">
+    <app-icon name="plus" [size]="16" /> Nueva categoría
+  </button>
+</app-page-header>
+
+<div class="mb-4 flex flex-wrap items-center gap-3">
+  <label class="input input-bordered flex w-full items-center gap-2 md:w-80">
+    <app-icon name="search" class="text-base-content/50" />
+    <input
+      type="search"
+      class="grow"
+      placeholder="Buscar categoría"
+      aria-label="Buscar categoría"
+      [value]="search()"
+      (input)="search.set($any($event.target).value)"
+    />
+  </label>
+
+  <div class="join" role="group" aria-label="Estado de la categoría">
+    @for (item of filters; track item.value) {
+      <button
+        type="button"
+        class="btn btn-sm join-item"
+        [class.btn-active]="filter() === item.value"
+        [attr.aria-pressed]="filter() === item.value"
+        (click)="filter.set(item.value)"
+      >
+        {{ item.label }}
+        <span class="text-xs tabular-nums text-base-content/60">{{ counts()[item.value] }}</span>
+      </button>
+    }
+  </div>
+</div>
+
+<app-resource-state
+  [loading]="categories.isLoading()"
+  [failed]="!!categories.error()"
+  [empty]="isEmpty()"
+  emptyTitle="Sin categorías"
+  emptyDescription="Creá una categoría, por ejemplo «Promociones», y asignale productos o combos."
+  (retry)="categories.reload()"
+>
+  <section class="overflow-hidden rounded-box border border-base-300 bg-base-100" aria-label="Lista de categorías">
+    <div
+      class="grid items-center gap-x-4 px-5 py-3 md:grid-cols-[minmax(0,2fr)_90px_90px_100px_130px] max-md:hidden"
+    >
+      <span class="list-th">Categoría</span>
+      <span class="list-th text-end">Productos</span>
+      <span class="list-th text-end">Combos</span>
+      <span class="list-th">Estado</span>
+      <span></span>
+    </div>
+
+    @for (category of visible(); track category.id) {
+      <div
+        class="list-row grid-cols-2 gap-y-2 md:grid-cols-[minmax(0,2fr)_90px_90px_100px_130px]"
+        [class.opacity-70]="!category.activo"
+      >
+        <button
+          type="button"
+          class="min-w-0 text-start max-md:col-span-2"
+          [attr.aria-label]="'Editar la categoría ' + category.nombre"
+          (click)="edit(category)"
+        >
+          <span class="block truncate font-semibold">{{ category.nombre }}</span>
+          @if (category.descripcion) {
+            <span class="block truncate text-xs text-base-content/55">{{ category.descripcion }}</span>
+          }
+        </button>
+        <span class="tabular-nums md:text-end">
+          <span class="text-xs text-base-content/55 md:hidden">Productos </span>{{ category.productos }}
+        </span>
+        <span class="tabular-nums md:text-end">
+          <span class="text-xs text-base-content/55 md:hidden">Combos </span>{{ category.combos }}
+        </span>
+        <app-status-chip
+          [tone]="category.activo ? 'ok' : 'neutral'"
+          [label]="category.activo ? 'Activa' : 'Inactiva'"
+        />
+        <span class="flex items-center justify-end gap-1">
+          <button
+            type="button"
+            class="btn btn-ghost btn-sm btn-square"
+            [attr.aria-label]="'Editar ' + category.nombre"
+            (click)="edit(category)"
+          >
+            <app-icon name="edit" [size]="16" />
+          </button>
+          @if (category.activo) {
+            <button
+              type="button"
+              class="btn btn-ghost btn-sm text-error"
+              [attr.aria-label]="'Desactivar ' + category.nombre"
+              (click)="deactivateTarget.set(category)"
+            >
+              Desactivar
+            </button>
+          } @else {
+            <button
+              type="button"
+              class="btn btn-ghost btn-sm"
+              [attr.aria-label]="'Reactivar ' + category.nombre"
+              (click)="activateTarget.set(category)"
+            >
+              Reactivar
+            </button>
+          }
+        </span>
+      </div>
+    } @empty {
+      <p class="border-t border-base-300 px-5 py-8 text-center text-sm text-base-content/55">
+        Ninguna categoría coincide con la búsqueda.
+      </p>
+    }
+
+    <p class="border-t border-base-300 px-5 py-3 text-xs text-base-content/55">
+      {{ visible().length }} de {{ counts().todas }} categorías · desactivar no borra: lo que ya la usa
+      se conserva
+    </p>
+  </section>
+</app-resource-state>
+
+<app-category-drawer
+  [open]="drawerOpen()"
+  [category]="editing()"
+  (closed)="drawerOpen.set(false)"
+  (saved)="onSaved()"
+/>
+
+<app-confirm-dialog
+  [open]="deactivateTarget() !== null"
+  title="Desactivar categoría"
+  [message]="deactivateText()"
+  confirmLabel="Desactivar"
+  [busy]="busy()"
+  (confirmed)="confirmDeactivate()"
+  (cancelled)="deactivateTarget.set(null)"
+/>
+
+<app-confirm-dialog
+  [open]="activateTarget() !== null"
+  title="Reactivar categoría"
+  [message]="'La categoría «' + (activateTarget()?.nombre ?? '') + '» vuelve a poder elegirse en productos y combos.'"
+  confirmLabel="Reactivar"
+  tone="primary"
+  [busy]="busy()"
+  (confirmed)="confirmActivate()"
+  (cancelled)="activateTarget.set(null)"
+/>

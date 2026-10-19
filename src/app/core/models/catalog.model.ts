@@ -81,6 +81,8 @@ export interface CatalogProductDraft {
 export interface Category {
   readonly id: Id;
   readonly nombre: string;
+  /** El backend lo informa siempre; ausente se trata como activa. */
+  readonly activo?: boolean;
 }
 
 export const IMAGE_TYPES: readonly string[] = ['image/jpeg', 'image/png', 'image/webp'];

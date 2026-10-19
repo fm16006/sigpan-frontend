@@ -22,6 +22,9 @@ export const API_ENDPOINTS = {
   },
   categorias: {
     root: '/categorias',
+    byId: (id: Id) => `/categorias/${id}`,
+    /** Reactiva una categoría desactivada. */
+    activar: (id: Id) => `/categorias/${id}/activar`,
   },
   usuarios: {
     root: '/usuarios',
@@ -102,6 +105,8 @@ export const API_ENDPOINTS = {
   combos: {
     root: '/combos',
     byId: (id: Id) => `/combos/${id}`,
+    /** Combos vendibles en el punto de venta, con su existencia por sucursal (cajero y administración). */
+    pos: '/combos/pos',
   },
   combosDetalles: {
     root: '/combos-detalles',
