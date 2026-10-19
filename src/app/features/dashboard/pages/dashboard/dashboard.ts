@@ -6,6 +6,8 @@ import { ApiClient } from '../../../../core/http/api-client';
 import { CashCut, Sale } from '../../../../core/models/order.model';
 import { RawMaterial } from '../../../../core/models/production.model';
 import { Auth } from '../../../../core/services/auth';
+import { BranchScope } from '../../../../core/services/branch-scope';
+import { BranchScopePicker } from '../../../../shared/ui/branch-scope-picker/branch-scope-picker';
 import { MoneyPipe } from '../../../../shared/pipes/money.pipe';
 import { Icon } from '../../../../shared/ui/icon/icon';
 import { PageHeader } from '../../../../shared/ui/page-header/page-header';
@@ -14,13 +16,14 @@ import { valueOr } from '../../../../core/http/resource-value';
 
 @Component({
   selector: 'app-dashboard',
-  imports: [RouterLink, PageHeader, StatCard, Icon, MoneyPipe],
+  imports: [RouterLink, PageHeader, StatCard, Icon, MoneyPipe, BranchScopePicker],
   templateUrl: './dashboard.html',
 })
 export class Dashboard {
   private readonly api = inject(ApiClient);
 
   protected readonly auth = inject(Auth);
+  protected readonly scope = inject(BranchScope);
   protected readonly crumbs = [{ label: 'Inicio' }, { label: 'Panel' }];
 
   protected readonly cut = httpResource<CashCut>(() => this.api.url(API_ENDPOINTS.orders.cashCut));
@@ -28,7 +31,7 @@ export class Dashboard {
     defaultValue: [],
   });
   protected readonly materials = httpResource<RawMaterial[]>(
-    () => this.api.url(API_ENDPOINTS.materiasPrimas.stockBajo),
+    () => this.api.url(API_ENDPOINTS.materiasPrimas.stockBajo, this.scope.params()),
     { defaultValue: [] },
   );
 

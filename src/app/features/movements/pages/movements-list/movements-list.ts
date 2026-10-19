@@ -4,6 +4,8 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ProductMovement, StockMovement } from '../../../../core/models/inventory.model';
 import { Auth } from '../../../../core/services/auth';
+import { BranchScope } from '../../../../core/services/branch-scope';
+import { BranchScopePicker } from '../../../../shared/ui/branch-scope-picker/branch-scope-picker';
 import { MoneyPipe } from '../../../../shared/pipes/money.pipe';
 import { Crumb } from '../../../../shared/ui/breadcrumbs/breadcrumbs';
 import { Icon } from '../../../../shared/ui/icon/icon';
@@ -35,6 +37,7 @@ const PAGE_SIZE = 50;
     DecimalPipe,
     MoneyPipe,
     PageHeader,
+    BranchScopePicker,
     ResourceState,
     StatusChip,
     Icon,
@@ -45,8 +48,10 @@ const PAGE_SIZE = 50;
 })
 export class MovementsList {
   private readonly service = inject(InventoryService);
+  protected readonly scope = inject(BranchScope);
 
   protected readonly canWrite = inject(Auth).hasAnyRole(['ADMINISTRADOR', 'BODEGUERO']);
+
   protected readonly crumbs: readonly Crumb[] = [{ label: 'Inventario' }, { label: 'Movimientos' }];
   protected readonly periods = KARDEX_PERIODS;
 
@@ -57,11 +62,11 @@ export class MovementsList {
   protected readonly drawer = signal<Drawer>(null);
 
   private readonly materialMovements = httpResource<StockMovement[]>(
-    () => this.service.allMovementsUrl('materia-prima'),
+    () => this.service.allMovementsUrl('materia-prima', this.scope.params()),
     { defaultValue: [] },
   );
   private readonly productMovements = httpResource<ProductMovement[]>(
-    () => this.service.allMovementsUrl('producto'),
+    () => this.service.allMovementsUrl('producto', this.scope.params()),
     { defaultValue: [] },
   );
 

@@ -47,6 +47,7 @@ export const BACKOFFICE_NAV_GROUPS: readonly NavGroup[] = [
       { label: 'Compras', path: '/backoffice/purchases', icon: 'receipt', roles: INVENTARIO },
       { label: 'Proveedores', path: '/backoffice/suppliers', icon: 'truck', roles: INVENTARIO },
       { label: 'Movimientos', path: '/backoffice/movements', icon: 'movements', roles: INVENTARIO },
+      { label: 'Traslados', path: '/backoffice/transfers', icon: 'transfer', roles: INVENTARIO },
     ],
   },
   {

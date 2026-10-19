@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_ENDPOINTS } from '../../../core/constants/api-endpoints';
-import { ApiClient } from '../../../core/http/api-client';
+import { ApiClient, QueryParams } from '../../../core/http/api-client';
 import { Id } from '../../../core/models/api.model';
 import {
   CatalogProduct,
@@ -13,8 +13,9 @@ import {
 export class ProductAdminService {
   private readonly api = inject(ApiClient);
 
-  productsUrl(): string {
-    return this.api.url(API_ENDPOINTS.productos.root);
+  /** `scope`: `sucursalId` o `todas`; sin él, la existencia es la de la tienda en línea. */
+  productsUrl(scope?: QueryParams): string {
+    return this.api.url(API_ENDPOINTS.productos.root, scope);
   }
 
   categoriesUrl(): string {

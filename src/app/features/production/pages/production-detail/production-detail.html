@@ -43,7 +43,7 @@
     </app-detail-header>
 
     <div class="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-      <app-stat-card label="Lotes" [value]="o.cantidad" />
+      <app-stat-card label="Lotes" [value]="o.cantidad" [hint]="o.sucursal ? 'En ' + o.sucursal : undefined" />
       <app-stat-card
         [label]="o.estado === 'TERMINADO' ? 'Unidades producidas' : 'Unidades a producir'"
         [value]="units() !== null ? (units() | number: '1.0-3') + ' u' : '—'"
