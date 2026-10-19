@@ -1,161 +1,150 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { httpResource } from '@angular/common/http';
 import { DatePipe, DecimalPipe } from '@angular/common';
-import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { AppError } from '../../../../core/http/app-error';
-import { applyFieldErrors, firstErrorMessage } from '../../../../core/http/form-errors';
-import { Id } from '../../../../core/models/api.model';
+import { Router, RouterLink } from '@angular/router';
 import { CatalogProduct } from '../../../../core/models/catalog.model';
 import {
-  CLOSED_PRODUCTION_STATUSES,
   Formula,
   PRODUCTION_STATUS_LABELS,
   Production,
 } from '../../../../core/models/production.model';
-import { Notifications } from '../../../../core/services/notifications';
-import { notBeforeToday, todayIso } from '../../../../core/utils/dates';
+import { Icon } from '../../../../shared/ui/icon/icon';
 import { PageHeader } from '../../../../shared/ui/page-header/page-header';
 import { ResourceState } from '../../../../shared/ui/resource-state/resource-state';
+import { StatusChip } from '../../../../shared/ui/status-chip/status-chip';
+import { OrderFormDrawer, OrderPrefill } from '../../components/order-form-drawer/order-form-drawer';
+import {
+  ORDER_SEGMENTS,
+  OrderSegment,
+  matchesOrderSearch,
+  matchesSegment,
+  orderCode,
+  orderUnits,
+  progressSteps,
+  segmentOf,
+  stepClass,
+} from '../../production-summary';
 import { ProductionService } from '../../services/production.service';
+
+interface OrderRow {
+  readonly production: Production;
+  readonly code: string;
+  readonly units: number | null;
+  readonly steps: ReturnType<typeof progressSteps>;
+}
 
 @Component({
   selector: 'app-production-list',
-  imports: [ReactiveFormsModule, PageHeader, ResourceState, DatePipe, DecimalPipe],
+  imports: [
+    RouterLink,
+    DatePipe,
+    DecimalPipe,
+    PageHeader,
+    ResourceState,
+    StatusChip,
+    Icon,
+    OrderFormDrawer,
+  ],
   templateUrl: './production-list.html',
 })
 export class ProductionList {
   private readonly service = inject(ProductionService);
-  private readonly notifications = inject(Notifications);
-  private readonly fb = inject(FormBuilder).nonNullable;
+  private readonly router = inject(Router);
 
+  /**
+   * Query params opcionales (se enlazan solos): `?productoId=3&cantidad=2` abre "Nueva orden"
+   * prellenada con ese producto y esos lotes (así enlaza la pestaña Receta del producto).
+   */
+  readonly productoId = input<string>();
+  readonly cantidad = input<string>();
+
+  protected readonly crumbs = [{ label: 'Producción' }, { label: 'Órdenes' }];
   protected readonly statusLabels = PRODUCTION_STATUS_LABELS;
-  /** Mínimo del selector de fecha planificada. */
-  protected readonly today = todayIso();
+  protected readonly segments = ORDER_SEGMENTS;
+  protected readonly code = orderCode;
+  protected readonly stepClass = stepClass;
 
   protected readonly productions = httpResource<Production[]>(() => this.service.listUrl(), {
     defaultValue: [],
   });
-  protected readonly products = httpResource<CatalogProduct[]>(() => this.service.productsUrl(), {
+  private readonly products = httpResource<CatalogProduct[]>(() => this.service.productsUrl(), {
     defaultValue: [],
   });
-  protected readonly formulas = httpResource<Formula[]>(() => this.service.formulasUrl(), {
+  private readonly formulas = httpResource<Formula[]>(() => this.service.formulasUrl(), {
     defaultValue: [],
   });
 
-  protected readonly items = computed(() =>
-    [...this.productions.value()].sort((a, b) => b.id - a.id),
+  // value() lanza si el recurso está en error: se lee solo cuando hay valor.
+  private readonly orderItems = computed(() =>
+    this.productions.hasValue() ? this.productions.value() : [],
+  );
+  protected readonly productItems = computed(() =>
+    this.products.hasValue() ? this.products.value() : [],
+  );
+  protected readonly formulaItems = computed(() =>
+    this.formulas.hasValue() ? this.formulas.value() : [],
   );
 
-  protected readonly form = this.fb.group({
-    productoId: [0, [Validators.required, Validators.min(1)]],
-    formulaId: [0, [Validators.required, Validators.min(1)]],
-    cantidad: [1, [Validators.required, Validators.min(1)]],
-    fechaPlanificada: ['', [Validators.required, notBeforeToday]],
-    comentario: [''],
-  });
+  protected readonly search = signal('');
+  protected readonly segment = signal<OrderSegment>('activas');
+  protected readonly drawerOpen = signal(false);
+  protected readonly prefill = signal<OrderPrefill | null>(null);
 
-  private readonly productId = toSignal(this.form.controls.productoId.valueChanges, {
-    initialValue: 0,
-  });
-  private readonly formulaId = toSignal(this.form.controls.formulaId.valueChanges, {
-    initialValue: 0,
-  });
-  private readonly batches = toSignal(this.form.controls.cantidad.valueChanges, {
-    initialValue: 1,
-  });
-
-  protected readonly productFormulas = computed(() =>
-    this.formulas.value().filter((formula) => formula.productoId === Number(this.productId())),
+  protected readonly loading = computed(
+    () => this.productions.isLoading() || this.formulas.isLoading(),
   );
-  protected readonly expectedUnits = computed(() => {
-    const formula = this.formulas.value().find((item) => item.id === Number(this.formulaId()));
-    return formula ? Number(formula.cantidadProduccion) * Number(this.batches() || 0) : null;
+
+  private readonly rows = computed<readonly OrderRow[]>(() => {
+    const formulas = this.formulaItems();
+    return [...this.orderItems()]
+      .sort((a, b) => b.id - a.id)
+      .map((production) => ({
+        production,
+        code: orderCode(production.id),
+        units: orderUnits(production, formulas),
+        steps: progressSteps(production.estado),
+      }));
   });
 
-  protected readonly showForm = signal(false);
-  protected readonly saving = signal(false);
-  protected readonly busyId = signal<Id | null>(null);
-  protected readonly confirmFinishId = signal<Id | null>(null);
+  protected readonly counts = computed(() => {
+    const items = this.orderItems();
+    return {
+      activas: items.filter((item) => segmentOf(item.estado) === 'activas').length,
+      terminadas: items.filter((item) => segmentOf(item.estado) === 'terminadas').length,
+      canceladas: items.filter((item) => segmentOf(item.estado) === 'canceladas').length,
+      todas: items.length,
+    } satisfies Record<OrderSegment, number>;
+  });
+
+  protected readonly visible = computed(() => {
+    const segment = this.segment();
+    const term = this.search();
+    return this.rows().filter(
+      (row) => matchesSegment(row.production.estado, segment) && matchesOrderSearch(row.production, term),
+    );
+  });
 
   constructor() {
-    this.form.controls.productoId.valueChanges
-      .pipe(takeUntilDestroyed())
-      .subscribe((productoId) => {
-        const options = this.formulas
-          .value()
-          .filter((formula) => formula.productoId === Number(productoId));
-        this.form.controls.formulaId.setValue(options.length === 1 ? options[0].id : 0);
+    effect(() => {
+      const productoId = Number(this.productoId());
+      const lotes = Number(this.cantidad());
+      if (!(productoId > 0)) {
+        return;
+      }
+      untracked(() => {
+        this.prefill.set({ productoId, lotes: lotes > 0 ? lotes : 1 });
+        this.drawerOpen.set(true);
       });
-  }
-
-  protected errorFor(field: string): string | null {
-    const control = this.form.get(field);
-    if (control?.hasError('min') && control.touched) {
-      if (field === 'productoId') return 'Elegí un producto.';
-      if (field === 'formulaId') return 'Elegí una receta.';
-      return 'Debe ser al menos 1.';
-    }
-    if (field === 'fechaPlanificada' && control?.hasError('minDate')) {
-      return 'La fecha planificada no puede ser anterior a hoy.';
-    }
-    return firstErrorMessage(this.form, field);
-  }
-
-  protected isClosed(production: Production): boolean {
-    return CLOSED_PRODUCTION_STATUSES.includes(production.estado);
-  }
-
-  protected toggleForm(): void {
-    this.resetForm();
-    this.showForm.update((open) => !open);
-  }
-
-  protected save(): void {
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
-      return;
-    }
-
-    this.saving.set(true);
-    const value = this.form.getRawValue();
-    this.service.create({ ...value, comentario: value.comentario.trim() }).subscribe({
-      next: (production) => {
-        this.saving.set(false);
-        this.showForm.set(false);
-        this.resetForm();
-        this.notifications.success(`Producción de "${production.producto}" registrada.`);
-        this.productions.reload();
-      },
-      error: (error: AppError) => {
-        this.saving.set(false);
-        applyFieldErrors(this.form, error);
-      },
     });
   }
 
-  protected finish(production: Production): void {
-    if (this.confirmFinishId() !== production.id) {
-      this.confirmFinishId.set(production.id);
-      return;
-    }
-
-    this.confirmFinishId.set(null);
-    this.busyId.set(production.id);
-    this.service.changeStatus(production.id, 'TERMINADO').subscribe({
-      next: () => {
-        this.busyId.set(null);
-        this.notifications.success(
-          `Producción de "${production.producto}" terminada. El inventario se actualizó.`,
-        );
-        this.productions.reload();
-      },
-      error: () => this.busyId.set(null),
-    });
+  protected openNew(): void {
+    this.prefill.set(null);
+    this.drawerOpen.set(true);
   }
 
-  /** Formulario en blanco; la fecha planificada arranca en hoy. */
-  private resetForm(): void {
-    this.form.reset({ fechaPlanificada: todayIso() });
+  protected onSaved(production: Production): void {
+    this.drawerOpen.set(false);
+    void this.router.navigate(['/backoffice/production', production.id]);
   }
 }

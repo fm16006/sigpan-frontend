@@ -1,190 +1,118 @@
-<app-page-header title="Producción" subtitle="Órdenes de producción por receta">
-  <button
-    type="button"
-    class="btn btn-sm"
-    [disabled]="productions.isLoading()"
-    (click)="productions.reload()"
-  >
-    Actualizar
-  </button>
-  <button type="button" class="btn btn-sm btn-primary" (click)="toggleForm()">
-    {{ showForm() ? 'Cerrar' : 'Nueva producción' }}
+<app-page-header
+  title="Órdenes de producción"
+  subtitle="Planificá, iniciá y terminá. Al terminar se descargan los insumos y entra el producto. Hacé clic en una orden para abrirla."
+  [crumbs]="crumbs"
+>
+  <button type="button" class="btn btn-primary" (click)="openNew()">
+    <app-icon name="plus" [size]="16" /> Nueva orden
   </button>
 </app-page-header>
 
-@if (showForm()) {
-  <section class="mb-6 rounded-box border border-base-300 bg-base-100 p-4">
-    <h2 class="mb-3 font-semibold">Nueva producción</h2>
-    <form class="grid gap-4 md:grid-cols-2" [formGroup]="form" (ngSubmit)="save()">
-      <div>
-        <label class="label" for="productoId"><span class="label-text">Producto</span></label>
-        <select
-          id="productoId"
-          formControlName="productoId"
-          class="select select-bordered w-full"
-          [class.select-error]="!!errorFor('productoId')"
-        >
-          <option [ngValue]="0" disabled>Elegí un producto</option>
-          @for (product of products.value(); track product.id) {
-            <option [ngValue]="product.id">{{ product.nombre }}</option>
-          }
-        </select>
-        @if (errorFor('productoId'); as message) {
-          <p class="mt-1 text-xs text-error">{{ message }}</p>
-        }
-      </div>
+<div class="mb-4 flex flex-wrap items-center gap-3">
+  <label class="input input-bordered flex w-full items-center gap-2 md:w-80">
+    <app-icon name="search" class="text-base-content/50" />
+    <input
+      type="search"
+      class="grow"
+      placeholder="Buscar orden, producto o receta"
+      aria-label="Buscar orden, producto o receta"
+      [value]="search()"
+      (input)="search.set($any($event.target).value)"
+    />
+  </label>
 
-      <div>
-        <label class="label" for="formulaId"><span class="label-text">Receta</span></label>
-        <select
-          id="formulaId"
-          formControlName="formulaId"
-          class="select select-bordered w-full"
-          [class.select-error]="!!errorFor('formulaId')"
-        >
-          <option [ngValue]="0" disabled>Elegí una receta</option>
-          @for (formula of productFormulas(); track formula.id) {
-            <option [ngValue]="formula.id">
-              {{ formula.nombre }} · rinde {{ formula.cantidadProduccion | number: '1.0-2' }}
-            </option>
-          }
-        </select>
-        @if (errorFor('formulaId'); as message) {
-          <p class="mt-1 text-xs text-error">{{ message }}</p>
-        } @else if (form.controls.productoId.value && productFormulas().length === 0) {
-          <p class="mt-1 text-xs text-base-content/50">Este producto aún no tiene recetas.</p>
-        }
-      </div>
-
-      <div>
-        <label class="label" for="cantidad"><span class="label-text">Lotes</span></label>
-        <input
-          id="cantidad"
-          type="number"
-          step="1"
-          min="1"
-          formControlName="cantidad"
-          class="input input-bordered w-full"
-          [class.input-error]="!!errorFor('cantidad')"
-        />
-        @if (errorFor('cantidad'); as message) {
-          <p class="mt-1 text-xs text-error">{{ message }}</p>
-        } @else if (expectedUnits() !== null) {
-          <p class="mt-1 text-xs text-base-content/50">
-            Se obtendrán {{ expectedUnits() | number: '1.0-2' }} unidades.
-          </p>
-        }
-      </div>
-
-      <div>
-        <label class="label" for="fechaPlanificada"
-          ><span class="label-text">Fecha planificada</span></label
-        >
-        <input
-          id="fechaPlanificada"
-          type="date"
-          [min]="today"
-          formControlName="fechaPlanificada"
-          class="input input-bordered w-full"
-          [class.input-error]="!!errorFor('fechaPlanificada')"
-        />
-        @if (errorFor('fechaPlanificada'); as message) {
-          <p class="mt-1 text-xs text-error">{{ message }}</p>
-        }
-      </div>
-
-      <div>
-        <label class="label" for="comentario"><span class="label-text">Comentario</span></label>
-        <input
-          id="comentario"
-          type="text"
-          formControlName="comentario"
-          class="input input-bordered w-full"
-        />
-      </div>
-
-      <div class="md:col-span-2 flex justify-end gap-2">
-        <button type="button" class="btn btn-ghost" (click)="toggleForm()">Cancelar</button>
-        <button type="submit" class="btn btn-primary" [disabled]="saving()">
-          @if (saving()) {
-            <span class="loading loading-spinner loading-sm"></span>
-          }
-          Registrar producción
-        </button>
-      </div>
-    </form>
-  </section>
-}
+  <div class="join" role="group" aria-label="Estado de la orden">
+    @for (item of segments; track item.value) {
+      <button
+        type="button"
+        class="btn btn-sm join-item"
+        [class.btn-active]="segment() === item.value"
+        [attr.aria-pressed]="segment() === item.value"
+        (click)="segment.set(item.value)"
+      >
+        {{ item.label }}
+        <span class="text-xs tabular-nums text-base-content/60">{{ counts()[item.value] }}</span>
+      </button>
+    }
+  </div>
+</div>
 
 <app-resource-state
-  [loading]="productions.isLoading()"
+  [loading]="loading()"
   [failed]="!!productions.error()"
-  [empty]="items().length === 0"
-  emptyTitle="Sin producciones"
-  emptyDescription="Registrá una producción para descontar insumos y sumar producto terminado."
+  [empty]="counts().todas === 0"
+  emptyTitle="Sin órdenes"
+  emptyDescription="Creá una orden para descontar insumos y sumar producto terminado."
   (retry)="productions.reload()"
 >
-  <div class="overflow-x-auto rounded-box border border-base-300 bg-base-100">
-    <table class="table">
-      <thead>
-        <tr>
-          <th scope="col">Código</th>
-          <th scope="col">Producto</th>
-          <th scope="col">Receta</th>
-          <th scope="col" class="text-end">Lotes</th>
-          <th scope="col">Planificada</th>
-          <th scope="col">Registrada</th>
-          <th scope="col">Estado</th>
-          <th scope="col" class="text-end">Acción</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (production of items(); track production.id) {
-          <tr>
-            <td class="tabular-nums text-base-content/60">{{ production.id }}</td>
-            <td>
-              <p class="font-medium">{{ production.producto }}</p>
-              @if (production.comentario) {
-                <p class="text-sm text-base-content/55">{{ production.comentario }}</p>
-              }
-            </td>
-            <td class="text-sm">{{ production.formula }}</td>
-            <td class="text-end tabular-nums">{{ production.cantidad }}</td>
-            <td class="text-sm font-medium">
-              {{ production.fechaPlanificada | date: 'mediumDate' }}
-            </td>
-            <td class="text-sm text-base-content/60">{{ production.fecha | date: 'short' }}</td>
-            <td>
+  <section class="overflow-hidden rounded-box border border-base-300 bg-base-100" aria-label="Lista de órdenes">
+    <div
+      class="grid items-center gap-x-4 px-5 py-3 md:grid-cols-[90px_minmax(0,1.6fr)_60px_90px_110px_minmax(0,1.7fr)_16px] max-md:hidden"
+    >
+      <span class="list-th">Orden</span>
+      <span class="list-th">Producto</span>
+      <span class="list-th text-end">Lotes</span>
+      <span class="list-th text-end">Unidades</span>
+      <span class="list-th">Planificada</span>
+      <span class="list-th">Avance</span>
+      <span></span>
+    </div>
+
+    @for (row of visible(); track row.production.id) {
+      <a
+        class="list-row grid-cols-2 gap-y-2 md:grid-cols-[90px_minmax(0,1.6fr)_60px_90px_110px_minmax(0,1.7fr)_16px]"
+        [routerLink]="['/backoffice/production', row.production.id]"
+        [attr.aria-label]="'Abrir la orden ' + row.code"
+      >
+        <span class="font-mono text-sm font-medium">{{ row.code }}</span>
+        <span class="min-w-0">
+          <span class="block truncate font-semibold">{{ row.production.producto }}</span>
+          <span class="block truncate text-xs text-base-content/55">{{ row.production.formula }}</span>
+        </span>
+        <span class="tabular-nums md:text-end">
+          <span class="text-xs text-base-content/55 md:hidden">Lotes </span>{{ row.production.cantidad }}
+        </span>
+        <span class="tabular-nums md:text-end">
+          @if (row.units !== null) {
+            {{ row.units | number: '1.0-3' }} u
+          } @else {
+            <span class="text-base-content/45">—</span>
+          }
+        </span>
+        <span class="text-sm">{{ row.production.fechaPlanificada | date: 'd MMM y' }}</span>
+        <span class="flex flex-wrap items-center gap-1 max-md:col-span-2">
+          @if (row.steps; as steps) {
+            @for (step of steps; track step.status) {
               <span
-                class="badge badge-sm"
-                [class.badge-success]="production.estado === 'TERMINADO'"
-                [class.badge-ghost]="production.estado === 'CANCELADO'"
-                [class.badge-info]="!isClosed(production)"
+                [class]="stepClass(step.state)"
+                [attr.aria-current]="step.state === 'current' ? 'step' : null"
               >
-                {{ statusLabels[production.estado] }}
+                {{ statusLabels[step.status] }}
               </span>
-            </td>
-            <td class="text-end">
-              @if (busyId() === production.id) {
-                <span class="loading loading-spinner loading-sm"></span>
-              } @else if (!isClosed(production)) {
-                <button
-                  type="button"
-                  class="btn btn-xs"
-                  [class.btn-success]="confirmFinishId() === production.id"
-                  (click)="finish(production)"
-                >
-                  {{ confirmFinishId() === production.id ? '¿Confirmar?' : 'Terminar' }}
-                </button>
-              }
-            </td>
-          </tr>
-        }
-      </tbody>
-    </table>
-  </div>
-  <p class="mt-2 text-xs text-base-content/50">
-    Al terminar una producción se descuentan los insumos de la receta y se suma el producto al
-    inventario.
-  </p>
+            }
+          } @else {
+            <app-status-chip tone="bad" [label]="statusLabels[row.production.estado]" />
+          }
+        </span>
+        <app-icon name="chevron" class="text-base-content/40 max-md:hidden" />
+      </a>
+    } @empty {
+      <p class="border-t border-base-300 px-5 py-8 text-center text-sm text-base-content/55">
+        Ninguna orden coincide con el filtro.
+      </p>
+    }
+
+    <p class="border-t border-base-300 px-5 py-3 text-xs text-base-content/55">
+      {{ visible().length }} de {{ counts().todas }} órdenes
+    </p>
+  </section>
 </app-resource-state>
+
+<app-order-form-drawer
+  [open]="drawerOpen()"
+  [products]="productItems()"
+  [formulas]="formulaItems()"
+  [prefill]="prefill()"
+  (closed)="drawerOpen.set(false)"
+  (saved)="onSaved($event)"
+/>

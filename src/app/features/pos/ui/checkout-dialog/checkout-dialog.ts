@@ -1,4 +1,15 @@
-import { Component, DestroyRef, computed, inject, input, output, signal } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  ElementRef,
+  computed,
+  effect,
+  inject,
+  input,
+  output,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   Observable,
@@ -23,17 +34,18 @@ import {
   DocumentKind,
   PAYMENT_OPTIONS,
   PaymentMethod,
+  PaymentOptionId,
   PosLine,
   Receipt,
 } from '../../models/checkout.model';
 import { CardDecision, authorizeCard } from '../../payment/card-authorization';
+import { addCash, cashChange, parseCash, roundMoney } from '../../payment/cash';
 import { beep } from '../../payment/terminal-beep';
 import { terminalErrorMessage } from '../../payment/terminal-protocol';
 import { formatReceipt } from '../../receipt/receipt-format';
 import { CardTerminal } from '../../services/card-terminal';
 import { TicketPrinter } from '../../services/ticket-printer';
 import { PaymentTerminal, TerminalScreen } from '../payment-terminal/payment-terminal';
-import { KeypadKey, PosKeypad, applyKeypadKey } from '../pos-keypad/pos-keypad';
 
 type CheckoutPhase = 'pago' | 'tarjeta' | 'procesando' | 'imprimiendo' | 'listo';
 
@@ -68,9 +80,12 @@ function after<T>(ms: number, value: T): Observable<T> {
 
 @Component({
   selector: 'app-checkout-dialog',
-  imports: [MoneyPipe, PaymentTerminal, PosKeypad],
+  imports: [MoneyPipe, PaymentTerminal],
   templateUrl: './checkout-dialog.html',
-  host: { '(document:keydown.escape)': 'cancel()' },
+  host: {
+    '(document:keydown.escape)': 'cancel()',
+    '(document:keydown.enter)': 'onEnter($event)',
+  },
 })
 export class CheckoutDialog {
   private readonly orders = inject(OrderService);
@@ -81,6 +96,8 @@ export class CheckoutDialog {
   readonly lines = input.required<readonly PosLine[]>();
   readonly total = input.required<number>();
   readonly cashier = input.required<string>();
+  /** Ahorro de la cotización, solo para mostrarlo en el cobro. */
+  readonly savings = input(0);
 
   readonly completed = output<void>();
   readonly cancelled = output<void>();
@@ -99,14 +116,23 @@ export class CheckoutDialog {
   protected readonly cardScreen = signal<TerminalScreen>({ kind: 'conectando' });
   private cardCharge: Subscription | null = null;
 
-  protected readonly cash = computed(() => {
-    const value = Number(this.cashText());
-    return this.cashText() === '' || Number.isNaN(value) ? null : value;
+  private readonly cashInput = viewChild<ElementRef<HTMLInputElement>>('cashInput');
+
+  protected readonly itemCount = computed(() =>
+    this.lines().reduce((sum, line) => sum + line.quantity, 0),
+  );
+  protected readonly cash = computed(() => parseCash(this.cashText()));
+  /** Cambio (o faltante) a dos decimales; sin monto recibido todavía es null. */
+  protected readonly change = computed(() => {
+    const cash = this.cash();
+    return cash === null ? null : cashChange(cash, this.total());
   });
-  protected readonly change = computed(() => (this.cash() ?? 0) - this.total());
-  protected readonly short = computed(() => this.cash() !== null && this.change() < -0.0001);
-  protected readonly changeAmount = computed(() => Math.abs(this.change()));
-  protected readonly canConfirm = computed(() => this.cash() !== null && !this.short());
+  protected readonly short = computed(() => this.change()?.short ?? false);
+  protected readonly changeAmount = computed(() => this.change()?.amount ?? 0);
+  /** Efectivo exige haber recibido al menos el total; tarjeta se confirma con la terminal. */
+  protected readonly canConfirm = computed(() =>
+    this.method() === 'TARJETA' ? true : this.cash() !== null && !this.short(),
+  );
   protected readonly canCancelCard = computed(() =>
     ['conectando', 'presentar'].includes(this.cardScreen().kind),
   );
@@ -114,17 +140,17 @@ export class CheckoutDialog {
     ['sin-pos', 'declinada', 'no-procesada', 'anulada', 'error'].includes(this.cardScreen().kind),
   );
 
-  protected selectMethod(method: PaymentMethod): void {
-    this.error.set(null);
-    if (method === 'TARJETA') {
-      this.startCard();
-    } else {
-      this.method.set(method);
-    }
+  constructor() {
+    // El foco cae en el campo de efectivo apenas aparece, para teclear y confirmar con Enter.
+    effect(() => this.cashInput()?.nativeElement.focus());
   }
 
-  protected press(key: KeypadKey): void {
-    this.cashText.update((value) => applyKeypadKey(value, key));
+  protected selectMethod(option: PaymentOptionId): void {
+    if (option === 'MIXTO' || this.phase() !== 'pago') {
+      return;
+    }
+    this.error.set(null);
+    this.method.set(option);
   }
 
   protected typeCash(value: string): void {
@@ -132,11 +158,32 @@ export class CheckoutDialog {
   }
 
   protected addCash(amount: number): void {
-    this.cashText.set(String((this.cash() ?? 0) + amount));
+    this.cashText.set(addCash(this.cashText(), amount));
+    this.focusCash();
   }
 
   protected exactCash(): void {
-    this.cashText.set(this.total().toFixed(2));
+    this.cashText.set(roundMoney(this.total()).toFixed(2));
+    this.focusCash();
+  }
+
+  protected clearCash(): void {
+    this.cashText.set('');
+    this.focusCash();
+  }
+
+  private focusCash(): void {
+    this.cashInput()?.nativeElement.focus();
+  }
+
+  /** Enter confirma la venta, salvo que el foco esté en un botón (ahí Enter lo pulsa). */
+  protected onEnter(event: Event): void {
+    const target = event.target as HTMLElement | null;
+    if (this.phase() !== 'pago' || target?.closest('button, a')) {
+      return;
+    }
+    event.preventDefault();
+    this.confirm();
   }
 
   protected cancel(): void {
@@ -150,12 +197,16 @@ export class CheckoutDialog {
   }
 
   protected confirm(): void {
-    if (!this.canConfirm()) {
+    if (this.phase() !== 'pago' || !this.canConfirm()) {
       return;
     }
 
     this.error.set(null);
-    this.registerSale(this.cash() ?? this.total(), null);
+    if (this.method() === 'TARJETA') {
+      this.startCard();
+    } else {
+      this.registerSale(this.cash() ?? this.total(), null);
+    }
   }
 
   protected cancelCard(): void {

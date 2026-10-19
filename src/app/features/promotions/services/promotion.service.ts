@@ -20,6 +20,11 @@ export class PromotionService extends CrudClient<Promotion, PromotionDraft> {
     return this.api.get<Promotion[]>(API_ENDPOINTS.promociones.root);
   }
 
+  /** Todos los vínculos promoción-producto (para contar productos por promoción). */
+  allLinks(): Observable<PromotionProductLink[]> {
+    return this.api.get<PromotionProductLink[]>(API_ENDPOINTS.promocionesProductos.root);
+  }
+
   productLinks(promocionId: Id): Observable<PromotionProductLink[]> {
     return this.api.get<PromotionProductLink[]>(
       API_ENDPOINTS.promocionesProductos.byPromocion(promocionId),

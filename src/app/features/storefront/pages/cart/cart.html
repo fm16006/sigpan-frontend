@@ -69,7 +69,7 @@
       <aside class="h-fit rounded-box border border-base-300 bg-base-100 p-5">
         <h2 class="text-base font-semibold">Resumen</h2>
         <dl class="mt-4 grid gap-2" [class.opacity-50]="quotePending()">
-          @if (quote.value(); as q) {
+          @if (quoteValue(); as q) {
             @if (q.ahorro > 0) {
               <div class="flex items-baseline justify-between text-success">
                 <dt class="text-sm font-medium">Ahorro</dt>

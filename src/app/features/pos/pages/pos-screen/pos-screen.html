@@ -1,211 +1,220 @@
 <input id="pos-menu" type="checkbox" class="drawer-toggle" aria-hidden="true" />
 
 <div class="drawer-content flex h-dvh flex-col">
-  <header class="flex items-center gap-3 bg-neutral px-3 py-2 text-neutral-content">
-    @if (isAdmin) {
-      <label for="pos-menu" class="btn btn-ghost btn-sm btn-square" aria-label="Abrir menú">
-        <svg
-          class="size-5"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          aria-hidden="true"
-        >
-          <path d="M4 7h16M4 12h16M4 17h16" stroke-width="1.8" stroke-linecap="round" />
-        </svg>
-      </label>
-    }
-    <span class="font-semibold tracking-wide">SigPan · Caja</span>
-
-    <div role="tablist" class="ms-2 flex gap-1">
-      <button
-        type="button"
-        role="tab"
-        class="btn btn-sm"
-        [class.btn-primary]="tab() === 'venta'"
-        [class.btn-ghost]="tab() !== 'venta'"
-        [attr.aria-selected]="tab() === 'venta'"
-        (click)="tab.set('venta')"
-      >
-        Venta
-      </button>
-      <button
-        type="button"
-        role="tab"
-        class="btn btn-sm"
-        [class.btn-primary]="tab() === 'corte'"
-        [class.btn-ghost]="tab() !== 'corte'"
-        [attr.aria-selected]="tab() === 'corte'"
-        (click)="showCut()"
-      >
-        Corte del día
-      </button>
-    </div>
-
-    <div class="ms-auto flex items-center gap-4">
-      <div class="hidden text-end leading-tight md:block">
-        <p class="text-sm font-semibold tabular-nums">{{ clock() }}</p>
-        <p class="text-xs capitalize opacity-70">{{ day() }}</p>
-      </div>
+  @if (view() === 'caja') {
+    <app-pos-caja
+      [cashier]="auth.user()?.name ?? ''"
+      (back)="view.set('venta')"
+      (openRegister)="view.set('apertura')"
+    />
+  } @else if (view() === 'apertura') {
+    <app-pos-apertura
+      [cashier]="auth.user()?.name ?? ''"
+      (back)="view.set('venta')"
+      (closing)="view.set('caja')"
+    />
+  } @else {
+    <header
+      class="flex flex-wrap items-center gap-x-4 gap-y-1 bg-neutral px-4 py-2.5 text-neutral-content"
+    >
+      <span class="font-serif text-lg font-semibold">Caja {{ caja }}</span>
       @if (auth.user(); as user) {
-        <div class="hidden border-s border-neutral-content/20 ps-4 leading-tight sm:block">
-          <p class="text-sm font-semibold">{{ user.name }}</p>
-          <p class="text-xs opacity-70">{{ isAdmin ? 'Administración' : 'Cajero' }}</p>
-        </div>
+        <span class="text-sm opacity-75">{{ user.name }} · {{ roleName() }}</span>
       }
-      <button type="button" class="btn btn-error btn-sm" (click)="auth.logout()">
-        Cerrar sesión
-      </button>
-    </div>
-  </header>
+      <span class="hidden text-sm opacity-70 md:inline">
+        <span class="tabular-nums">{{ clock() }}</span> · <span class="capitalize">{{ day() }}</span>
+      </span>
 
-  @if (tab() === 'venta') {
-    <div class="grid min-h-0 flex-1 gap-3 p-3 lg:grid-cols-[minmax(22rem,28rem)_minmax(0,1fr)]">
+      <div class="ms-auto flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          class="btn btn-sm btn-ghost border border-neutral-content/30 text-neutral-content hover:bg-neutral-content/10"
+          (click)="view.set('apertura')"
+        >
+          Abrir caja
+        </button>
+        <button
+          type="button"
+          class="btn btn-sm btn-ghost border border-neutral-content/30 text-neutral-content hover:bg-neutral-content/10"
+          (click)="view.set('caja')"
+        >
+          Caja y corte
+        </button>
+        @if (adminLinks().length > 0) {
+          <label
+            for="pos-menu"
+            class="btn btn-sm btn-ghost border border-neutral-content/30 text-neutral-content hover:bg-neutral-content/10"
+            role="button"
+            tabindex="0"
+            aria-label="Abrir el menú del panel"
+            (keydown.enter)="$any($event.currentTarget).click()"
+          >
+            Panel
+          </label>
+        }
+        <button
+          type="button"
+          class="btn btn-sm btn-error"
+          (click)="requestLogout()"
+        >
+          Cerrar sesión
+        </button>
+      </div>
+    </header>
+
+    <div
+      class="grid min-h-0 flex-1 gap-3 overflow-y-auto p-3 lg:grid-cols-[minmax(22rem,28rem)_minmax(0,1fr)] lg:overflow-hidden"
+    >
       <aside
-        class="flex min-h-0 flex-col rounded-box border border-base-300 bg-base-100"
+        class="flex min-h-96 flex-col rounded-box border border-base-300 bg-base-100 lg:min-h-0"
         aria-label="Ticket actual"
       >
-        <div class="flex items-center justify-between border-b border-base-300 px-4 py-2">
-          <h2 class="font-semibold">Ticket</h2>
-          <span class="text-sm text-base-content/55">{{ itemCount() }} artículo(s)</span>
+        <div class="flex items-center justify-between border-b border-base-300 px-4 py-3">
+          <div>
+            <h2 class="font-serif text-xl font-semibold">Ticket</h2>
+            <p class="text-xs text-base-content/60">
+              {{ itemCount() }} artículo(s) · {{ lines().length }} línea(s)
+            </p>
+          </div>
+          <button
+            type="button"
+            class="btn btn-ghost btn-sm text-error"
+            [disabled]="lines().length === 0"
+            (click)="clearOpen.set(true)"
+          >
+            Vaciar ticket
+          </button>
         </div>
 
-        <div class="min-h-40 flex-1 overflow-y-auto">
+        <div class="min-h-40 flex-1 overflow-y-auto px-3">
           @if (lines().length === 0) {
-            <p class="p-6 text-center text-sm text-base-content/50">Ticket vacío.</p>
+            <p class="p-8 text-center text-sm text-base-content/55">
+              Escaneá un producto o tocá una tarjeta para empezar.
+            </p>
           } @else {
-            <table class="table table-sm">
-              <thead class="sticky top-0 bg-base-100">
-                <tr>
-                  <th scope="col" class="w-12 text-end">Cant.</th>
-                  <th scope="col">Descripción</th>
-                  <th scope="col" class="text-end">P. unit.</th>
-                  <th scope="col" class="text-end">Importe</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (line of lines(); track line.product.id) {
-                  <tr
-                    class="cursor-pointer"
-                    [class.bg-primary/15]="selectedId() === line.product.id"
-                    [attr.aria-selected]="selectedId() === line.product.id"
-                    (click)="selectedId.set(line.product.id)"
-                  >
-                    <td class="text-end font-semibold tabular-nums">{{ line.quantity }}</td>
-                    <td class="max-w-0 truncate">{{ line.product.nombre }}</td>
-                    <td class="text-end tabular-nums">{{ line.product.precio | money }}</td>
-                    <td class="text-end font-medium tabular-nums">
+            <ul>
+              @for (line of lines(); track line.product.id) {
+                <li
+                  class="my-1 rounded-field border-t border-base-300 px-2 py-2.5 first:border-t-0"
+                  [class.bg-primary/10]="selectedId() === line.product.id"
+                >
+                  <div class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5">
+                    <button
+                      type="button"
+                      class="min-w-0 text-start"
+                      [attr.aria-pressed]="selectedId() === line.product.id"
+                      (click)="selectedId.set(line.product.id)"
+                    >
+                      <span class="block truncate font-semibold">{{ line.product.nombre }}</span>
+                      <span class="block text-xs text-base-content/60">
+                        {{ line.quantity }} × {{ line.product.precio | money }}
+                        @if (lineQuote(line); as lq) {
+                          @if (lq.descuento > 0) {
+                            · ahorra {{ lq.descuento | money }}
+                          }
+                        }
+                      </span>
+                    </button>
+                    <span class="text-end font-semibold tabular-nums">
                       @if (lineQuote(line); as lq) {
                         {{ lq.total | money }}
-                        @if (lq.descuento > 0) {
-                          <span class="block text-xs text-success">
-                            -{{ lq.descuento | money }} · {{ ruleLabel(lq.regla) }}
-                          </span>
-                        }
                       } @else {
                         <span class="text-base-content/40">—</span>
                       }
-                    </td>
-                  </tr>
-                }
-              </tbody>
-            </table>
+                    </span>
+
+                    <span class="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-square"
+                        [attr.aria-label]="'Uno menos de ' + line.product.nombre"
+                        (click)="step(-1, line)"
+                      >
+                        −
+                      </button>
+                      <span class="min-w-8 text-center font-semibold tabular-nums">{{
+                        line.quantity
+                      }}</span>
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-square"
+                        [attr.aria-label]="'Uno más de ' + line.product.nombre"
+                        (click)="step(1, line)"
+                      >
+                        +
+                      </button>
+                    </span>
+                    <span class="text-end">
+                      @if (lineQuote(line); as lq) {
+                        @if (lq.regla) {
+                          <span class="badge badge-success badge-soft badge-sm font-semibold">
+                            {{ ruleLabel(lq.regla) }}
+                          </span>
+                        }
+                      }
+                    </span>
+                  </div>
+                  @if (tierHint(line); as hint) {
+                    <p
+                      class="mt-2 rounded-field bg-warning/15 px-2.5 py-1.5 text-xs text-base-content/80"
+                    >
+                      {{ hint }}
+                    </p>
+                  }
+                </li>
+              }
+            </ul>
           }
         </div>
 
-        <div class="grid grid-cols-4 gap-1.5 border-t border-base-300 p-2">
-          <button
-            type="button"
-            class="btn btn-sm"
-            [disabled]="!selectedLine()"
-            (click)="step(-1)"
-            aria-label="Restar uno a la línea"
-          >
-            −1
-          </button>
-          <button
-            type="button"
-            class="btn btn-sm"
-            [disabled]="!selectedLine()"
-            (click)="step(1)"
-            aria-label="Sumar uno a la línea"
-          >
-            +1
-          </button>
-          <button
-            type="button"
-            class="btn btn-sm btn-warning"
-            [disabled]="!selectedLine()"
-            (click)="removeSelected()"
-          >
-            Quitar
-          </button>
-          <button
-            type="button"
-            class="btn btn-sm btn-ghost text-error"
-            [disabled]="lines().length === 0"
-            (click)="clear()"
-          >
-            Anular
-          </button>
-        </div>
-
-        <dl class="grid gap-1 border-t border-base-300 px-4 py-3 text-sm">
-          @if (ahorro() > 0) {
-            <div class="flex items-baseline justify-between text-success">
-              <dt class="font-medium">Ahorro</dt>
-              <dd class="font-semibold tabular-nums">
-                {{ ahorro() | money }}
-                <span class="text-xs">{{ reglaAplicada() }}</span>
-              </dd>
-            </div>
-          }
-          <div class="flex items-baseline justify-between" [class.opacity-50]="quotePending()">
-            <dt class="font-medium">TOTAL</dt>
-            <dd class="text-4xl font-bold tabular-nums">{{ total() | money }}</dd>
+        <div class="grid gap-1.5 border-t border-base-300 px-4 py-3 text-sm">
+          <div class="flex justify-between text-base-content/75">
+            <span>Subtotal</span>
+            <span class="tabular-nums">{{ subtotal() | money }}</span>
+          </div>
+          <div class="flex justify-between text-success">
+            <span>Descuentos</span>
+            <span class="tabular-nums">−{{ descuento() | money }}</span>
+          </div>
+          <div class="flex items-baseline justify-between pt-1" [class.opacity-50]="quotePending()">
+            <span class="font-semibold">Total</span>
+            <span class="font-serif text-4xl font-semibold tabular-nums">{{ total() | money }}</span>
           </div>
           @if (quote.error()) {
             <p role="alert" class="text-xs text-error">
-              No pudimos cotizar el ticket. Revisa los productos antes de cobrar.
+              No pudimos cotizar el ticket. Revisá los productos antes de cobrar.
             </p>
           }
-        </dl>
-
-        <div class="p-2 pt-0">
           <button
             type="button"
-            class="btn btn-success btn-lg h-16 w-full text-xl"
+            class="btn btn-primary btn-lg mt-1 h-16 justify-between text-xl"
             [disabled]="lines().length === 0 || quotePending() || !!quote.error()"
             (click)="charge()"
           >
-            COBRAR
+            Cobrar
+            <kbd class="kbd kbd-sm text-base-content">F12</kbd>
           </button>
         </div>
       </aside>
 
-      <section class="flex min-h-0 flex-col gap-3" aria-label="Productos">
-        <div class="flex flex-wrap gap-2">
-          <form class="join" (submit)="$event.preventDefault(); addByCode(code)">
-            <input
-              #code
-              type="text"
-              inputmode="numeric"
-              class="input input-bordered join-item w-32"
-              placeholder="Código"
-              aria-label="Código de producto"
-            />
-            <button type="submit" class="btn btn-neutral join-item">Agregar</button>
-          </form>
+      <section class="flex min-h-0 min-w-0 flex-col gap-3" aria-label="Productos">
+        <label
+          class="flex h-13 items-center gap-2.5 rounded-box border-2 border-primary bg-base-100 px-3.5"
+        >
+          <app-icon name="search" [size]="20" class="text-primary" />
           <input
-            #term
+            #searchInput
             type="search"
-            class="input input-bordered min-w-48 flex-1"
-            placeholder="Buscar producto"
-            aria-label="Buscar producto"
+            autocomplete="off"
+            class="min-w-0 flex-1 bg-transparent text-base outline-none"
+            placeholder="Escaneá el código o escribí el nombre…"
+            aria-label="Escanear o buscar por código o nombre"
             [value]="search()"
-            (input)="search.set(term.value.trim())"
+            (input)="search.set(searchInput.value)"
+            (keydown.enter)="scan()"
           />
-        </div>
+          <kbd class="kbd kbd-sm">F2</kbd>
+        </label>
 
         @if (categories().length > 1) {
           <div class="flex flex-wrap gap-1.5" role="group" aria-label="Categorías">
@@ -242,7 +251,7 @@
             [skeletonCount]="6"
             (retry)="catalog.reload()"
           >
-            <ul class="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
+            <ul class="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
               @for (product of visible(); track product.id) {
                 <li>
                   <button
@@ -253,6 +262,7 @@
                     [class.ring-primary]="selectedId() === product.id"
                     [class.opacity-50]="soldOut(product)"
                     [disabled]="soldOut(product)"
+                    [attr.aria-label]="'Agregar ' + product.nombre"
                     (click)="pick(product)"
                   >
                     <span class="flex items-start justify-between gap-1">
@@ -261,11 +271,26 @@
                       </span>
                       @if (soldOut(product)) {
                         <span class="badge badge-error badge-xs shrink-0">Agotado</span>
+                      } @else if (offerBadge(product); as offer) {
+                        <span class="badge badge-warning badge-soft badge-xs shrink-0 font-bold">
+                          {{ offer }}
+                        </span>
                       }
                     </span>
-                    <span class="flex items-end justify-between text-xs">
-                      <span class="text-base-content/50">#{{ product.id }}</span>
-                      <span class="text-base font-bold tabular-nums">{{
+                    <span class="flex items-end justify-between gap-1 text-xs">
+                      <span class="grid min-w-0">
+                        <span class="truncate font-mono text-base-content/60">{{
+                          product.codigo
+                        }}</span>
+                        <span class="text-base-content/60">
+                          @if (soldOut(product)) {
+                            Agotado
+                          } @else if (product.disponible != null) {
+                            {{ product.disponible }} disponibles
+                          }
+                        </span>
+                      </span>
+                      <span class="font-serif text-base font-semibold tabular-nums">{{
                         product.precio | money
                       }}</span>
                     </span>
@@ -276,116 +301,14 @@
           </app-resource-state>
         </div>
 
-        <div class="grid gap-3 md:grid-cols-[minmax(0,1fr)_16rem]">
-          <section
-            class="h-40 rounded-box border border-base-300 bg-base-100 p-3"
-            aria-label="Producto seleccionado"
-          >
-            <app-product-preview
-              [product]="selected()"
-              [available]="selectedAvailable()"
-              [checkingStock]="selectedDetail.isLoading()"
-              [inTicket]="selectedLine()?.quantity ?? 0"
-            />
-          </section>
-
-          <section class="rounded-box border border-base-300 bg-base-100 p-2" aria-label="Teclado">
-            <output
-              class="mb-1.5 block rounded-field bg-base-200 px-3 py-1.5 text-end font-mono text-xl tabular-nums"
-              aria-live="polite"
-            >
-              {{ keypad() || '0' }}
-            </output>
-            <app-pos-keypad (pressed)="press($event)" />
-            <button
-              type="button"
-              class="btn btn-sm btn-info mt-1.5 w-full"
-              [disabled]="!selectedLine() || !keypad()"
-              (click)="applyQuantity()"
-            >
-              Aplicar cantidad
-            </button>
-          </section>
-        </div>
+        <p class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-base-content/60">
+          <span><kbd class="kbd kbd-xs">F2</kbd> buscar</span>
+          <span><kbd class="kbd kbd-xs">+</kbd> <kbd class="kbd kbd-xs">−</kbd> cantidad</span>
+          <span><kbd class="kbd kbd-xs">Supr</kbd> quitar línea</span>
+          <span><kbd class="kbd kbd-xs">F12</kbd> cobrar</span>
+        </p>
       </section>
     </div>
-  } @else {
-    <section class="min-h-0 flex-1 overflow-y-auto p-4" aria-label="Corte del día">
-      <div class="mb-4 flex flex-wrap items-end gap-3">
-        <label class="grid gap-1 text-sm">
-          <span class="text-base-content/60">Fecha</span>
-          <input
-            #date
-            type="date"
-            class="input input-bordered input-sm"
-            [value]="cutDate()"
-            (change)="cutDate.set(date.value)"
-          />
-        </label>
-        <button type="button" class="btn btn-sm" (click)="cut.reload()">Actualizar</button>
-      </div>
-
-      @if (cut.isLoading()) {
-        <div class="h-24 animate-pulse rounded-box bg-base-100"></div>
-      } @else if (cut.error()) {
-        <div role="alert" class="alert alert-error">
-          <span>No pudimos calcular el corte.</span>
-          <button type="button" class="btn btn-sm" (click)="cut.reload()">Reintentar</button>
-        </div>
-      } @else if (cut.value(); as corte) {
-        <div
-          class="stats stats-vertical w-full border border-base-300 bg-base-100 sm:stats-horizontal"
-        >
-          <div class="stat">
-            <div class="stat-title">Ventas</div>
-            <div class="stat-value text-2xl">{{ corte.cantidadVentas }}</div>
-          </div>
-          <div class="stat">
-            <div class="stat-title">Productos vendidos</div>
-            <div class="stat-value text-2xl">{{ corte.productosVendidos }}</div>
-          </div>
-          <div class="stat">
-            <div class="stat-title">Total del día</div>
-            <div class="stat-value text-2xl text-primary">{{ corte.total | money }}</div>
-          </div>
-        </div>
-
-        @if (corte.ventas.length > 0) {
-          <div class="mt-4 overflow-x-auto rounded-box border border-base-300 bg-base-100">
-            <table class="table table-sm">
-              <thead>
-                <tr>
-                  <th scope="col">Venta</th>
-                  <th scope="col">Hora</th>
-                  <th scope="col">Cajero</th>
-                  <th scope="col">Productos</th>
-                  <th scope="col" class="text-end">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (venta of corte.ventas; track venta.id) {
-                  <tr>
-                    <td>#{{ venta.id }}</td>
-                    <td>{{ venta.fecha | date: 'shortTime' }}</td>
-                    <td>{{ venta.usuario }}</td>
-                    <td class="text-sm text-base-content/70">
-                      @for (linea of venta.detalles ?? []; track linea.id; let last = $last) {
-                        {{ linea.cantidad }} × {{ linea.producto }}{{ last ? '' : ', ' }}
-                      }
-                    </td>
-                    <td class="text-end font-medium">{{ venta.total | money }}</td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </div>
-        } @else {
-          <p class="mt-6 text-center text-sm text-base-content/50">
-            No hay ventas registradas en esta fecha.
-          </p>
-        }
-      }
-    </section>
   }
 </div>
 
@@ -393,13 +316,38 @@
   <app-checkout-dialog
     [lines]="lines()"
     [total]="total()"
+    [savings]="ahorro()"
     [cashier]="auth.user()?.name ?? ''"
     (cancelled)="checkoutOpen.set(false)"
     (completed)="finishSale()"
   />
 }
 
-@if (isAdmin) {
+<app-confirm-dialog
+  [open]="clearOpen()"
+  title="¿Vaciar el ticket?"
+  [message]="
+    'Se quitan los ' +
+    itemCount() +
+    ' artículo(s) del ticket actual. No se registra ninguna venta.'
+  "
+  confirmLabel="Vaciar ticket"
+  (confirmed)="clear()"
+  (cancelled)="clearOpen.set(false)"
+/>
+
+<app-confirm-dialog
+  [open]="logoutOpen()"
+  title="¿Cerrar sesión?"
+  [message]="
+    'Hay un ticket sin cobrar con ' + itemCount() + ' artículo(s). Si cerrás sesión, se pierde.'
+  "
+  confirmLabel="Cerrar sesión"
+  (confirmed)="auth.logout()"
+  (cancelled)="logoutOpen.set(false)"
+/>
+
+@if (adminLinks().length > 0) {
   <div class="drawer-side z-50">
     <label for="pos-menu" class="drawer-overlay" aria-label="Cerrar menú"></label>
     <aside class="flex min-h-full w-72 flex-col bg-base-100">

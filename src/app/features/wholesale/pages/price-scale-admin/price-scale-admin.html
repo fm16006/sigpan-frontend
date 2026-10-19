@@ -1,93 +1,143 @@
-<app-page-header title="Mayoreo" subtitle="Precio unitario según la cantidad comprada">
-  <button type="button" class="btn btn-sm" [disabled]="products.isLoading()" (click)="products.reload()">
-    Actualizar
+<app-page-header
+  title="Mayoreo"
+  subtitle="Precio unitario según la cantidad comprada. El tramo se elige por la cantidad total del producto en la canasta."
+  [crumbs]="crumbs"
+>
+  <button type="button" class="btn btn-primary" [disabled]="productId() === null" (click)="openCreate()">
+    <app-icon name="plus" />
+    Nuevo tramo
   </button>
 </app-page-header>
 
-<label class="form-control mb-6 max-w-md">
-  <span class="label-text mb-1">Producto</span>
-  <select class="select select-bordered" (change)="selectProduct($any($event.target).value)">
-    <option value="0">Seleccioná un producto</option>
-    @for (product of products.value(); track product.id) {
-      <option [value]="product.id" [selected]="productId() === product.id">{{ product.nombre }}</option>
-    }
-  </select>
-</label>
-
-@if (productId() !== null) {
-  <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
-    <section aria-label="Tramos del producto">
-      <app-resource-state
-        [loading]="tramos.isLoading()"
-        [failed]="!!tramos.error()"
-        [empty]="tramos.value().length === 0"
-        emptyTitle="Sin tramos"
-        emptyDescription="Agregá un tramo para ofrecer precio especial por cantidad."
-        (retry)="tramos.reload()"
-      >
-        <div class="overflow-x-auto rounded-box border border-base-300 bg-base-100">
-          <table class="table">
-            <thead>
-              <tr>
-                <th scope="col">Desde (unidades)</th>
-                <th scope="col" class="text-end">Precio unitario</th>
-                <th scope="col">Estado</th>
-                <th scope="col"><span class="sr-only">Acciones</span></th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (tramo of tramos.value(); track tramo.id) {
-                <tr [class.bg-base-200]="editing()?.id === tramo.id">
-                  <td class="tabular-nums">{{ tramo.cantidadMinima }}</td>
-                  <td class="text-end font-medium">{{ tramo.precioUnitario | money }}</td>
-                  <td>
-                    @if (tramo.activo) {
-                      <span class="badge badge-success badge-sm">Activo</span>
-                    } @else {
-                      <span class="badge badge-ghost badge-sm">Inactivo</span>
-                    }
-                  </td>
-                  <td class="text-end whitespace-nowrap">
-                    <button type="button" class="btn btn-ghost btn-xs" (click)="startEdit(tramo)">Editar</button>
-                    <button
-                      type="button"
-                      class="btn btn-ghost btn-xs text-error"
-                      (click)="remove(tramo)"
-                    >
-                      Eliminar
-                    </button>
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      </app-resource-state>
-    </section>
-
-    <form
-      [formGroup]="form"
-      (ngSubmit)="save()"
-      class="grid h-fit gap-4 rounded-box border border-base-300 bg-base-100 p-5"
-      aria-label="Formulario de tramo de mayoreo"
-    >
-      <h2 class="text-base font-semibold">{{ editing() ? 'Editar tramo' : 'Nuevo tramo' }}</h2>
-
-      @if (formError(); as message) {
-        <div role="alert" class="alert alert-error text-sm">{{ message }}</div>
+<div class="mb-4 flex flex-wrap items-end gap-3">
+  <label class="form-control min-w-64 max-w-md flex-1">
+    <span class="label-text mb-1">Producto</span>
+    <select class="select select-bordered w-full" (change)="selectProduct($any($event.target).value)">
+      <option value="0">Elegí un producto</option>
+      @for (item of productItems(); track item.id) {
+        <option [value]="item.id" [selected]="productId() === item.id">{{ item.nombre }}</option>
       }
+    </select>
+  </label>
+  @if (productId(); as id) {
+    <a [routerLink]="['/backoffice/products', id, 'precios']" class="btn btn-ghost">
+      Ver ficha del producto
+      <app-icon name="chevron" />
+    </a>
+  }
+</div>
 
+@if (productId() === null) {
+  <div class="rounded-box border border-dashed border-base-300 bg-base-100 px-6 py-10 text-center text-sm text-base-content/60">
+    Elegí un producto para ver y editar sus tramos de mayoreo.
+  </div>
+} @else {
+  <div class="grid items-start gap-6 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
+    <app-resource-state
+      [loading]="tramos.isLoading() && tramoItems().length === 0"
+      [failed]="!!tramos.error()"
+      [empty]="false"
+      (retry)="tramos.reload()"
+    >
+      <section aria-label="Tramos del producto" class="overflow-hidden rounded-box border border-base-300 bg-base-100">
+        <div
+          class="list-row grid-cols-[minmax(0,1.6fr)_6rem_8rem_6.5rem_1rem] border-t-0 py-3.5 max-md:hidden hover:bg-transparent"
+        >
+          <span class="list-th">Desde</span>
+          <span class="list-th text-end">Precio c/u</span>
+          <span class="list-th">Ejemplo</span>
+          <span class="list-th">Estado</span>
+          <span></span>
+        </div>
+
+        @if (baseLabel(); as label) {
+          <div
+            class="list-row grid-cols-[minmax(0,1.6fr)_6rem_8rem_6.5rem_1rem] max-md:grid-cols-2 max-md:gap-y-2 hover:bg-transparent"
+          >
+            <span class="flex flex-col">
+              <span class="font-semibold">{{ label }}</span>
+              <span class="text-xs text-base-content/60">Precio base del producto</span>
+            </span>
+            <span class="font-semibold tabular-nums md:text-end">{{ basePrice() | money }}</span>
+            <span class="text-sm text-base-content/70 max-md:hidden">—</span>
+            <app-status-chip label="Base" tone="neutral" />
+            <span></span>
+          </div>
+        }
+
+        @for (row of rows(); track row.tramo.id) {
+          <button
+            type="button"
+            class="list-row w-full cursor-pointer grid-cols-[minmax(0,1.6fr)_6rem_8rem_6.5rem_1rem] text-start max-md:grid-cols-2 max-md:gap-y-2"
+            [attr.aria-label]="'Editar tramo desde ' + row.desde + ' unidades'"
+            (click)="openEdit(row)"
+          >
+            <span class="font-semibold">{{ rangeLabel(row) }}</span>
+            <span class="font-semibold tabular-nums md:text-end">{{ row.tramo.precioUnitario | money }}</span>
+            <span class="text-sm tabular-nums text-base-content/70">{{ row.desde }} → {{ row.ejemploTotal | money }}</span>
+            <app-status-chip [label]="row.tramo.activo ? 'Activo' : 'Inactivo'" [tone]="row.tramo.activo ? 'ok' : 'neutral'" />
+            <app-icon name="chevron" class="text-base-content/40 max-md:hidden" />
+          </button>
+        } @empty {
+          <p class="border-t border-base-300 px-5 py-8 text-center text-sm text-base-content/60">
+            Este producto no tiene tramos. Agregá uno con «Nuevo tramo» para ofrecer precio especial por cantidad.
+          </p>
+        }
+
+        <div class="border-t border-base-300 px-5 py-3 text-xs text-base-content/60">
+          {{ rows().length }} {{ rows().length === 1 ? 'tramo' : 'tramos' }} de mayoreo
+        </div>
+      </section>
+    </app-resource-state>
+
+    <section class="panel" aria-label="Vista previa de precios">
+      <div class="flex flex-col gap-0.5">
+        <h2 class="font-serif text-xl font-semibold">¿Cuánto se cobra?</h2>
+        <p class="text-sm text-base-content/60">Con los tramos activos de este producto.</p>
+      </div>
+      <ul class="grid gap-2">
+        @for (preview of previews(); track preview.cantidad) {
+          <li class="flex items-center justify-between gap-3 rounded-field border border-base-300 px-4 py-3">
+            <span class="flex flex-col">
+              <span class="font-semibold">{{ preview.cantidad }} {{ preview.cantidad === 1 ? 'unidad' : 'unidades' }}</span>
+              <span class="text-xs text-base-content/60">
+                {{ preview.cantidad }} × {{ preview.precioUnitario | money }}
+                · {{ preview.tramo ? 'mayoreo' : 'precio base' }}
+              </span>
+            </span>
+            <span class="font-serif text-xl font-semibold tabular-nums">{{ preview.total | money }}</span>
+          </li>
+        }
+      </ul>
+    </section>
+  </div>
+}
+
+<app-form-drawer
+  [open]="drawerOpen()"
+  [title]="editing() ? 'Editar tramo' : 'Nuevo tramo'"
+  [subtitle]="product()?.nombre"
+  (closed)="closeDrawer()"
+>
+  <form id="price-scale-form" [formGroup]="form" (ngSubmit)="save()" class="grid gap-6" aria-label="Formulario de tramo de mayoreo">
+    @if (formError(); as message) {
+      <div role="alert" class="alert alert-error text-sm">{{ message }}</div>
+    }
+
+    <fieldset class="grid gap-3">
+      <legend class="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.09em] text-base-content/55">
+        Tramo
+      </legend>
       <label class="form-control">
         <span class="label-text mb-1">Cantidad mínima</span>
-        <input type="number" min="1" step="1" formControlName="cantidadMinima" class="input input-bordered" />
+        <input type="number" min="1" step="1" formControlName="cantidadMinima" class="input input-bordered w-full" />
         @if (fieldError('cantidadMinima'); as message) {
           <span class="mt-1 text-sm text-error">{{ message }}</span>
         }
       </label>
-
       <label class="form-control">
         <span class="label-text mb-1">Precio unitario</span>
-        <input type="number" min="0.01" step="0.01" formControlName="precioUnitario" class="input input-bordered" />
+        <input type="number" min="0.01" step="0.01" formControlName="precioUnitario" class="input input-bordered w-full" />
         <span class="mt-1 text-xs text-base-content/55">
           Debe ser menor que el del tramo anterior y mayor que el del siguiente.
         </span>
@@ -95,23 +145,42 @@
           <span class="mt-1 text-sm text-error">{{ message }}</span>
         }
       </label>
+    </fieldset>
 
+    <fieldset class="grid gap-2">
+      <legend class="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.09em] text-base-content/55">
+        Estado
+      </legend>
       <label class="label cursor-pointer justify-start gap-3">
         <input type="checkbox" class="checkbox checkbox-sm" formControlName="activo" />
         <span class="text-sm">Activo</span>
       </label>
+    </fieldset>
+  </form>
 
-      <div class="flex justify-end gap-2">
-        @if (editing()) {
-          <button type="button" class="btn btn-ghost" (click)="cancelEdit()">Cancelar</button>
-        }
-        <button type="submit" class="btn btn-primary" [disabled]="saving()">
-          @if (saving()) {
-            <span class="loading loading-spinner loading-sm"></span>
-          }
-          Guardar tramo
-        </button>
-      </div>
-    </form>
+  <div footer class="contents">
+    @if (editing()) {
+      <button type="button" class="btn btn-ghost me-auto text-error" [disabled]="saving()" (click)="askDelete()">
+        Eliminar
+      </button>
+    }
+    <button type="button" class="btn btn-ghost" (click)="closeDrawer()">Cancelar</button>
+    <button type="submit" form="price-scale-form" class="btn btn-primary" [disabled]="saving()">
+      @if (saving()) {
+        <span class="loading loading-spinner loading-sm"></span>
+      }
+      Guardar
+    </button>
   </div>
-}
+</app-form-drawer>
+
+<app-confirm-dialog
+  [open]="confirmingDelete()"
+  title="¿Eliminar tramo?"
+  [message]="deleteMessage()"
+  confirmLabel="Eliminar"
+  tone="danger"
+  [busy]="deleting()"
+  (confirmed)="confirmDelete()"
+  (cancelled)="cancelDelete()"
+/>

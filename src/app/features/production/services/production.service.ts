@@ -17,12 +17,39 @@ export class ProductionService {
     return this.api.url(API_ENDPOINTS.producciones.root);
   }
 
+  orderUrl(id: Id): string {
+    return this.api.url(API_ENDPOINTS.producciones.byId(id));
+  }
+
+  /** Insumos que una orden terminada descargó del inventario. */
+  detailsUrl(productionId: Id): string {
+    return this.api.url(API_ENDPOINTS.produccionDetalle.byProduccion(productionId));
+  }
+
   productsUrl(): string {
     return this.api.url(API_ENDPOINTS.productos.root);
   }
 
   formulasUrl(): string {
     return this.api.url(API_ENDPOINTS.formulas.root);
+  }
+
+  formulaUrl(id: Id): string {
+    return this.api.url(API_ENDPOINTS.formulas.byId(id));
+  }
+
+  /** Costo calculado por el backend (solo administración y jefe de producción). */
+  costUrl(formulaId: Id): string {
+    return this.api.url(API_ENDPOINTS.formulas.costoUnitario(formulaId));
+  }
+
+  materialsUrl(): string {
+    return this.api.url(API_ENDPOINTS.materiasPrimas.root);
+  }
+
+  /** Explosión de materiales de la receta del producto para `cantidad` unidades. */
+  explosionUrl(productoId: Id, cantidad: number): string {
+    return this.api.url(API_ENDPOINTS.formulas.explosion(productoId), { cantidad });
   }
 
   create(draft: ProductionDraft): Observable<Production> {

@@ -1,0 +1,163 @@
+<app-page-header
+  title="Productos"
+  subtitle="Lo que se vende en mostrador y en la tienda en línea. Hacé clic en un producto para abrir su ficha."
+  [crumbs]="crumbs"
+>
+  @if (isAdmin) {
+    <button type="button" class="btn btn-primary" (click)="drawerOpen.set(true)">
+      <app-icon name="plus" />
+      Nuevo producto
+    </button>
+  }
+</app-page-header>
+
+<div class="mb-4 grid gap-3 sm:grid-cols-3">
+  <app-stat-card
+    label="Productos activos"
+    [value]="kpis().activos"
+    [hint]="all().length - kpis().activos > 0 ? all().length - kpis().activos + ' inactivos' : 'Todos en venta'"
+  />
+  <app-stat-card
+    label="Bajo mínimo"
+    [value]="kpis().bajoMinimo"
+    [hint]="kpis().bajoMinimoNombres.join(', ') || 'Nada por reabastecer'"
+  />
+  <app-stat-card
+    label="Agotados"
+    [value]="kpis().agotados"
+    [hint]="kpis().agotadosNombres.join(', ') || 'Todo con existencia'"
+  />
+</div>
+
+<div class="mb-4 flex flex-wrap items-center gap-2.5">
+  <label
+    class="input input-bordered flex min-w-0 flex-1 basis-64 items-center gap-2"
+  >
+    <app-icon name="search" [size]="16" class="text-base-content/55" />
+    <input
+      type="search"
+      class="grow"
+      placeholder="Buscar por nombre o código"
+      aria-label="Buscar por nombre o código"
+      [value]="query()"
+      (input)="query.set($any($event.target).value)"
+    />
+  </label>
+  <div
+    role="group"
+    aria-label="Estado de existencia"
+    class="inline-flex max-w-full gap-0.5 overflow-x-auto rounded-[10px] bg-base-200 p-[3px]"
+  >
+    @for (item of segments; track item.value) {
+      <button
+        type="button"
+        class="whitespace-nowrap rounded-[7px] px-3 py-1.5 text-sm text-base-content/65"
+        [class]="segment() === item.value ? 'bg-base-100 font-semibold !text-base-content shadow-sm ring-1 ring-base-300' : 'font-medium'"
+        [attr.aria-pressed]="segment() === item.value"
+        (click)="segment.set(item.value)"
+      >
+        {{ item.label }}
+        <span class="opacity-65">{{ counts()[item.value] }}</span>
+      </button>
+    }
+  </div>
+  <select
+    class="select select-bordered"
+    aria-label="Especialidad"
+    [value]="especialidad()"
+    (change)="setEspecialidad($any($event.target).value)"
+  >
+    <option value="">Todas las especialidades</option>
+    @for (option of especialidades; track option.value) {
+      <option [value]="option.value">{{ option.label }}</option>
+    }
+  </select>
+</div>
+
+<app-resource-state
+  [loading]="products.isLoading() && !products.hasValue()"
+  [failed]="!!products.error()"
+  [empty]="all().length === 0"
+  emptyTitle="Sin productos"
+  emptyDescription="Creá el primer producto para que aparezca en el catálogo."
+  (retry)="products.reload()"
+>
+  <section aria-label="Lista de productos" class="overflow-hidden rounded-box border border-base-300 bg-base-100">
+    <div
+      class="grid items-center gap-x-4 px-5 py-3.5 max-md:hidden md:grid-cols-[minmax(0,2.2fr)_7rem_7rem_5rem_10rem_7.5rem_1rem]"
+    >
+      <span class="list-th">Producto</span>
+      <span class="list-th">Especialidad</span>
+      <span class="list-th">Categoría</span>
+      <span class="list-th text-right">Precio</span>
+      <span class="list-th">Disponible</span>
+      <span class="list-th">Estado</span>
+      <span></span>
+    </div>
+
+    @for (row of rows(); track row.product.id) {
+      <a
+        class="list-row grid-cols-2 gap-y-2 md:grid-cols-[minmax(0,2.2fr)_7rem_7rem_5rem_10rem_7.5rem_1rem]"
+        [routerLink]="['/backoffice/products', row.product.id]"
+        [attr.aria-label]="'Abrir ficha de ' + row.product.nombre"
+      >
+        <span class="flex min-w-0 items-center gap-3 max-md:col-span-2">
+          @if (row.product.imagenUrl) {
+            <img
+              [src]="row.product.imagenUrl"
+              alt=""
+              class="size-[38px] shrink-0 rounded-[10px] object-cover"
+              loading="lazy"
+            />
+          } @else {
+            <span
+              aria-hidden="true"
+              class="grid size-[38px] shrink-0 place-items-center rounded-[10px] bg-primary/10 font-serif text-base font-semibold text-primary"
+            >
+              {{ row.product.nombre.charAt(0).toUpperCase() }}
+            </span>
+          }
+          <span class="flex min-w-0 flex-col">
+            <span class="truncate font-semibold">{{ row.product.nombre }}</span>
+            <span class="font-mono text-xs text-base-content/60">{{ row.product.codigo }}</span>
+          </span>
+        </span>
+        <span class="text-sm text-base-content/80 max-md:hidden">{{ especialidadLabels[row.product.especialidad] }}</span>
+        <span class="truncate text-sm text-base-content/80 max-md:hidden">{{ row.product.categoria }}</span>
+        <span class="font-semibold tabular-nums md:text-right">{{ row.product.precio | money }}</span>
+        <span class="flex flex-col gap-1.5 max-md:col-span-2 max-md:row-start-3">
+          <span class="tabular-nums">
+            {{ row.product.disponible ?? 0 }}
+            <span class="text-xs text-base-content/60">· mín. {{ row.product.stockMinimo ?? 0 }}</span>
+          </span>
+          <span class="h-[5px] overflow-hidden rounded-full bg-base-200">
+            <span
+              class="block h-full rounded-full"
+              [class]="barClass(row.state)"
+              [style.width.%]="row.percent"
+            ></span>
+          </span>
+        </span>
+        <app-status-chip
+          class="max-md:justify-self-end"
+          [label]="chips[row.state].label"
+          [tone]="chips[row.state].tone"
+        />
+        <app-icon name="chevron" class="text-base-content/40 max-md:hidden" />
+      </a>
+    } @empty {
+      <div class="border-t border-base-300 px-5 py-10 text-center text-sm text-base-content/60">
+        Ningún producto coincide con la búsqueda. Probá con otro nombre o código.
+      </div>
+    }
+
+    <div
+      class="flex flex-wrap justify-between gap-3 border-t border-base-300 px-5 py-3 text-sm text-base-content/60"
+    >
+      <span>{{ rows().length }} de {{ all().length }} productos</span>
+      <span>Ordenado por nombre</span>
+    </div>
+  </section>
+</app-resource-state>
+
+<app-product-drawer [open]="drawerOpen()" (closed)="drawerOpen.set(false)" (saved)="onSaved()" />

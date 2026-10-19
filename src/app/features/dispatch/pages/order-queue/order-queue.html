@@ -1,4 +1,8 @@
-<app-page-header title="Pedidos en línea" [subtitle]="pendingCount() + ' pedido(s) por atender'">
+<app-page-header
+  title="Pedidos en línea"
+  [subtitle]="pendingCount() + ' pedido(s) por atender'"
+  [crumbs]="crumbs"
+>
   <label class="label cursor-pointer gap-2 text-sm">
     <input
       type="checkbox"
@@ -8,13 +12,13 @@
     />
     Ver entregados y cancelados
   </label>
-  <button type="button" class="btn btn-sm" [disabled]="queue.isLoading()" (click)="queue.reload()">
+  <button type="button" class="btn" [disabled]="queue.isLoading()" (click)="queue.reload()">
     Actualizar
   </button>
 </app-page-header>
 
 <app-resource-state
-  [loading]="queue.isLoading() && queue.value().length === 0"
+  [loading]="queue.isLoading() && queueItems().length === 0"
   [failed]="!!queue.error()"
   [empty]="items().length === 0"
   emptyTitle="Sin pedidos pendientes"
@@ -30,9 +34,7 @@
             <p class="text-sm text-base-content/60">{{ order.usuario }}</p>
             <p class="text-xs text-base-content/45">{{ order.fecha | date: 'short' }}</p>
           </div>
-          <span class="badge" [class]="statusBadge[order.estado] ?? 'badge-ghost'">
-            {{ statusLabels[order.estado] ?? order.estado }}
-          </span>
+          <app-status-chip [label]="statusLabels[order.estado] ?? order.estado" [tone]="statusTone(order)" />
         </div>
 
         <ul class="mt-3 grid flex-1 gap-1 text-sm">
@@ -51,7 +53,7 @@
               @if (busyId() === order.id) {
                 <span class="loading loading-spinner loading-sm"></span>
               } @else {
-                <button type="button" class="btn btn-ghost btn-xs text-error" (click)="cancel(order)">
+                <button type="button" class="btn btn-ghost btn-xs text-error" (click)="askCancel(order)">
                   Cancelar
                 </button>
                 @if (nextStatus(order); as next) {
@@ -67,3 +69,13 @@
     }
   </ul>
 </app-resource-state>
+
+<app-confirm-dialog
+  [open]="cancelling() !== null"
+  title="¿Cancelar pedido?"
+  [message]="cancelMessage()"
+  confirmLabel="Cancelar pedido"
+  tone="danger"
+  (confirmed)="confirmCancel()"
+  (cancelled)="dismissCancel()"
+/>

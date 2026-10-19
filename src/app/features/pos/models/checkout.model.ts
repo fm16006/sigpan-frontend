@@ -10,6 +10,9 @@ export type DocumentKind = 'TICKET' | 'CCF' | 'FACTURA';
 
 export type PaymentMethod = 'EFECTIVO' | 'TARJETA';
 
+/** Lo que se ofrece en el cobro: Mixto se muestra pero todavía no se puede elegir. */
+export type PaymentOptionId = PaymentMethod | 'MIXTO';
+
 export interface CheckoutOption<T extends string> {
   readonly id: T;
   readonly label: string;
@@ -23,11 +26,13 @@ export const DOCUMENT_OPTIONS: readonly CheckoutOption<DocumentKind>[] = [
   { id: 'FACTURA', label: 'Factura', hint: 'Próximamente', available: false },
 ];
 
-export const PAYMENT_OPTIONS: readonly CheckoutOption<PaymentMethod>[] = [
+export const PAYMENT_OPTIONS: readonly CheckoutOption<PaymentOptionId>[] = [
   { id: 'EFECTIVO', label: 'Efectivo', hint: 'Billetes y monedas', available: true },
   { id: 'TARJETA', label: 'Tarjeta', hint: 'Débito o crédito', available: true },
+  { id: 'MIXTO', label: 'Mixto', hint: 'Próximamente', available: false },
 ];
 
+/** Billetes del cobro en efectivo; "Exacto" y "Borrar" van aparte. */
 export const CASH_SHORTCUTS = [1, 5, 10, 20] as const;
 
 export interface ReceiptLine {

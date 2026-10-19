@@ -1,12 +1,14 @@
 import {
   ApplicationConfig,
+  LOCALE_ID,
   PLATFORM_ID,
   inject,
   provideAppInitializer,
   provideBrowserGlobalErrorListeners,
   provideZonelessChangeDetection,
 } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
+import { isPlatformBrowser, registerLocaleData } from '@angular/common';
+import localeEsSv from '@angular/common/locales/es-SV';
 import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
 import {
   provideRouter,
@@ -23,9 +25,13 @@ import { errorInterceptor } from './core/interceptors/error-interceptor';
 import { timeoutInterceptor } from './core/interceptors/timeout-interceptor';
 import { Auth } from './core/services/auth';
 
+// Fechas en español de El Salvador (oct, octubre); números con punto decimal como hasta ahora.
+registerLocaleData(localeEsSv);
+
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZonelessChangeDetection(),
+    { provide: LOCALE_ID, useValue: 'es-SV' },
     provideBrowserGlobalErrorListeners(),
     provideApiConfig(),
 

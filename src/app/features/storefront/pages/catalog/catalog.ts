@@ -7,6 +7,7 @@ import { ProductCard } from '../../../../shared/ui/product-card/product-card';
 import { ResourceState } from '../../../../shared/ui/resource-state/resource-state';
 import { ProductService } from '../../services/product.service';
 import { ShopCart } from '../../services/shop-cart';
+import { valueOr } from '../../../../core/http/resource-value';
 
 type SortOrder = 'destacados' | 'precio-asc' | 'precio-desc' | 'nombre';
 
@@ -39,13 +40,15 @@ export class Catalog {
   protected readonly search = signal('');
   protected readonly sort = signal<SortOrder>('destacados');
 
+  private readonly catalogItems = computed(() => valueOr(this.catalog, []));
+  private readonly categoryItems = computed(() => valueOr(this.categoryList, []));
+
   /** Solo categorías que tienen algo que vender. */
   protected readonly categories = computed(() =>
-    this.categoryList
-      .value()
+    this.categoryItems()
       .map((category) => ({
         ...category,
-        total: this.catalog.value().filter((product) => product.categoriaId === category.id).length,
+        total: this.catalogItems().filter((product) => product.categoriaId === category.id).length,
       }))
       .filter((category) => category.total > 0),
   );
@@ -53,8 +56,7 @@ export class Catalog {
   protected readonly items = computed(() => {
     const term = normalize(this.search());
     const category = this.categoryId();
-    const filtered = this.catalog
-      .value()
+    const filtered = this.catalogItems()
       .filter((product) => category === null || product.categoriaId === category)
       .filter(
         (product) =>

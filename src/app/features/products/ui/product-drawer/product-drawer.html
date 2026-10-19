@@ -1,0 +1,205 @@
+<app-form-drawer
+  [open]="open()"
+  [title]="editing ? 'Editar producto' : 'Nuevo producto'"
+  [subtitle]="editing ? product()!.nombre + ' · ' + product()!.codigo : 'Completá los datos del producto.'"
+  (closed)="cancel()"
+>
+  @if (formError(); as message) {
+    <div role="alert" class="alert alert-error mb-4 py-2 text-sm">{{ message }}</div>
+  }
+  <form id="product-form" class="flex flex-col gap-6" [formGroup]="form" (ngSubmit)="save()">
+    <fieldset class="flex flex-col gap-3">
+      <legend class="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.09em] text-base-content/55">
+        Identificación
+      </legend>
+      <div class="grid gap-3 sm:grid-cols-2">
+        <div>
+          <label class="mb-1.5 block text-sm font-semibold" for="codigo">Código</label>
+          <input
+            id="codigo"
+            type="text"
+            maxlength="30"
+            formControlName="codigo"
+            class="input input-bordered w-full font-mono text-sm"
+            [class.input-error]="!!errorFor('codigo')"
+          />
+          @if (errorFor('codigo'); as message) {
+            <p class="mt-1 text-xs text-error">{{ message }}</p>
+          } @else {
+            <p class="mt-1 text-xs text-base-content/55">Único. Es el que se teclea en caja, p. ej. PF-001.</p>
+          }
+        </div>
+        <div>
+          <label class="mb-1.5 block text-sm font-semibold" for="unidadVenta">Unidad de venta</label>
+          <input
+            id="unidadVenta"
+            type="text"
+            placeholder="Ej. unidad, docena"
+            maxlength="30"
+            formControlName="unidadVenta"
+            class="input input-bordered w-full"
+            [class.input-error]="!!errorFor('unidadVenta')"
+          />
+          @if (errorFor('unidadVenta'); as message) {
+            <p class="mt-1 text-xs text-error">{{ message }}</p>
+          }
+        </div>
+      </div>
+      <div>
+        <label class="mb-1.5 block text-sm font-semibold" for="nombre">Nombre</label>
+        <input
+          id="nombre"
+          type="text"
+          formControlName="nombre"
+          class="input input-bordered w-full"
+          [class.input-error]="!!errorFor('nombre')"
+        />
+        @if (errorFor('nombre'); as message) {
+          <p class="mt-1 text-xs text-error">{{ message }}</p>
+        }
+      </div>
+    </fieldset>
+
+    <fieldset class="flex flex-col gap-3">
+      <legend class="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.09em] text-base-content/55">
+        Clasificación
+      </legend>
+      <div class="grid gap-3 sm:grid-cols-2">
+        <div>
+          <label class="mb-1.5 block text-sm font-semibold" for="especialidad">Especialidad</label>
+          <select
+            id="especialidad"
+            formControlName="especialidad"
+            class="select select-bordered w-full"
+            [class.select-error]="!!errorFor('especialidad')"
+          >
+            <option value="" disabled>Elegí una especialidad</option>
+            @for (option of especialidades; track option.value) {
+              <option [value]="option.value">{{ option.label }}</option>
+            }
+          </select>
+          @if (errorFor('especialidad'); as message) {
+            <p class="mt-1 text-xs text-error">{{ message }}</p>
+          }
+        </div>
+        <div>
+          <label class="mb-1.5 block text-sm font-semibold" for="categoriaId">Categoría</label>
+          <select
+            id="categoriaId"
+            formControlName="categoriaId"
+            class="select select-bordered w-full"
+            [class.select-error]="!!errorFor('categoriaId')"
+          >
+            <option [ngValue]="0" disabled>Elegí una categoría</option>
+            @for (category of categoryList(); track category.id) {
+              <option [ngValue]="category.id">{{ category.nombre }}</option>
+            }
+          </select>
+          @if (errorFor('categoriaId'); as message) {
+            <p class="mt-1 text-xs text-error">{{ message }}</p>
+          }
+        </div>
+      </div>
+      <div>
+        <label class="mb-1.5 block text-sm font-semibold" for="nuevaCategoria">¿No está? Creá una categoría</label>
+        <div class="join w-full">
+          <input
+            id="nuevaCategoria"
+            type="text"
+            placeholder="Ej. Pan dulce"
+            [formControl]="newCategory"
+            class="input input-bordered join-item w-full"
+          />
+          <button type="button" class="btn join-item" [disabled]="savingCategory()" (click)="createCategory()">
+            Agregar
+          </button>
+        </div>
+      </div>
+    </fieldset>
+
+    <fieldset class="flex flex-col gap-3">
+      <legend class="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.09em] text-base-content/55">
+        Venta e inventario
+      </legend>
+      <div class="grid gap-3 sm:grid-cols-2">
+        <div>
+          <label class="mb-1.5 block text-sm font-semibold" for="precio">Precio</label>
+          <input
+            id="precio"
+            type="number"
+            step="0.01"
+            min="0"
+            formControlName="precio"
+            class="input input-bordered w-full"
+            [class.input-error]="!!errorFor('precio')"
+          />
+          @if (errorFor('precio'); as message) {
+            <p class="mt-1 text-xs text-error">{{ message }}</p>
+          } @else if (!isAdmin) {
+            <p class="mt-1 text-xs text-base-content/55">Solo administración cambia precios.</p>
+          }
+        </div>
+        <div>
+          <label class="mb-1.5 block text-sm font-semibold" for="stockMinimo">Existencia mínima</label>
+          <input
+            id="stockMinimo"
+            type="number"
+            step="1"
+            min="0"
+            formControlName="stockMinimo"
+            class="input input-bordered w-full"
+            [class.input-error]="!!errorFor('stockMinimo')"
+          />
+          @if (errorFor('stockMinimo'); as message) {
+            <p class="mt-1 text-xs text-error">{{ message }}</p>
+          } @else {
+            <p class="mt-1 text-xs text-base-content/55">Por debajo de este nivel se marca «Reabastecer».</p>
+          }
+        </div>
+      </div>
+    </fieldset>
+
+    <fieldset class="flex flex-col gap-3">
+      <legend class="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.09em] text-base-content/55">
+        Ficha para el cliente
+      </legend>
+      <div>
+        <label class="mb-1.5 block text-sm font-semibold" for="alergenos">Alérgenos (opcional)</label>
+        <input
+          id="alergenos"
+          type="text"
+          placeholder="Ej. gluten, huevo, lácteos"
+          maxlength="255"
+          formControlName="alergenos"
+          class="input input-bordered w-full"
+          [class.input-error]="!!errorFor('alergenos')"
+        />
+        @if (errorFor('alergenos'); as message) {
+          <p class="mt-1 text-xs text-error">{{ message }}</p>
+        }
+      </div>
+      <div>
+        <label class="mb-1.5 block text-sm font-semibold" for="descripcion">Descripción</label>
+        <textarea
+          id="descripcion"
+          rows="3"
+          formControlName="descripcion"
+          class="textarea textarea-bordered w-full"
+        ></textarea>
+      </div>
+      <p class="text-xs text-base-content/55">
+        La foto se cambia desde el menú «Más» de la ficha del producto.
+      </p>
+    </fieldset>
+  </form>
+
+  <div footer class="contents">
+    <button type="button" class="btn btn-ghost" (click)="cancel()">Cancelar</button>
+    <button type="submit" form="product-form" class="btn btn-primary" [disabled]="saving()">
+      @if (saving()) {
+        <span class="loading loading-spinner loading-sm"></span>
+      }
+      Guardar
+    </button>
+  </div>
+</app-form-drawer>

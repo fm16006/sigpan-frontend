@@ -40,8 +40,9 @@ export interface DetailTab {
       @if (tabs().length) {
         <nav class="flex gap-1 overflow-x-auto border-b border-base-300" aria-label="Secciones">
           @for (tab of tabs(); track tab.path) {
+            <!-- '' en routerLink lleva a la raíz del sitio; '.' es la ficha misma. -->
             <a
-              [routerLink]="tab.path"
+              [routerLink]="tab.path || '.'"
               routerLinkActive="!border-primary !text-primary font-semibold"
               [routerLinkActiveOptions]="{ exact: true }"
               class="-mb-px inline-flex items-center gap-1.5 whitespace-nowrap border-b-2 border-transparent px-4 py-3 text-sm font-medium text-base-content/65 hover:text-base-content"

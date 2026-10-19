@@ -1,9 +1,9 @@
 import { Component, OnInit, computed, inject, input, output, signal } from '@angular/core';
-import { HttpErrorResponse, httpResource } from '@angular/common/http';
+import { httpResource } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { forkJoin, of } from 'rxjs';
 import { API_ENDPOINTS } from '../../../../core/constants/api-endpoints';
-import { AppError, toAppError } from '../../../../core/http/app-error';
+import { asAppError } from '../../../../core/http/as-app-error';
 import { applyFieldErrors, firstErrorMessage } from '../../../../core/http/form-errors';
 import { CatalogProduct } from '../../../../core/models/catalog.model';
 import { Id } from '../../../../core/models/api.model';
@@ -17,14 +17,20 @@ import {
 } from '../../../../core/models/promotion.model';
 import { ApiClient } from '../../../../core/http/api-client';
 import { Notifications } from '../../../../core/services/notifications';
+import { FormDrawer } from '../../../../shared/ui/form-drawer/form-drawer';
+import { fullMonthOf } from '../../promotion-utils';
 import { PromotionService } from '../../services/promotion.service';
+import { valueOr } from '../../../../core/http/resource-value';
 
 type Vigencia = 'RANGO' | 'MES';
 
-/** Alta y edicion de una promocion, con sus productos. Los errores del backend se muestran junto al campo o arriba. */
+/**
+ * Alta y edición de una promoción, con sus productos, dentro de un drawer. Los errores del backend
+ * se muestran junto al campo o arriba. Eliminar lo confirma quien aloja el componente.
+ */
 @Component({
   selector: 'app-promotion-form',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, FormDrawer],
   templateUrl: './promotion-form.html',
 })
 export class PromotionForm implements OnInit {
@@ -37,6 +43,8 @@ export class PromotionForm implements OnInit {
   readonly promotion = input<Promotion | null>(null);
   readonly saved = output<Promotion>();
   readonly cancelled = output<void>();
+  /** El usuario pidió eliminar la promoción en edición; quien la aloja pide la confirmación. */
+  readonly removeRequested = output<Promotion>();
 
   protected readonly types = PROMOTION_TYPES;
   protected readonly typeLabels = PROMOTION_TYPE_LABELS;
@@ -45,6 +53,7 @@ export class PromotionForm implements OnInit {
     () => this.api.url(API_ENDPOINTS.productos.root),
     { defaultValue: [] },
   );
+  protected readonly productItems = computed(() => valueOr(this.products, []));
 
   protected readonly form = this.fb.nonNullable.group({
     nombre: ['', [Validators.required, Validators.maxLength(150)]],
@@ -70,15 +79,18 @@ export class PromotionForm implements OnInit {
     // Los inputs ya tienen valor aquí (no en el constructor): datos de la promoción y sus productos.
     const current = this.promotion();
     if (current) {
+      // Un mes calendario completo se edita como "Mes completo": el backend guarda solo las fechas.
+      const mes = fullMonthOf(current.fechaInicio, current.fechaFin);
       this.form.patchValue({
         nombre: current.nombre,
         descripcion: current.descripcion ?? '',
         tipoDescuento: current.tipoDescuento,
         valorDescuento: current.valorDescuento,
         prioridad: current.prioridad ?? 0,
-        vigencia: 'RANGO',
-        fechaInicio: current.fechaInicio ?? '',
-        fechaFin: current.fechaFin ?? '',
+        vigencia: mes ? 'MES' : 'RANGO',
+        mes: mes ?? '',
+        fechaInicio: mes ? '' : (current.fechaInicio ?? ''),
+        fechaFin: mes ? '' : (current.fechaFin ?? ''),
       });
       this.service.productLinks(current.id).subscribe((links) => {
         this.loadedLinks = links;
@@ -111,6 +123,12 @@ export class PromotionForm implements OnInit {
       this.form.markAllAsTouched();
       return;
     }
+    const mes = this.form.controls.mes;
+    if (this.form.controls.vigencia.value === 'MES' && !mes.value) {
+      mes.markAsTouched();
+      mes.setErrors({ required: true });
+      return;
+    }
     if (this.selectedIds().size === 0) {
       this.formError.set('Seleccioná al menos un producto.');
       return;
@@ -132,6 +150,11 @@ export class PromotionForm implements OnInit {
 
   protected cancel(): void {
     this.cancelled.emit();
+  }
+
+  protected requestRemove(): void {
+    const current = this.promotion();
+    if (current) this.removeRequested.emit(current);
   }
 
   private draft(): PromotionDraft {
@@ -177,7 +200,7 @@ export class PromotionForm implements OnInit {
 
   private onError(error: unknown): void {
     this.saving.set(false);
-    const appError: AppError = toAppError(error as HttpErrorResponse);
+    const appError = asAppError(error);
     applyFieldErrors(this.form, appError);
 
     // Errores de nivel de objeto (p. ej. rango de fechas) no pertenecen a un control: van arriba.

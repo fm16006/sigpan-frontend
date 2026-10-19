@@ -13,6 +13,7 @@ export interface RawMaterialStock {
   readonly materiaPrimaId: Id;
   readonly materiaPrima: string;
   readonly cantidad: number;
+  readonly cantidadMinima?: number | null;
   readonly fechaActualizacion: string | null;
 }
 
@@ -30,11 +31,28 @@ export const DOCUMENTO_MAX_LENGTH = 50;
 export interface StockMovement {
   readonly id: Id;
   readonly inventarioId: Id;
+  /** Que insumo movio; el backend lo informa en `/movimientos-inventario/materia-prima`. */
+  readonly materiaPrimaId?: Id;
+  readonly materiaPrima?: string;
   readonly tipo: MovementType;
   readonly cantidad: number;
   readonly fecha: string;
   readonly motivo: string | null;
   readonly documento: string | null;
+  readonly costoInicial: number | null;
+  readonly costoFinal: number | null;
+}
+
+/** Movimiento de producto: el backend no guarda documento en este tipo. */
+export interface ProductMovement {
+  readonly id: Id;
+  readonly inventarioId: Id;
+  readonly productoId: Id;
+  readonly producto: string;
+  readonly tipo: MovementType;
+  readonly cantidad: number;
+  readonly fecha: string;
+  readonly motivo: string | null;
   readonly costoInicial: number | null;
   readonly costoFinal: number | null;
 }

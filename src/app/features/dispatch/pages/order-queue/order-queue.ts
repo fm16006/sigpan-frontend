@@ -4,31 +4,43 @@ import { DatePipe, isPlatformBrowser } from '@angular/common';
 import { Id } from '../../../../core/models/api.model';
 import {
   NEXT_STATUS,
-  ORDER_STATUS_BADGE,
   ORDER_STATUS_LABELS,
   OrderStatus,
   Sale,
 } from '../../../../core/models/order.model';
 import { Notifications } from '../../../../core/services/notifications';
 import { MoneyPipe } from '../../../../shared/pipes/money.pipe';
+import { ConfirmDialog } from '../../../../shared/ui/confirm-dialog/confirm-dialog';
 import { PageHeader } from '../../../../shared/ui/page-header/page-header';
 import { ResourceState } from '../../../../shared/ui/resource-state/resource-state';
+import { ChipTone, StatusChip } from '../../../../shared/ui/status-chip/status-chip';
 import { OrderService } from '../../../storefront/services/order.service';
+import { valueOr } from '../../../../core/http/resource-value';
 
 const ACTIVE: readonly string[] = ['PENDIENTE', 'EN_PREPARACION', 'LISTO'];
 const REFRESH_MS = 30_000;
 
+const STATUS_TONES: Readonly<Record<string, ChipTone>> = {
+  PENDIENTE: 'neutral',
+  EN_PREPARACION: 'warn',
+  LISTO: 'info',
+  ENTREGADO: 'ok',
+  CANCELADO: 'bad',
+  COMPLETADA: 'ok',
+};
+
 @Component({
   selector: 'app-order-queue',
-  imports: [PageHeader, ResourceState, MoneyPipe, DatePipe],
+  imports: [PageHeader, ResourceState, ConfirmDialog, StatusChip, MoneyPipe, DatePipe],
   templateUrl: './order-queue.html',
 })
 export class OrderQueue {
   private readonly orders = inject(OrderService);
   private readonly notifications = inject(Notifications);
 
+  protected readonly crumbs = [{ label: 'Ventas' }, { label: 'Pedidos en línea' }];
   protected readonly statusLabels = ORDER_STATUS_LABELS;
-  protected readonly statusBadge = ORDER_STATUS_BADGE;
+  protected readonly cancelling = signal<Sale | null>(null);
   protected readonly showClosed = signal(false);
   protected readonly busyId = signal<Id | null>(null);
 
@@ -36,15 +48,23 @@ export class OrderQueue {
     defaultValue: [],
   });
 
+  protected readonly queueItems = computed(() => valueOr(this.queue, []));
+
   protected readonly items = computed(() =>
-    this.queue
-      .value()
+    this.queueItems()
       .filter((order) => this.showClosed() || ACTIVE.includes(order.estado))
       .sort((a, b) => a.fecha.localeCompare(b.fecha)),
   );
 
+  protected readonly cancelMessage = computed(() => {
+    const order = this.cancelling();
+    return order
+      ? `Vas a cancelar el pedido #${order.id} de ${order.usuario ?? "un cliente"}. El pedido queda como cancelado y no se puede reactivar.`
+      : '';
+  });
+
   protected readonly pendingCount = computed(
-    () => this.queue.value().filter((order) => ACTIVE.includes(order.estado)).length,
+    () => this.queueItems().filter((order) => ACTIVE.includes(order.estado)).length,
   );
 
   constructor() {
@@ -69,8 +89,24 @@ export class OrderQueue {
     }
   }
 
-  protected cancel(order: Sale): void {
-    this.change(order, 'CANCELADO');
+  protected statusTone(order: Sale): ChipTone {
+    return STATUS_TONES[order.estado] ?? 'neutral';
+  }
+
+  protected askCancel(order: Sale): void {
+    this.cancelling.set(order);
+  }
+
+  protected dismissCancel(): void {
+    this.cancelling.set(null);
+  }
+
+  protected confirmCancel(): void {
+    const order = this.cancelling();
+    this.cancelling.set(null);
+    if (order) {
+      this.change(order, 'CANCELADO');
+    }
   }
 
   private change(order: Sale, estado: OrderStatus): void {

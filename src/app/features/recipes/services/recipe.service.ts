@@ -34,8 +34,9 @@ export class RecipeService {
     return this.api.url(API_ENDPOINTS.formulas.costoUnitario(formulaId));
   }
 
-  explosionUrl(productoId: Id, cantidad: number): string {
-    return this.api.url(API_ENDPOINTS.formulas.explosion(productoId), { cantidad });
+  /** Todos los insumos de todas las recetas: la lista los cuenta por receta. */
+  allLinesUrl(): string {
+    return this.api.url(API_ENDPOINTS.formulaDetalles.root);
   }
 
   createFormula(draft: FormulaDraft): Observable<Formula> {
