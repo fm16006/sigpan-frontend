@@ -1,6 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { BUSINESS_INFO } from '../../../core/config/business.config';
+import { CompanyStore } from '../../../core/services/company-store';
 import { BrandMark } from '../../ui/brand-mark/brand-mark';
 
 @Component({
@@ -10,5 +10,5 @@ import { BrandMark } from '../../ui/brand-mark/brand-mark';
 })
 export class Footer {
   protected readonly anio = new Date().getFullYear();
-  protected readonly business = BUSINESS_INFO;
+  protected readonly business = inject(CompanyStore).info;
 }

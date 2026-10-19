@@ -65,6 +65,7 @@ export const BACKOFFICE_NAV_GROUPS: readonly NavGroup[] = [
     label: 'Administración',
     items: [
       { label: 'Usuarios', path: '/backoffice/users', icon: 'users', roles: ['ADMINISTRADOR'] },
+      { label: 'Empresa', path: '/backoffice/company', icon: 'info', roles: ['ADMINISTRADOR'] },
       { label: 'Bitácora', path: '/backoffice/audit', icon: 'clock', roles: ['ADMINISTRADOR'] },
     ],
   },

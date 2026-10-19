@@ -240,10 +240,10 @@
     <div>
       <p class="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Visitanos</p>
       <h2 class="mt-1 text-2xl font-semibold">Te esperamos con pan calientito</h2>
-      <p class="mt-2 text-sm text-base-content/65">{{ business.direccion }}</p>
+      <p class="mt-2 text-sm text-base-content/65">{{ business().direccion }}</p>
     </div>
     <dl class="grid gap-2 text-sm md:col-span-2 sm:grid-cols-3">
-      @for (slot of business.horario; track slot.dias) {
+      @for (slot of business().horario; track slot.dias) {
         <div class="rounded-box bg-base-200 p-4">
           <dt class="font-semibold">{{ slot.dias }}</dt>
           <dd class="mt-1 text-base-content/65">{{ slot.horas }}</dd>

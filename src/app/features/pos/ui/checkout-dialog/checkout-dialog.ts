@@ -23,7 +23,7 @@ import {
   switchMap,
   timer,
 } from 'rxjs';
-import { BUSINESS_INFO } from '../../../../core/config/business.config';
+import { CompanyStore } from '../../../../core/services/company-store';
 import { AppError } from '../../../../core/http/app-error';
 import { Sale } from '../../../../core/models/order.model';
 import { MoneyPipe } from '../../../../shared/pipes/money.pipe';
@@ -91,6 +91,8 @@ function after<T>(ms: number, value: T): Observable<T> {
 export class CheckoutDialog {
   private readonly orders = inject(OrderService);
   private readonly printer = inject(TicketPrinter);
+  /** Encabezado del ticket: datos de la empresa (o los de respaldo mientras cargan). */
+  private readonly company = inject(CompanyStore);
   protected readonly terminal = inject(CardTerminal);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -117,7 +119,7 @@ export class CheckoutDialog {
   /** El ticket completo, para la impresión del navegador (solo se ve al imprimir). */
   protected readonly receiptText = computed(() => {
     const receipt = this.receipt();
-    return receipt ? formatReceipt(receipt, BUSINESS_INFO).join('\n') : '';
+    return receipt ? formatReceipt(receipt, this.company.info()).join('\n') : '';
   });
   private readonly page = inject(DOCUMENT);
   protected readonly cardScreen = signal<TerminalScreen>({ kind: 'conectando' });
@@ -362,7 +364,7 @@ export class CheckoutDialog {
     this.phase.set('imprimiendo');
 
     this.printer
-      .print(formatReceipt(receipt, BUSINESS_INFO))
+      .print(formatReceipt(receipt, this.company.info()))
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (line) => this.printed.update((lines) => [...lines, line]),

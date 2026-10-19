@@ -1,10 +1,23 @@
-import { Component, input } from '@angular/core';
+import { Component, computed, inject, input } from '@angular/core';
+import { CompanyStore } from '../../../core/services/company-store';
 
-/** Logo. En un componente porque aparece en la barra, el panel y el login. */
+/**
+ * Logo. En un componente porque aparece en la barra, el panel y el login. Sin `label` muestra
+ * el nombre comercial de la empresa; si la empresa subió un logo, reemplaza al dibujo.
+ */
 @Component({
   selector: 'app-brand-mark',
   template: `
     <span class="flex items-center gap-2 text-primary">
+      @if (logoUrl(); as logo) {
+        <img
+          [src]="logo"
+          alt=""
+          class="shrink-0 rounded-lg object-contain"
+          [style.width.rem]="size()"
+          [style.height.rem]="size()"
+        />
+      } @else {
       <svg
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 48 48"
@@ -35,13 +48,14 @@ import { Component, input } from '@angular/core';
         <circle cx="28" cy="26" r="1" fill="currentColor" />
         <circle cx="24" cy="30" r="1" fill="currentColor" />
       </svg>
+      }
 
-      @if (label()) {
+      @if (text()) {
         <span
           class="font-serif font-semibold tracking-tight text-base-content"
           [class]="labelClass()"
         >
-          {{ label() }}
+          {{ text() }}
         </span>
       }
     </span>
@@ -50,7 +64,11 @@ import { Component, input } from '@angular/core';
 export class BrandMark {
   /** Lado del logo en rem. */
   readonly size = input(2);
-  /** Vacío para mostrar solo el símbolo. */
-  readonly label = input('Panadería SigPan');
+  /** Vacío para mostrar solo el símbolo; sin indicar, el nombre comercial de la empresa. */
+  readonly label = input<string>();
   readonly labelClass = input('text-lg');
+
+  private readonly business = inject(CompanyStore).info;
+  protected readonly text = computed(() => this.label() ?? this.business().nombreComercial);
+  protected readonly logoUrl = computed(() => this.business().logoUrl ?? null);
 }

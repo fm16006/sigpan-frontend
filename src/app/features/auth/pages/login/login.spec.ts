@@ -1,8 +1,11 @@
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { throwError } from 'rxjs';
+import { BUSINESS_INFO } from '../../../../core/config/business.config';
 import { AppError } from '../../../../core/http/app-error';
 import { Auth } from '../../../../core/services/auth';
+import { CompanyStore } from '../../../../core/services/company-store';
 import { GoogleIdentity } from '../../../../core/services/google-identity';
 import { Login } from './login';
 
@@ -14,6 +17,8 @@ describe('Login', () => {
         provideRouter([]),
         { provide: Auth, useValue: { login: () => throwError(() => error), role: () => null } },
         { provide: GoogleIdentity, useValue: { enabled: false } },
+        // La marca del encabezado lee el nombre de la empresa; aquí basta el respaldo.
+        { provide: CompanyStore, useValue: { info: signal(BUSINESS_INFO) } },
       ],
     });
 

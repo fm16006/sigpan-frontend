@@ -101,6 +101,11 @@ export const API_ENDPOINTS = {
     byId: (id: Id) => `/escalas-precio/${id}`,
     byProducto: (id: Id) => `/escalas-precio/producto/${id}`,
   },
+  empresa: {
+    /** GET público; PUT solo administración. */
+    root: '/empresa',
+    logo: '/empresa/logo',
+  },
   orders: {
     place: '/ventas/pedido',
     counter: '/ventas/mostrador',
