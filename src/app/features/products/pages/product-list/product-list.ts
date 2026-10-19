@@ -12,6 +12,8 @@ import {
   isResale,
 } from '../../../../core/models/catalog.model';
 import { Auth } from '../../../../core/services/auth';
+import { BranchScope } from '../../../../core/services/branch-scope';
+import { BranchScopePicker } from '../../../../shared/ui/branch-scope-picker/branch-scope-picker';
 import { MoneyPipe } from '../../../../shared/pipes/money.pipe';
 import { Icon } from '../../../../shared/ui/icon/icon';
 import { PageHeader } from '../../../../shared/ui/page-header/page-header';
@@ -38,6 +40,7 @@ import { ProductDrawer } from '../../ui/product-drawer/product-drawer';
     MoneyPipe,
     Icon,
     PageHeader,
+    BranchScopePicker,
     ResourceState,
     StatCard,
     StatusChip,
@@ -48,6 +51,7 @@ import { ProductDrawer } from '../../ui/product-drawer/product-drawer';
 export class ProductList {
   private readonly service = inject(ProductAdminService);
   private readonly auth = inject(Auth);
+  protected readonly scope = inject(BranchScope);
 
   /** Solo administración crea productos. */
   protected readonly isAdmin = this.auth.hasAnyRole(['ADMINISTRADOR']);
@@ -66,7 +70,7 @@ export class ProductList {
   }));
   protected readonly isResale = isResale;
 
-  protected readonly products = httpResource<CatalogProduct[]>(() => this.service.productsUrl(), {
+  protected readonly products = httpResource<CatalogProduct[]>(() => this.service.productsUrl(this.scope.params()), {
     defaultValue: [],
   });
   protected readonly all = computed(() => (this.products.hasValue() ? this.products.value() : []));

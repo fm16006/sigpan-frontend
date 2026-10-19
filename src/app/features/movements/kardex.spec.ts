@@ -81,3 +81,32 @@ describe('inPeriod', () => {
     expect(inPeriod('2026-10-18T23:00:00', 'hoy', now)).toBe(false);
   });
 });
+
+describe('kárdex por sucursal (HU-61)', () => {
+  it('cada entrada conserva la sucursal y el documento del traslado', () => {
+    const salida: StockMovement = {
+      ...material,
+      tipo: 'SALIDA',
+      sucursalId: 1,
+      sucursal: 'Principal',
+      documento: 'TRA-000123',
+    };
+    const entrada: ProductMovement = {
+      ...product,
+      tipo: 'ENTRADA',
+      sucursalId: 2,
+      sucursal: 'Norte',
+      documento: 'TRA-000123',
+    };
+
+    const entries = mergeKardex([salida], [entrada]);
+
+    expect(entries.map((entry) => entry.sucursal)).toEqual(['Norte', 'Principal']);
+    expect(entries.every((entry) => entry.documento === 'TRA-000123')).toBe(true);
+    expect(filterKardex(entries, { query: 'tra-000123', segment: 'todos', period: 'todo' })).toHaveLength(2);
+  });
+
+  it('un movimiento sin sucursal informada queda con sucursal nula', () => {
+    expect(mergeKardex([material], [])[0].sucursal).toBeNull();
+  });
+});

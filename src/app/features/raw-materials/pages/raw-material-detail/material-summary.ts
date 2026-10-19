@@ -1,6 +1,7 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { hasInventory } from '../../../../core/models/inventory.model';
 import { ItemPurchase } from '../../../../core/models/purchase.model';
 import { MoneyPipe } from '../../../../shared/pipes/money.pipe';
 import { documentLabel } from '../../../purchases/purchase-calc';
@@ -17,10 +18,14 @@ import { CONSUMPTION_DAYS, MaterialDetailStore } from './material-detail.store';
       <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <app-stat-card
           label="Existencia"
-          [value]="
-            row.inventarioId === null ? '—' : (row.cantidad | number: '1.0-3') + ' ' + row.unidad
+          [value]="!hasInventory(row) ? '—' : (row.cantidad | number: '1.0-3') + ' ' + row.unidad"
+          [hint]="
+            !hasInventory(row)
+              ? 'Sin inventario habilitado'
+              : row.consolidado
+                ? 'Suma de todas las sucursales'
+                : 'En ' + store.scope.label()
           "
-          [hint]="row.inventarioId === null ? 'Sin inventario habilitado' : undefined"
         />
         <app-stat-card label="Mínimo" [value]="(row.minimo | number: '1.0-3') + ' ' + row.unidad" />
         <app-stat-card
@@ -162,6 +167,7 @@ import { CONSUMPTION_DAYS, MaterialDetailStore } from './material-detail.store';
 })
 export class MaterialSummary {
   protected readonly store = inject(MaterialDetailStore);
+  protected readonly hasInventory = hasInventory;
   protected readonly days = CONSUMPTION_DAYS;
 
   protected label(item: ItemPurchase): string {

@@ -7,6 +7,7 @@ import { AppError } from '../../../../core/http/app-error';
 import { applyFieldErrors, firstErrorMessage, formLevelMessage } from '../../../../core/http/form-errors';
 import { CatalogProduct } from '../../../../core/models/catalog.model';
 import { Formula, MaterialExplosion, Production } from '../../../../core/models/production.model';
+import { BranchScope } from '../../../../core/services/branch-scope';
 import { Notifications } from '../../../../core/services/notifications';
 import { debouncedSignal } from '../../../../core/utils/debounced-signal';
 import { notBeforeToday, todayIso } from '../../../../core/utils/dates';
@@ -30,6 +31,7 @@ export interface OrderPrefill {
 })
 export class OrderFormDrawer {
   private readonly service = inject(ProductionService);
+  protected readonly scope = inject(BranchScope);
   private readonly notifications = inject(Notifications);
   private readonly fb = inject(FormBuilder).nonNullable;
 
@@ -50,6 +52,7 @@ export class OrderFormDrawer {
   protected readonly form = this.fb.group({
     productoId: [0, [Validators.required, Validators.min(1)]],
     formulaId: [0, [Validators.required, Validators.min(1)]],
+    sucursalId: [0],
     cantidad: [1, [Validators.required, Validators.min(1)]],
     fechaPlanificada: [todayIso(), [Validators.required, notBeforeToday]],
     comentario: [''],
@@ -57,6 +60,7 @@ export class OrderFormDrawer {
 
   private readonly productId = toSignal(this.form.controls.productoId.valueChanges, { initialValue: 0 });
   private readonly formulaId = toSignal(this.form.controls.formulaId.valueChanges, { initialValue: 0 });
+  private readonly branchId = toSignal(this.form.controls.sucursalId.valueChanges, { initialValue: 0 });
   private readonly batches = toSignal(this.form.controls.cantidad.valueChanges, { initialValue: 1 });
 
   /** Solo los productos que tienen al menos una receta pueden producirse. */
@@ -84,7 +88,7 @@ export class OrderFormDrawer {
   protected readonly explosion = httpResource<MaterialExplosion>(() => {
     const units = this.queryUnits();
     return this.open() && Number(this.productId()) > 0 && this.formula() && units > 0
-      ? this.service.explosionUrl(Number(this.productId()), units)
+      ? this.service.explosionUrl(Number(this.productId()), units, Number(this.branchId()) || null)
       : undefined;
   });
 
@@ -133,6 +137,7 @@ export class OrderFormDrawer {
         this.form.reset({
           productoId: 0,
           formulaId: 0,
+          sucursalId: this.scope.branchId() ?? this.scope.ownBranchId() ?? 0,
           cantidad: prefill?.lotes ?? 1,
           fechaPlanificada: todayIso(),
           comentario: '',
@@ -170,6 +175,7 @@ export class OrderFormDrawer {
       .create({
         productoId: Number(value.productoId),
         formulaId: Number(value.formulaId),
+        ...(Number(value.sucursalId) > 0 ? { sucursalId: Number(value.sucursalId) } : {}),
         cantidad: Number(value.cantidad),
         fechaPlanificada: value.fechaPlanificada,
         comentario: value.comentario.trim(),

@@ -20,6 +20,7 @@ import {
   PURCHASE_DOCUMENT_MAX_LENGTH,
   Supplier,
 } from '../../../core/models/purchase.model';
+import { BranchScope } from '../../../core/services/branch-scope';
 import { Notifications } from '../../../core/services/notifications';
 import { todayIso } from '../../../core/utils/dates';
 import { MoneyPipe } from '../../../shared/pipes/money.pipe';
@@ -55,6 +56,10 @@ import { InventoryService } from '../services/inventory.service';
         @if (formError(); as message) {
           <div role="alert" class="alert alert-error py-2 text-sm">{{ message }}</div>
         }
+
+        <p class="rounded-box bg-base-200 px-4 py-2.5 text-sm">
+          La compra entra al inventario de la sucursal <strong>{{ scope.label() }}</strong>.
+        </p>
 
         <fieldset class="flex flex-col gap-4">
           <legend class="text-[0.68rem] font-semibold uppercase tracking-[0.09em] text-base-content/55">
@@ -258,6 +263,7 @@ import { InventoryService } from '../services/inventory.service';
 })
 export class PurchaseDrawer {
   private readonly service = inject(InventoryService);
+  protected readonly scope = inject(BranchScope);
   private readonly purchases = inject(PurchaseService);
   private readonly suppliers = inject(SupplierService);
   private readonly notifications = inject(Notifications);
@@ -306,13 +312,13 @@ export class PurchaseDrawer {
     { defaultValue: [] },
   );
   private readonly stocks = httpResource<RawMaterialStock[]>(
-    () => (this.open() ? this.service.stockUrl('materia-prima') : undefined),
+    () => (this.open() ? this.service.stockUrl('materia-prima', this.scope.params()) : undefined),
     { defaultValue: [] },
   );
   private readonly movements = httpResource<StockMovement[]>(
     () => {
       const id = this.selectedId();
-      return this.open() && id > 0 ? this.service.movementsUrl('materia-prima', id) : undefined;
+      return this.open() && id > 0 ? this.service.movementsUrl('materia-prima', id, this.scope.params()) : undefined;
     },
     { defaultValue: [] },
   );
@@ -386,7 +392,7 @@ export class PurchaseDrawer {
     const id = this.selectedId();
     if (id <= 0) return;
     this.opening.set(true);
-    this.service.openStock('materia-prima', id).subscribe({
+    this.service.openStock('materia-prima', id, this.scope.branchId()).subscribe({
       next: () => {
         this.opening.set(false);
         this.notifications.success(`Inventario de "${this.selected()?.nombre}" habilitado.`);

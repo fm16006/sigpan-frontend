@@ -2,9 +2,15 @@ import { DecimalPipe } from '@angular/common';
 import { httpResource } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import { RawMaterialStock, StockMovement } from '../../../../core/models/inventory.model';
+import {
+  RawMaterialStock,
+  StockMovement,
+  hasInventory,
+} from '../../../../core/models/inventory.model';
 import { RawMaterial } from '../../../../core/models/production.model';
 import { Auth } from '../../../../core/services/auth';
+import { BranchScope } from '../../../../core/services/branch-scope';
+import { BranchScopePicker } from '../../../../shared/ui/branch-scope-picker/branch-scope-picker';
 import { MoneyPipe } from '../../../../shared/pipes/money.pipe';
 import { Crumb } from '../../../../shared/ui/breadcrumbs/breadcrumbs';
 import { Icon } from '../../../../shared/ui/icon/icon';
@@ -34,6 +40,7 @@ type Drawer = 'create' | 'purchase' | null;
     DecimalPipe,
     MoneyPipe,
     PageHeader,
+    BranchScopePicker,
     ResourceState,
     StatCard,
     StatusChip,
@@ -46,10 +53,12 @@ type Drawer = 'create' | 'purchase' | null;
 export class RawMaterialList {
   private readonly service = inject(InventoryService);
   private readonly router = inject(Router);
+  protected readonly scope = inject(BranchScope);
 
   protected readonly canWrite = inject(Auth).hasAnyRole(['ADMINISTRADOR', 'BODEGUERO']);
   protected readonly crumbs: readonly Crumb[] = [{ label: 'Inventario' }, { label: 'Materia prima' }];
   protected readonly chips = MATERIAL_STATUS_CHIP;
+  protected readonly hasInventory = hasInventory;
 
   protected readonly query = signal('');
   protected readonly segment = signal<MaterialSegment>('todos');
@@ -59,12 +68,12 @@ export class RawMaterialList {
     defaultValue: [],
   });
   private readonly stocks = httpResource<RawMaterialStock[]>(
-    () => this.service.stockUrl('materia-prima'),
+    () => this.service.stockUrl('materia-prima', this.scope.params()),
     { defaultValue: [] },
   );
-  /** Todos los movimientos: de ahí sale el costo promedio vigente de cada insumo. */
+  /** Movimientos de la sucursal vista: de ahí sale el costo promedio vigente de cada insumo. */
   private readonly movements = httpResource<StockMovement[]>(
-    () => this.service.allMovementsUrl('materia-prima'),
+    () => this.service.allMovementsUrl('materia-prima', this.scope.params()),
     { defaultValue: [] },
   );
 

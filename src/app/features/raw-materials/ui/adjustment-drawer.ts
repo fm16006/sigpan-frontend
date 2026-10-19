@@ -19,6 +19,7 @@ import {
   StockKind,
 } from '../../../core/models/inventory.model';
 import { RawMaterial } from '../../../core/models/production.model';
+import { BranchScope } from '../../../core/services/branch-scope';
 import { Notifications } from '../../../core/services/notifications';
 import { FormDrawer } from '../../../shared/ui/form-drawer/form-drawer';
 import { documentoObligatorio } from '../movement-document';
@@ -52,6 +53,10 @@ interface ItemOption {
         @if (formError(); as message) {
           <div role="alert" class="alert alert-error py-2 text-sm">{{ message }}</div>
         }
+
+        <p class="rounded-box bg-base-200 px-4 py-2.5 text-sm">
+          El movimiento se registra en la sucursal <strong>{{ scope.label() }}</strong>.
+        </p>
 
         <fieldset class="flex flex-col gap-4">
           <legend class="text-[0.68rem] font-semibold uppercase tracking-[0.09em] text-base-content/55">
@@ -237,6 +242,7 @@ interface ItemOption {
 })
 export class AdjustmentDrawer {
   private readonly service = inject(InventoryService);
+  protected readonly scope = inject(BranchScope);
   private readonly notifications = inject(Notifications);
   private readonly fb = inject(FormBuilder).nonNullable;
 
@@ -284,7 +290,7 @@ export class AdjustmentDrawer {
     { defaultValue: [] },
   );
   private readonly materialStock = httpResource<RawMaterialStock[]>(
-    () => (this.open() ? this.service.stockUrl('materia-prima') : undefined),
+    () => (this.open() ? this.service.stockUrl('materia-prima', this.scope.params()) : undefined),
     { defaultValue: [] },
   );
   private readonly products = httpResource<CatalogProduct[]>(
@@ -292,7 +298,7 @@ export class AdjustmentDrawer {
     { defaultValue: [] },
   );
   private readonly productStock = httpResource<ProductStock[]>(
-    () => (this.open() && this.kind() === 'producto' ? this.service.stockUrl('producto') : undefined),
+    () => (this.open() && this.kind() === 'producto' ? this.service.stockUrl('producto', this.scope.params()) : undefined),
     { defaultValue: [] },
   );
 
@@ -380,7 +386,7 @@ export class AdjustmentDrawer {
     const item = this.item();
     if (!item) return;
     this.opening.set(true);
-    this.service.openStock(this.kind(), item.id).subscribe({
+    this.service.openStock(this.kind(), item.id, this.scope.branchId()).subscribe({
       next: () => {
         this.opening.set(false);
         this.notifications.success(`Inventario de "${item.nombre}" habilitado.`);

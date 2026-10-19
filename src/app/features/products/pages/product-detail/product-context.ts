@@ -5,6 +5,7 @@ import { ActivatedRoute } from '@angular/router';
 import { map } from 'rxjs';
 import { API_ENDPOINTS } from '../../../../core/constants/api-endpoints';
 import { ApiClient } from '../../../../core/http/api-client';
+import { BranchScope } from '../../../../core/services/branch-scope';
 import { Id } from '../../../../core/models/api.model';
 import { CatalogProduct, isResale } from '../../../../core/models/catalog.model';
 import { Combo, ComboLine } from '../../../../core/models/combo.model';
@@ -27,6 +28,8 @@ export class ProductContext {
   private readonly api = inject(ApiClient);
   private readonly route = inject(ActivatedRoute);
   private readonly purchaseService = inject(PurchaseService);
+  /** Sucursal cuyas existencias se ven (la del usuario por defecto). */
+  readonly scope = inject(BranchScope);
 
   readonly id = toSignal(this.route.paramMap.pipe(map((params) => Number(params.get('id')))), {
     initialValue: Number(this.route.snapshot.paramMap.get('id')),
@@ -35,9 +38,11 @@ export class ProductContext {
   /** La ficha pide abrir el panel de edición (lo usan también las pestañas). */
   readonly editing = signal(false);
 
-  readonly productRes = httpResource<CatalogProduct>(() => this.api.url(API_ENDPOINTS.productos.byId(this.id())));
+  readonly productRes = httpResource<CatalogProduct>(() =>
+    this.api.url(API_ENDPOINTS.productos.byId(this.id()), this.scope.params()),
+  );
   readonly stockRes = httpResource<ProductInventory>(() =>
-    this.api.url(API_ENDPOINTS.inventarios.byProducto(this.id())),
+    this.api.url(API_ENDPOINTS.inventarios.byProducto(this.id()), this.scope.params()),
   );
   // Se pide la lista y se filtra: /formulas/producto/:id responde 404 cuando no hay receta y el
   // interceptor lo mostraría como un aviso de error en un caso que es normal.

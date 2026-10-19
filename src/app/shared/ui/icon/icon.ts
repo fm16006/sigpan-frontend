@@ -26,6 +26,7 @@ const PATHS = {
   edit: 'M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4',
   trash: 'M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3',
   receipt: 'M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6',
+  transfer: 'M4 8h13M13 4l4 4-4 4M20 16H7M11 12l-4 4 4 4',
   truck: 'M3 6h11v10H3zM14 9h4l3 3v4h-7M7 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4M17 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4',
 } as const;
 

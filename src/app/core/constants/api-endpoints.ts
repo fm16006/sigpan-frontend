@@ -45,6 +45,8 @@ export const API_ENDPOINTS = {
   inventarios: {
     materiasPrimas: '/inventarios/materia-prima',
     productos: '/inventarios/producto',
+    /** Sucursales (id, nombre, código, estado) para elegirlas en inventario y traslados. */
+    sucursales: '/inventarios/sucursales',
     /** Inventario de un producto, por id de producto. */
     byProducto: (productoId: Id) => `/inventarios/producto/${productoId}`,
     /** Inventario de una materia prima, por id de materia prima. */
@@ -119,6 +121,10 @@ export const API_ENDPOINTS = {
     root: '/proveedores',
     byId: (id: Id) => `/proveedores/${id}`,
     activo: (id: Id) => `/proveedores/${id}/activo`,
+  },
+  traslados: {
+    root: '/traslados',
+    byId: (id: Id) => `/traslados/${id}`,
   },
   compras: {
     root: '/compras',

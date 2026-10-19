@@ -121,6 +121,7 @@ export class BranchDetail {
 
   protected readonly tabs = computed<DetailTab[]>(() => [
     { label: 'Cajas', path: '', count: this.store.branch()?.cajas.length ?? null },
+    { label: 'Inventario', path: 'inventario' },
     { label: 'Usuarios', path: 'usuarios', count: this.store.users().length },
   ]);
 
