@@ -85,6 +85,18 @@ export const routes: Routes = [
           import('./features/promotions/promotions.routes').then((m) => m.PROMOTIONS_ROUTES),
       },
       {
+        path: 'combos',
+        canActivate: [roleGuard(['ADMINISTRADOR'])],
+        loadChildren: () =>
+          import('./features/combos/combos.routes').then((m) => m.COMBOS_ROUTES),
+      },
+      {
+        path: 'wholesale',
+        canActivate: [roleGuard(['ADMINISTRADOR'])],
+        loadChildren: () =>
+          import('./features/wholesale/wholesale.routes').then((m) => m.WHOLESALE_ROUTES),
+      },
+      {
         path: 'audit',
         canActivate: [roleGuard(['ADMINISTRADOR'])],
         loadChildren: () => import('./features/audit/audit.routes').then((m) => m.AUDIT_ROUTES),

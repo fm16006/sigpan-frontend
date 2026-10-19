@@ -130,14 +130,3 @@ export interface ProductionDraft {
   readonly fechaPlanificada: string;
   readonly comentario: string;
 }
-
-export interface Promotion {
-  readonly id: Id;
-  readonly nombre: string;
-  readonly descripcion: string | null;
-  readonly tipoDescuento: string;
-  readonly valorDescuento: number;
-  readonly fechaInicio: string | null;
-  readonly fechaFin: string | null;
-  readonly activo: boolean;
-}

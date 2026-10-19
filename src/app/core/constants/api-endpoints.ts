@@ -67,6 +67,26 @@ export const API_ENDPOINTS = {
   },
   promociones: {
     root: '/promociones',
+    byId: (id: Id) => `/promociones/${id}`,
+  },
+  promocionesProductos: {
+    root: '/promociones-productos',
+    byId: (id: Id) => `/promociones-productos/${id}`,
+    byPromocion: (id: Id) => `/promociones-productos/promocion/${id}`,
+  },
+  combos: {
+    root: '/combos',
+    byId: (id: Id) => `/combos/${id}`,
+  },
+  combosDetalles: {
+    root: '/combos-detalles',
+    byId: (id: Id) => `/combos-detalles/${id}`,
+    byCombo: (id: Id) => `/combos-detalles/combo/${id}`,
+  },
+  escalasPrecio: {
+    root: '/escalas-precio',
+    byId: (id: Id) => `/escalas-precio/${id}`,
+    byProducto: (id: Id) => `/escalas-precio/producto/${id}`,
   },
   orders: {
     place: '/ventas/pedido',
@@ -75,6 +95,8 @@ export const API_ENDPOINTS = {
     queue: '/ventas/pedidos',
     cashCut: '/ventas/corte',
     status: (id: Id) => `/ventas/${id}/estado`,
+    /** Cotiza una canasta con el motor de promociones. No guarda nada. */
+    quote: '/ventas/cotizar',
   },
 } as const;
 
