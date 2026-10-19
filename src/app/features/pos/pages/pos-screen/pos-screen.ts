@@ -1,6 +1,6 @@
-import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, PLATFORM_ID, computed, inject, signal } from '@angular/core';
 import { httpResource } from '@angular/common/http';
-import { DatePipe } from '@angular/common';
+import { DatePipe, isPlatformBrowser } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { Id } from '../../../../core/models/api.model';
 import { CatalogProduct } from '../../../../core/models/catalog.model';
@@ -18,10 +18,13 @@ import { PosLine } from '../../models/checkout.model';
 import { CheckoutDialog } from '../../ui/checkout-dialog/checkout-dialog';
 import { KeypadKey, PosKeypad, applyKeypadKey } from '../../ui/pos-keypad/pos-keypad';
 import { ProductPreview } from '../../ui/product-preview/product-preview';
+import { todayIso } from '../../../../core/utils/dates';
 
 type PosTab = 'venta' | 'corte';
 
 const POS_PATH = '/backoffice/pos';
+/** Existencias al día sin recargar la página, igual que la cola de despacho. */
+const CATALOG_REFRESH_MS = 30_000;
 const TIME_FORMAT = new Intl.DateTimeFormat('es-SV', { hour: 'numeric', minute: '2-digit' });
 const DAY_FORMAT = new Intl.DateTimeFormat('es-SV', {
   weekday: 'long',
@@ -71,7 +74,7 @@ export class PosScreen {
   protected readonly selectedId = signal<Id | null>(null);
   protected readonly keypad = signal('');
   protected readonly checkoutOpen = signal(false);
-  protected readonly cutDate = signal(today());
+  protected readonly cutDate = signal(todayIso());
 
   protected readonly clock = computed(() => TIME_FORMAT.format(this.now()));
   protected readonly day = computed(() => DAY_FORMAT.format(this.now()));
@@ -135,8 +138,15 @@ export class PosScreen {
   );
 
   constructor() {
-    const timer = setInterval(() => this.now.set(new Date()), 30_000);
-    inject(DestroyRef).onDestroy(() => clearInterval(timer));
+    const destroyRef = inject(DestroyRef);
+    if (isPlatformBrowser(inject(PLATFORM_ID))) {
+      const clock = setInterval(() => this.now.set(new Date()), 30_000);
+      const refresh = setInterval(() => this.catalog.reload(), CATALOG_REFRESH_MS);
+      destroyRef.onDestroy(() => {
+        clearInterval(clock);
+        clearInterval(refresh);
+      });
+    }
   }
 
   protected toneFor(category: string): string {
@@ -150,6 +160,10 @@ export class PosScreen {
   }
 
   protected add(product: CatalogProduct, quantity = 1): void {
+    if (this.soldOut(product)) {
+      this.notifications.error(`${product.nombre} está agotado.`);
+      return;
+    }
     const current = this.ticket().find((line) => line.product.id === product.id)?.quantity ?? 0;
     if (!this.fitsStock(product, current + quantity)) {
       return;
@@ -237,8 +251,10 @@ export class PosScreen {
     this.cut.reload();
   }
 
+  /** Lo dice el backend (agotado). Si el detalle recién consultado es del mismo producto, manda ese. */
   protected soldOut(product: CatalogProduct): boolean {
-    return this.stockOf(product) === 0;
+    const detail = this.selectedDetail.value();
+    return detail?.id === product.id ? detail.agotado : product.agotado;
   }
 
   /** Existencia conocida: la del detalle recién consultado o, si no, la del catálogo. */
@@ -275,10 +291,4 @@ export class PosScreen {
     );
     return true;
   }
-}
-
-function today(): string {
-  const now = new Date();
-  const offset = now.getTimezoneOffset() * 60_000;
-  return new Date(now.getTime() - offset).toISOString().slice(0, 10);
 }

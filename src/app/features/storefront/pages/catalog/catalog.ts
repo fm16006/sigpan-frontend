@@ -103,7 +103,7 @@ function normalize(text: string): string {
 }
 
 function sortProducts(products: CatalogProduct[], order: SortOrder): CatalogProduct[] {
-  const available = (product: CatalogProduct) => (product.disponible === 0 ? 1 : 0);
+  const available = (product: CatalogProduct) => (product.agotado ? 1 : 0);
   const byOrder: Record<SortOrder, (a: CatalogProduct, b: CatalogProduct) => number> = {
     destacados: (a, b) =>
       available(a) - available(b) || Number(!!b.imagenUrl) - Number(!!a.imagenUrl),

@@ -55,6 +55,9 @@
     <p class="mb-3 text-sm text-base-content/60">
       {{ row.nombre }} · existencia actual {{ row.cantidad | number: '1.0-3' }} {{ row.unidad }}
     </p>
+    @if (formError(); as message) {
+      <div role="alert" class="alert alert-error mb-4 py-2 text-sm">{{ message }}</div>
+    }
     <form class="grid gap-4 md:grid-cols-2" [formGroup]="form" (ngSubmit)="saveMovement()">
       <div>
         <label class="label" for="tipo"><span class="label-text">Tipo</span></label>
@@ -116,6 +119,26 @@
         />
         @if (errorFor('motivo'); as message) {
           <p class="mt-1 text-xs text-error">{{ message }}</p>
+        }
+      </div>
+
+      <div>
+        <label class="label" for="documento"
+          ><span class="label-text">N.º de documento</span></label
+        >
+        <input
+          id="documento"
+          type="text"
+          maxlength="50"
+          placeholder="Ej. FAC-0042"
+          formControlName="documento"
+          class="input input-bordered w-full"
+          [class.input-error]="!!errorFor('documento')"
+        />
+        @if (errorFor('documento'); as message) {
+          <p class="mt-1 text-xs text-error">{{ message }}</p>
+        } @else if (form.controls.tipo.value === 'ENTRADA') {
+          <p class="mt-1 text-xs text-base-content/50">Factura, remisión o guía de la compra.</p>
         }
       </div>
 
@@ -229,6 +252,7 @@
                           <th scope="col" class="text-end">Costo unitario</th>
                           <th scope="col" class="text-end">Costo promedio</th>
                           <th scope="col">Motivo</th>
+                          <th scope="col">Documento</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -250,6 +274,7 @@
                             <td class="text-end">{{ movement.costoInicial | money }}</td>
                             <td class="text-end">{{ movement.costoFinal | money }}</td>
                             <td class="text-sm">{{ movement.motivo }}</td>
+                            <td class="text-sm">{{ movement.documento ?? '—' }}</td>
                           </tr>
                         }
                       </tbody>

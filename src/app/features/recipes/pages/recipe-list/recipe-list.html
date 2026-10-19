@@ -2,7 +2,94 @@
   <button type="button" class="btn btn-sm" [disabled]="formulas.isLoading()" (click)="formulas.reload()">
     Actualizar
   </button>
+  @if (canManage) {
+    <button type="button" class="btn btn-sm btn-primary" (click)="showFormulaForm() ? closeFormulaForm() : openNewFormula()">
+      {{ showFormulaForm() && editingFormulaId() === null ? 'Cerrar' : 'Nueva receta' }}
+    </button>
+  }
 </app-page-header>
+
+@if (canManage && showFormulaForm()) {
+  <section class="mb-6 max-w-4xl rounded-box border border-base-300 bg-base-100 p-4">
+    <h2 class="mb-3 font-semibold">{{ editingFormulaId() === null ? 'Nueva receta' : 'Editar receta' }}</h2>
+    @if (formulaError(); as message) {
+      <div role="alert" class="alert alert-error mb-4 py-2 text-sm">{{ message }}</div>
+    }
+    <form class="grid gap-4 md:grid-cols-2" [formGroup]="formulaForm" (ngSubmit)="saveFormula()">
+      <div>
+        <label class="label" for="recetaProducto"><span class="label-text">Producto</span></label>
+        <select
+          id="recetaProducto"
+          formControlName="productoId"
+          class="select select-bordered w-full"
+          [class.select-error]="!!errorFor('formula', 'productoId')"
+        >
+          <option [ngValue]="0" disabled>Elegí un producto</option>
+          @for (product of products.value(); track product.id) {
+            <option [ngValue]="product.id">{{ product.nombre }}</option>
+          }
+        </select>
+        @if (errorFor('formula', 'productoId'); as message) {
+          <p class="mt-1 text-xs text-error">{{ message }}</p>
+        }
+      </div>
+
+      <div>
+        <label class="label" for="recetaNombre"><span class="label-text">Nombre de la receta</span></label>
+        <input
+          id="recetaNombre"
+          type="text"
+          formControlName="nombre"
+          class="input input-bordered w-full"
+          [class.input-error]="!!errorFor('formula', 'nombre')"
+        />
+        @if (errorFor('formula', 'nombre'); as message) {
+          <p class="mt-1 text-xs text-error">{{ message }}</p>
+        }
+      </div>
+
+      <div>
+        <label class="label" for="recetaCantidad"><span class="label-text">Cantidad producida por lote</span></label>
+        <input
+          id="recetaCantidad"
+          type="number"
+          step="0.01"
+          min="0.01"
+          formControlName="cantidadProduccion"
+          class="input input-bordered w-full"
+          [class.input-error]="!!errorFor('formula', 'cantidadProduccion')"
+        />
+        @if (errorFor('formula', 'cantidadProduccion'); as message) {
+          <p class="mt-1 text-xs text-error">{{ message }}</p>
+        }
+      </div>
+
+      <div>
+        <label class="label" for="recetaDescripcion"><span class="label-text">Descripción</span></label>
+        <textarea
+          id="recetaDescripcion"
+          rows="2"
+          formControlName="descripcion"
+          class="textarea textarea-bordered w-full"
+          [class.textarea-error]="!!errorFor('formula', 'descripcion')"
+        ></textarea>
+        @if (errorFor('formula', 'descripcion'); as message) {
+          <p class="mt-1 text-xs text-error">{{ message }}</p>
+        }
+      </div>
+
+      <div class="md:col-span-2 flex justify-end gap-2">
+        <button type="button" class="btn btn-ghost" (click)="closeFormulaForm()">Cancelar</button>
+        <button type="submit" class="btn btn-primary" [disabled]="savingFormula()">
+          @if (savingFormula()) {
+            <span class="loading loading-spinner loading-sm"></span>
+          }
+          Guardar receta
+        </button>
+      </div>
+    </form>
+  </section>
+}
 
 <app-resource-state
   [loading]="formulas.isLoading()"
@@ -32,21 +119,184 @@
 
         @if (openId() === formula.id) {
           <div class="border-t border-base-300 px-4 py-3">
+            @if (canManage) {
+              <div class="mb-3 flex flex-wrap gap-2">
+                <button type="button" class="btn btn-xs" (click)="openEditFormula(formula)">Editar receta</button>
+                <button
+                  type="button"
+                  class="btn btn-xs"
+                  [class.btn-active]="costId() === formula.id"
+                  [attr.aria-expanded]="costId() === formula.id"
+                  (click)="toggleCost(formula.id)"
+                >
+                  {{ costId() === formula.id ? 'Ocultar costo' : 'Ver costo unitario' }}
+                </button>
+              </div>
+            }
+
             @if (lines.isLoading()) {
               <span class="loading loading-spinner loading-sm"></span>
+            } @else if (lines.error()) {
+              <p class="text-sm text-error">No pudimos cargar los insumos.</p>
             } @else if (lines.value().length === 0) {
               <p class="text-sm text-base-content/50">Esta receta aún no tiene insumos.</p>
             } @else {
-              <ul class="grid gap-1 text-sm">
+              <ul class="grid gap-2 text-sm">
                 @for (line of lines.value(); track line.id) {
-                  <li class="flex justify-between gap-3">
+                  <li class="flex flex-wrap items-center justify-between gap-3">
                     <span>{{ line.materiaPrima }}</span>
-                    <span class="tabular-nums text-base-content/70">
-                      {{ line.cantidad | number: '1.0-3' }} {{ line.unidadMedida }}
+                    <span class="flex items-center gap-3">
+                      <span class="tabular-nums text-base-content/70">
+                        {{ line.cantidad | number: '1.0-3' }} {{ line.unidadMedida }}
+                      </span>
+                      @if (canManage) {
+                        @if (busyLineId() === line.id) {
+                          <span class="loading loading-spinner loading-xs"></span>
+                        } @else {
+                          <button type="button" class="btn btn-xs btn-ghost" (click)="openEditLine(line)">
+                            Editar
+                          </button>
+                          <button
+                            type="button"
+                            class="btn btn-xs"
+                            [class.btn-error]="confirmRemoveLineId() === line.id"
+                            [class.btn-ghost]="confirmRemoveLineId() !== line.id"
+                            (click)="removeLine(line)"
+                          >
+                            {{ confirmRemoveLineId() === line.id ? '¿Confirmar?' : 'Quitar' }}
+                          </button>
+                        }
+                      }
                     </span>
                   </li>
                 }
               </ul>
+            }
+
+            @if (canManage) {
+              @if (lineFormOpen()) {
+                <form
+                  class="mt-4 grid gap-3 rounded-box bg-base-200/60 p-3 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_auto]"
+                  [formGroup]="lineForm"
+                  (ngSubmit)="saveLine(formula.id)"
+                  aria-label="Insumo de la receta"
+                >
+                  @if (lineError(); as message) {
+                    <div role="alert" class="alert alert-error py-2 text-sm md:col-span-4">{{ message }}</div>
+                  }
+                  <div>
+                    <label class="label" for="lineaInsumo"><span class="label-text">Insumo</span></label>
+                    <select
+                      id="lineaInsumo"
+                      formControlName="materiaPrimaId"
+                      class="select select-bordered select-sm w-full"
+                      [class.select-error]="!!errorFor('line', 'materiaPrimaId')"
+                    >
+                      <option [ngValue]="0" disabled>Elegí un insumo</option>
+                      @for (material of materials.value(); track material.id) {
+                        <option [ngValue]="material.id">{{ material.nombre }} ({{ material.unidadMedida }})</option>
+                      }
+                    </select>
+                    @if (errorFor('line', 'materiaPrimaId'); as message) {
+                      <p class="mt-1 text-xs text-error">{{ message }}</p>
+                    }
+                  </div>
+
+                  <div>
+                    <label class="label" for="lineaCantidad"><span class="label-text">Cantidad</span></label>
+                    <input
+                      id="lineaCantidad"
+                      type="number"
+                      step="0.001"
+                      min="0.001"
+                      formControlName="cantidad"
+                      class="input input-bordered input-sm w-full"
+                      [class.input-error]="!!errorFor('line', 'cantidad')"
+                    />
+                    @if (errorFor('line', 'cantidad'); as message) {
+                      <p class="mt-1 text-xs text-error">{{ message }}</p>
+                    }
+                  </div>
+
+                  <div>
+                    <label class="label" for="lineaUnidad"><span class="label-text">Unidad</span></label>
+                    <input
+                      id="lineaUnidad"
+                      type="text"
+                      maxlength="30"
+                      formControlName="unidadMedida"
+                      class="input input-bordered input-sm w-full"
+                      [class.input-error]="!!errorFor('line', 'unidadMedida')"
+                    />
+                    @if (errorFor('line', 'unidadMedida'); as message) {
+                      <p class="mt-1 text-xs text-error">{{ message }}</p>
+                    } @else {
+                      <p class="mt-1 text-xs text-base-content/50">Debe ser la unidad base del insumo.</p>
+                    }
+                  </div>
+
+                  <div class="flex items-end gap-2">
+                    <button type="button" class="btn btn-sm btn-ghost" (click)="closeLineForm()">Cancelar</button>
+                    <button type="submit" class="btn btn-sm btn-primary" [disabled]="savingLine()">
+                      @if (savingLine()) {
+                        <span class="loading loading-spinner loading-xs"></span>
+                      }
+                      {{ editingLineId() === null ? 'Agregar' : 'Guardar' }}
+                    </button>
+                  </div>
+                </form>
+              } @else {
+                <button type="button" class="btn btn-sm mt-3" (click)="openNewLine()">Agregar insumo</button>
+              }
+            }
+
+            @if (canManage && costId() === formula.id) {
+              <div class="mt-4 rounded-box bg-base-200/60 p-3">
+                @if (cost.isLoading()) {
+                  <span class="loading loading-spinner loading-sm"></span>
+                } @else if (cost.error()) {
+                  <p class="text-sm text-error">No pudimos calcular el costo de esta receta.</p>
+                } @else if (costOf(formula.id); as c) {
+                  <dl class="mb-3 grid gap-2 sm:grid-cols-3">
+                    <div>
+                      <dt class="text-xs text-base-content/55">Costo unitario</dt>
+                      <dd class="text-xl font-semibold tabular-nums">{{ c.costoUnitario | money }}</dd>
+                    </div>
+                    <div>
+                      <dt class="text-xs text-base-content/55">Costo del lote</dt>
+                      <dd class="font-medium tabular-nums">{{ c.costoTotal | money }}</dd>
+                    </div>
+                    <div>
+                      <dt class="text-xs text-base-content/55">Unidades por lote</dt>
+                      <dd class="font-medium tabular-nums">{{ c.cantidadProduccion | number: '1.0-2' }}</dd>
+                    </div>
+                  </dl>
+                  <div class="overflow-x-auto">
+                    <table class="table table-sm">
+                      <thead>
+                        <tr>
+                          <th scope="col">Insumo</th>
+                          <th scope="col" class="text-end">Cantidad</th>
+                          <th scope="col" class="text-end">Costo promedio</th>
+                          <th scope="col" class="text-end">Subtotal</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (insumo of c.insumos; track insumo.materiaPrimaId) {
+                          <tr>
+                            <td>{{ insumo.nombre }}</td>
+                            <td class="text-end tabular-nums">
+                              {{ insumo.cantidad | number: '1.0-3' }} {{ insumo.unidadMedida }}
+                            </td>
+                            <td class="text-end">{{ insumo.costoPromedio | money }}</td>
+                            <td class="text-end font-medium">{{ insumo.subtotal | money }}</td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                }
+              </div>
             }
           </div>
         }

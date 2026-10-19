@@ -19,11 +19,46 @@ export interface Formula {
   readonly producto: string;
 }
 
+export interface FormulaDraft {
+  readonly nombre: string;
+  readonly descripcion: string;
+  readonly cantidadProduccion: number;
+  readonly productoId: Id;
+}
+
 export interface FormulaLine {
   readonly id: Id;
+  readonly materiaPrimaId: Id;
   readonly materiaPrima: string;
   readonly unidadMedida: string;
   readonly cantidad: number;
+}
+
+export interface FormulaLineDraft {
+  readonly formulaId: Id;
+  readonly materiaPrimaId: Id;
+  readonly cantidad: number;
+  readonly unidadMedida: string;
+}
+
+export interface FormulaCostLine {
+  readonly materiaPrimaId: Id;
+  readonly nombre: string;
+  readonly unidadMedida: string;
+  readonly cantidad: number;
+  readonly costoPromedio: number;
+  readonly subtotal: number;
+}
+
+/** Costo calculado por el backend. El frontend solo lo muestra. */
+export interface FormulaCost {
+  readonly formulaId: Id;
+  readonly productoId: Id;
+  readonly producto: string;
+  readonly cantidadProduccion: number;
+  readonly costoTotal: number;
+  readonly costoUnitario: number;
+  readonly insumos: readonly FormulaCostLine[];
 }
 
 export const PRODUCTION_STATUSES = [
@@ -55,6 +90,8 @@ export interface Production {
   readonly cantidad: number;
   readonly estado: ProductionStatus;
   readonly fecha: string;
+  /** "YYYY-MM-DD". */
+  readonly fechaPlanificada: string;
   readonly comentario: string | null;
 }
 
@@ -62,6 +99,8 @@ export interface ProductionDraft {
   readonly productoId: Id;
   readonly formulaId: Id;
   readonly cantidad: number;
+  /** "YYYY-MM-DD", hoy o futura. */
+  readonly fechaPlanificada: string;
   readonly comentario: string;
 }
 

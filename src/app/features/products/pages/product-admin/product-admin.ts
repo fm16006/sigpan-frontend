@@ -2,11 +2,19 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { httpResource } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AppError } from '../../../../core/http/app-error';
-import { applyFieldErrors, firstErrorMessage } from '../../../../core/http/form-errors';
+import {
+  applyFieldErrors,
+  firstErrorMessage,
+  formLevelMessage,
+} from '../../../../core/http/form-errors';
 import { Id } from '../../../../core/models/api.model';
 import {
   CatalogProduct,
+  CatalogProductDraft,
   Category,
+  ESPECIALIDAD_LABELS,
+  ESPECIALIDADES,
+  Especialidad,
   IMAGE_TYPES,
   MAX_IMAGE_MB,
 } from '../../../../core/models/catalog.model';
@@ -16,6 +24,7 @@ import { MoneyPipe } from '../../../../shared/pipes/money.pipe';
 import { PageHeader } from '../../../../shared/ui/page-header/page-header';
 import { ResourceState } from '../../../../shared/ui/resource-state/resource-state';
 import { ProductAdminService } from '../../services/product-admin.service';
+import { createProductForm } from './product-form';
 
 @Component({
   selector: 'app-product-admin',
@@ -33,6 +42,11 @@ export class ProductAdmin {
   protected readonly canEdit = this.auth.hasAnyRole(['ADMINISTRADOR', 'JEFE_PRODUCCION']);
   protected readonly maxImageMb = MAX_IMAGE_MB;
   protected readonly acceptedTypes = IMAGE_TYPES.join(',');
+  protected readonly especialidades = ESPECIALIDADES.map((value) => ({
+    value,
+    label: ESPECIALIDAD_LABELS[value],
+  }));
+  protected readonly especialidadLabels = ESPECIALIDAD_LABELS;
 
   protected readonly products = httpResource<CatalogProduct[]>(() => this.service.productsUrl(), {
     defaultValue: [],
@@ -44,13 +58,7 @@ export class ProductAdmin {
     [...this.products.value()].sort((a, b) => b.id - a.id),
   );
 
-  protected readonly form = this.fb.group({
-    nombre: ['', [Validators.required, Validators.minLength(3)]],
-    descripcion: [''],
-    precio: [0, [Validators.required, Validators.min(0.01)]],
-    categoriaId: [0, [Validators.required, Validators.min(1)]],
-    stockMinimo: [0, [Validators.required, Validators.min(0)]],
-  });
+  protected readonly form = createProductForm(this.fb);
   protected readonly newCategory = this.fb.control('', [Validators.required, Validators.minLength(3)]);
 
   protected readonly showForm = signal(false);
@@ -59,6 +67,8 @@ export class ProductAdmin {
   protected readonly savingCategory = signal(false);
   protected readonly busyId = signal<Id | null>(null);
   protected readonly confirmDeleteId = signal<Id | null>(null);
+  /** Error general del backend, que no pertenece a un campo. */
+  protected readonly formError = signal<string | null>(null);
 
   protected errorFor(field: string): string | null {
     if (field === 'categoriaId' && this.form.controls.categoriaId.hasError('min')) {
@@ -66,6 +76,9 @@ export class ProductAdmin {
     }
     if (field === 'stockMinimo' && this.form.controls.stockMinimo.hasError('min')) {
       return this.form.controls.stockMinimo.touched ? 'No puede ser negativo.' : null;
+    }
+    if (field === 'especialidad' && this.form.controls.especialidad.hasError('required')) {
+      return this.form.controls.especialidad.touched ? 'Elegí una especialidad.' : null;
     }
     return firstErrorMessage(this.form, field);
   }
@@ -77,18 +90,24 @@ export class ProductAdmin {
     }
     this.editingId.set(null);
     this.form.reset();
+    this.formError.set(null);
     this.form.controls.precio.enable();
     this.showForm.set(true);
   }
 
   protected startEdit(product: CatalogProduct): void {
     this.editingId.set(product.id);
+    this.formError.set(null);
     this.form.setValue({
+      codigo: product.codigo,
       nombre: product.nombre,
       descripcion: product.descripcion ?? '',
       precio: Number(product.precio),
       categoriaId: product.categoriaId,
       stockMinimo: Number(product.stockMinimo ?? 0),
+      unidadVenta: product.unidadVenta,
+      especialidad: product.especialidad,
+      alergenos: product.alergenos ?? '',
     });
     if (this.isAdmin) {
       this.form.controls.precio.enable();
@@ -101,6 +120,7 @@ export class ProductAdmin {
   protected closeForm(): void {
     this.showForm.set(false);
     this.editingId.set(null);
+    this.formError.set(null);
     this.form.reset();
   }
 
@@ -111,25 +131,42 @@ export class ProductAdmin {
     }
 
     this.saving.set(true);
+    this.formError.set(null);
     const value = this.form.getRawValue();
-    const draft = { ...value, nombre: value.nombre.trim(), descripcion: value.descripcion.trim() };
+    const draft: CatalogProductDraft = {
+      ...value,
+      codigo: value.codigo.trim(),
+      nombre: value.nombre.trim(),
+      descripcion: value.descripcion.trim(),
+      unidadVenta: value.unidadVenta.trim(),
+      // El validador de required ya garantiza que hay una opción elegida.
+      especialidad: value.especialidad as Especialidad,
+      alergenos: value.alergenos.trim() || null,
+    };
     const id = this.editingId();
     const request = id === null ? this.service.create(draft) : this.service.update(id, draft);
 
     request.subscribe({
-        next: (product) => {
-          this.saving.set(false);
-          this.closeForm();
-          this.notifications.success(
-            `Producto "${product.nombre}" ${id === null ? 'creado' : 'actualizado'}.`,
-          );
-          this.products.reload();
-        },
-        error: (error: AppError) => {
-          this.saving.set(false);
-          applyFieldErrors(this.form, error);
-        },
-      });
+      next: (product) => {
+        this.saving.set(false);
+        this.closeForm();
+        this.notifications.success(
+          `Producto "${product.nombre}" ${id === null ? 'creado' : 'actualizado'}.`,
+        );
+        this.products.reload();
+      },
+      error: (error: AppError) => {
+        this.saving.set(false);
+        if (error.kind === 'conflict') {
+          // 409: el código ya lo usa otro producto. Se muestra junto al campo.
+          this.form.controls.codigo.setErrors({ server: error.message });
+          this.form.controls.codigo.markAsTouched();
+          return;
+        }
+        applyFieldErrors(this.form, error);
+        this.formError.set(formLevelMessage(error));
+      },
+    });
   }
 
   protected createCategory(): void {

@@ -14,6 +14,7 @@ import {
   Production,
 } from '../../../../core/models/production.model';
 import { Notifications } from '../../../../core/services/notifications';
+import { notBeforeToday, todayIso } from '../../../../core/utils/dates';
 import { PageHeader } from '../../../../shared/ui/page-header/page-header';
 import { ResourceState } from '../../../../shared/ui/resource-state/resource-state';
 import { ProductionService } from '../../services/production.service';
@@ -29,6 +30,8 @@ export class ProductionList {
   private readonly fb = inject(FormBuilder).nonNullable;
 
   protected readonly statusLabels = PRODUCTION_STATUS_LABELS;
+  /** Mínimo del selector de fecha planificada. */
+  protected readonly today = todayIso();
 
   protected readonly productions = httpResource<Production[]>(() => this.service.listUrl(), {
     defaultValue: [],
@@ -48,6 +51,7 @@ export class ProductionList {
     productoId: [0, [Validators.required, Validators.min(1)]],
     formulaId: [0, [Validators.required, Validators.min(1)]],
     cantidad: [1, [Validators.required, Validators.min(1)]],
+    fechaPlanificada: ['', [Validators.required, notBeforeToday]],
     comentario: [''],
   });
 
@@ -92,6 +96,9 @@ export class ProductionList {
       if (field === 'formulaId') return 'Elegí una receta.';
       return 'Debe ser al menos 1.';
     }
+    if (field === 'fechaPlanificada' && control?.hasError('minDate')) {
+      return 'La fecha planificada no puede ser anterior a hoy.';
+    }
     return firstErrorMessage(this.form, field);
   }
 
@@ -100,7 +107,7 @@ export class ProductionList {
   }
 
   protected toggleForm(): void {
-    this.form.reset();
+    this.resetForm();
     this.showForm.update((open) => !open);
   }
 
@@ -116,7 +123,7 @@ export class ProductionList {
       next: (production) => {
         this.saving.set(false);
         this.showForm.set(false);
-        this.form.reset();
+        this.resetForm();
         this.notifications.success(`Producción de "${production.producto}" registrada.`);
         this.productions.reload();
       },
@@ -145,5 +152,10 @@ export class ProductionList {
       },
       error: () => this.busyId.set(null),
     });
+  }
+
+  /** Formulario en blanco; la fecha planificada arranca en hoy. */
+  private resetForm(): void {
+    this.form.reset({ fechaPlanificada: todayIso() });
   }
 }

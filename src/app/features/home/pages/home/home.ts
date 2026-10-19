@@ -99,5 +99,5 @@ export class Home {
 }
 
 function rank(product: CatalogProduct): number {
-  return (product.disponible === 0 ? 0 : 2) + (product.imagenUrl ? 1 : 0);
+  return (product.agotado ? 0 : 2) + (product.imagenUrl ? 1 : 0);
 }

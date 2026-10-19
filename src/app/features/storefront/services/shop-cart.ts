@@ -10,6 +10,10 @@ export class ShopCart {
   private readonly notifications = inject(Notifications);
 
   add(product: CatalogProduct): void {
+    if (product.agotado) {
+      this.notifications.error(`${product.nombre} está agotado por hoy.`);
+      return;
+    }
     const stock = product.disponible;
     if (stock != null && this.cart.quantityOf(product.id) + 1 > stock) {
       this.notifications.error(
