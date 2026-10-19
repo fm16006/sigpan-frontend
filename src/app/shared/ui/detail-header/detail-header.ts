@@ -24,7 +24,7 @@ export interface DetailTab {
         <div class="flex min-w-0 items-center gap-4">
           <ng-content select="[media]" />
           <div class="flex min-w-0 flex-col gap-1.5">
-            <h1 class="text-3xl font-semibold text-base-content">{{ title() }}</h1>
+            <h1 class="text-2xl font-semibold text-base-content sm:text-3xl">{{ title() }}</h1>
             <div class="flex flex-wrap items-center gap-2 text-sm">
               @if (code()) {
                 <span class="font-mono text-xs text-base-content/60">{{ code() }}</span>
