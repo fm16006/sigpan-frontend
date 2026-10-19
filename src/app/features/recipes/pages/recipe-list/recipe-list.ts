@@ -77,6 +77,8 @@ export class RecipeList {
     // El backend la exige (@NotBlank en FormulaRequest).
     descripcion: ['', [Validators.required]],
     cantidadProduccion: [1, [Validators.required, Validators.min(0.01)]],
+    // Merma de proceso en porcentaje. Si no se llena, el backend guarda 0.
+    porcentajeMerma: [0, [Validators.min(0), Validators.max(100)]],
   });
 
   // Insumos de la receta abierta (alta y edición).
@@ -107,6 +109,9 @@ export class RecipeList {
   protected errorFor(form: 'formula' | 'line', field: string): string | null {
     const group: FormGroup = form === 'formula' ? this.formulaForm : this.lineForm;
     const control = group.get(field);
+    if (field === 'porcentajeMerma' && (control?.hasError('min') || control?.hasError('max')) && control.touched) {
+      return 'Debe estar entre 0 y 100.';
+    }
     if (control?.hasError('min') && control.touched) {
       if (field === 'productoId') return 'Elegí un producto.';
       if (field === 'materiaPrimaId') return 'Elegí un insumo.';
@@ -148,6 +153,7 @@ export class RecipeList {
       nombre: formula.nombre,
       descripcion: formula.descripcion ?? '',
       cantidadProduccion: Number(formula.cantidadProduccion),
+      porcentajeMerma: Number(formula.porcentajeMerma ?? 0),
     });
     this.showFormulaForm.set(true);
   }
@@ -172,6 +178,7 @@ export class RecipeList {
       nombre: value.nombre.trim(),
       descripcion: value.descripcion.trim(),
       cantidadProduccion: Number(value.cantidadProduccion),
+      porcentajeMerma: Number(value.porcentajeMerma ?? 0),
       productoId: Number(value.productoId),
     };
     const id = this.editingFormulaId();
