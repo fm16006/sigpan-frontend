@@ -1,49 +1,70 @@
-<form
-  [formGroup]="form"
-  (ngSubmit)="save()"
-  class="grid gap-4 rounded-box border border-base-300 bg-base-100 p-5"
-  aria-label="Formulario de promoción"
+<app-form-drawer
+  [open]="true"
+  [title]="isEdit() ? 'Editar promoción' : 'Nueva promoción'"
+  subtitle="Un producto es un descuento individual; varios forman un bloque."
+  (closed)="cancel()"
 >
-  <h2 class="text-base font-semibold">{{ isEdit() ? 'Editar promoción' : 'Nueva promoción' }}</h2>
+  <form
+    id="promotion-form"
+    [formGroup]="form"
+    (ngSubmit)="save()"
+    class="grid gap-6"
+    aria-label="Formulario de promoción"
+  >
+    @if (formError(); as message) {
+      <div role="alert" class="alert alert-error text-sm">{{ message }}</div>
+    }
 
-  @if (formError(); as message) {
-    <div role="alert" class="alert alert-error text-sm">{{ message }}</div>
-  }
-
-  <div class="grid gap-4 md:grid-cols-2">
-    <label class="form-control md:col-span-2">
-      <span class="label-text mb-1">Nombre</span>
-      <input type="text" formControlName="nombre" class="input input-bordered" />
-      @if (fieldError('nombre'); as message) {
-        <span class="mt-1 text-sm text-error">{{ message }}</span>
-      }
-    </label>
-
-    <label class="form-control md:col-span-2">
-      <span class="label-text mb-1">Descripción</span>
-      <textarea formControlName="descripcion" class="textarea textarea-bordered" rows="2"></textarea>
-    </label>
-
-    <label class="form-control">
-      <span class="label-text mb-1">Tipo de descuento</span>
-      <select formControlName="tipoDescuento" class="select select-bordered">
-        @for (type of types; track type) {
-          <option [value]="type">{{ typeLabels[type] }}</option>
+    <fieldset class="grid gap-3">
+      <legend class="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.09em] text-base-content/55">
+        Datos
+      </legend>
+      <label class="form-control">
+        <span class="label-text mb-1">Nombre</span>
+        <input type="text" formControlName="nombre" class="input input-bordered w-full" />
+        @if (fieldError('nombre'); as message) {
+          <span class="mt-1 text-sm text-error">{{ message }}</span>
         }
-      </select>
-    </label>
+      </label>
+      <label class="form-control">
+        <span class="label-text mb-1">Descripción</span>
+        <textarea formControlName="descripcion" class="textarea textarea-bordered w-full" rows="2"></textarea>
+      </label>
+    </fieldset>
 
-    <label class="form-control">
-      <span class="label-text mb-1">Valor</span>
-      <input type="number" step="0.01" min="0" formControlName="valorDescuento" class="input input-bordered" />
-      @if (fieldError('valorDescuento'); as message) {
-        <span class="mt-1 text-sm text-error">{{ message }}</span>
-      }
-    </label>
+    <fieldset class="grid gap-3 sm:grid-cols-2">
+      <legend class="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.09em] text-base-content/55">
+        Descuento
+      </legend>
+      <label class="form-control">
+        <span class="label-text mb-1">Tipo de descuento</span>
+        <select formControlName="tipoDescuento" class="select select-bordered w-full">
+          @for (type of types; track type) {
+            <option [value]="type">{{ typeLabels[type] }}</option>
+          }
+        </select>
+      </label>
+      <label class="form-control">
+        <span class="label-text mb-1">Valor</span>
+        <input type="number" step="0.01" min="0" formControlName="valorDescuento" class="input input-bordered w-full" />
+        @if (fieldError('valorDescuento'); as message) {
+          <span class="mt-1 text-sm text-error">{{ message }}</span>
+        }
+      </label>
+      <label class="form-control sm:col-span-2">
+        <span class="label-text mb-1">Prioridad</span>
+        <input type="number" min="0" step="1" formControlName="prioridad" class="input input-bordered w-full" />
+        <span class="mt-1 text-xs text-base-content/55">
+          Desempata cuando dos promociones dejan el mismo total. Mayor valor gana.
+        </span>
+      </label>
+    </fieldset>
 
-    <fieldset class="md:col-span-2">
-      <legend class="label-text mb-1">Vigencia</legend>
-      <div class="flex flex-wrap gap-4">
+    <fieldset class="grid gap-3 sm:grid-cols-2">
+      <legend class="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.09em] text-base-content/55">
+        Vigencia
+      </legend>
+      <div class="flex flex-wrap gap-4 sm:col-span-2" role="radiogroup" aria-label="Tipo de vigencia">
         <label class="label cursor-pointer gap-2">
           <input type="radio" class="radio radio-sm" formControlName="vigencia" value="RANGO" />
           <span>Rango de fechas</span>
@@ -53,66 +74,63 @@
           <span>Mes completo</span>
         </label>
       </div>
-    </fieldset>
 
-    @if (form.controls.vigencia.value === 'MES') {
-      <label class="form-control md:col-span-2">
-        <span class="label-text mb-1">Mes</span>
-        <input type="month" formControlName="mes" class="input input-bordered" />
-        @if (fieldError('mes'); as message) {
-          <span class="mt-1 text-sm text-error">{{ message }}</span>
-        }
-      </label>
-    } @else {
-      <label class="form-control">
-        <span class="label-text mb-1">Inicio</span>
-        <input type="date" formControlName="fechaInicio" class="input input-bordered" />
-      </label>
-      <label class="form-control">
-        <span class="label-text mb-1">Fin</span>
-        <input type="date" formControlName="fechaFin" class="input input-bordered" />
-      </label>
-    }
-
-    <label class="form-control">
-      <span class="label-text mb-1">Prioridad</span>
-      <input type="number" min="0" step="1" formControlName="prioridad" class="input input-bordered" />
-      <span class="mt-1 text-xs text-base-content/55">
-        Desempata cuando dos promociones dejan el mismo total. Mayor valor gana.
-      </span>
-    </label>
-  </div>
-
-  <fieldset>
-    <legend class="label-text mb-2">Productos</legend>
-    <p class="mb-2 text-xs text-base-content/55">
-      Un producto es descuento individual. Varios productos forman un bloque.
-    </p>
-    @if (products.isLoading()) {
-      <span class="loading loading-spinner loading-sm"></span>
-    }
-    <div class="grid max-h-64 gap-1 overflow-y-auto rounded-box border border-base-300 p-3 sm:grid-cols-2">
-      @for (product of products.value(); track product.id) {
-        <label class="label cursor-pointer justify-start gap-3">
-          <input
-            type="checkbox"
-            class="checkbox checkbox-sm"
-            [checked]="isSelected(product.id)"
-            (change)="toggleProduct(product.id, $any($event.target).checked)"
-          />
-          <span class="text-sm">{{ product.nombre }}</span>
+      @if (form.controls.vigencia.value === 'MES') {
+        <label class="form-control sm:col-span-2">
+          <span class="label-text mb-1">Mes</span>
+          <input type="month" formControlName="mes" class="input input-bordered w-full" />
+          @if (fieldError('mes'); as message) {
+            <span class="mt-1 text-sm text-error">{{ message }}</span>
+          }
+        </label>
+      } @else {
+        <label class="form-control">
+          <span class="label-text mb-1">Inicio</span>
+          <input type="date" formControlName="fechaInicio" class="input input-bordered w-full" />
+        </label>
+        <label class="form-control">
+          <span class="label-text mb-1">Fin</span>
+          <input type="date" formControlName="fechaFin" class="input input-bordered w-full" />
         </label>
       }
-    </div>
-  </fieldset>
+    </fieldset>
 
-  <div class="flex justify-end gap-2">
+    <fieldset class="grid gap-2">
+      <legend class="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.09em] text-base-content/55">
+        Productos
+        <span class="ms-1 normal-case tracking-normal text-base-content/45">({{ selectedIds().size }})</span>
+      </legend>
+      @if (products.isLoading()) {
+        <span class="loading loading-spinner loading-sm"></span>
+      }
+      <div class="grid max-h-64 gap-1 overflow-y-auto rounded-box border border-base-300 p-3 sm:grid-cols-2">
+        @for (product of productItems(); track product.id) {
+          <label class="label cursor-pointer justify-start gap-3">
+            <input
+              type="checkbox"
+              class="checkbox checkbox-sm"
+              [checked]="isSelected(product.id)"
+              (change)="toggleProduct(product.id, $any($event.target).checked)"
+            />
+            <span class="text-sm">{{ product.nombre }}</span>
+          </label>
+        }
+      </div>
+    </fieldset>
+  </form>
+
+  <div footer class="contents">
+    @if (isEdit()) {
+      <button type="button" class="btn btn-ghost me-auto text-error" [disabled]="saving()" (click)="requestRemove()">
+        Eliminar
+      </button>
+    }
     <button type="button" class="btn btn-ghost" (click)="cancel()">Cancelar</button>
-    <button type="submit" class="btn btn-primary" [disabled]="saving()">
+    <button type="submit" form="promotion-form" class="btn btn-primary" [disabled]="saving()">
       @if (saving()) {
         <span class="loading loading-spinner loading-sm"></span>
       }
       Guardar
     </button>
   </div>
-</form>
+</app-form-drawer>

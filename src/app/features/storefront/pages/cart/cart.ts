@@ -12,6 +12,7 @@ import { MoneyPipe } from '../../../../shared/pipes/money.pipe';
 import { EmptyState } from '../../../../shared/ui/empty-state/empty-state';
 import { PageHeader } from '../../../../shared/ui/page-header/page-header';
 import { OrderService } from '../../services/order.service';
+import { valueOr } from '../../../../core/http/resource-value';
 
 @Component({
   selector: 'app-cart',
@@ -41,8 +42,9 @@ export class Cart {
       : undefined;
   });
   protected readonly quotePending = computed(() => this.quoteLines() !== this.debouncedLines());
+  protected readonly quoteValue = computed(() => valueOr(this.quote, undefined));
   protected readonly quoteByProduct = computed(
-    () => new Map((this.quote.value()?.lineas ?? []).map((line) => [line.productoId, line] as const)),
+    () => new Map((this.quoteValue()?.lineas ?? []).map((line) => [line.productoId, line] as const)),
   );
   protected readonly ruleLabel = ruleLabel;
 

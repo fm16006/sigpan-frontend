@@ -1,39 +1,58 @@
 <app-page-header
   title="Panel"
   [subtitle]="'Resumen de la jornada · ' + (auth.user()?.name ?? '')"
+  [crumbs]="crumbs"
 >
-  <button type="button" class="btn btn-sm" [disabled]="loading()" (click)="reload()">
+  <button type="button" class="btn" [disabled]="loading()" (click)="reload()">
     Actualizar
   </button>
 </app-page-header>
 
 <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" [attr.aria-busy]="loading()">
-  <app-stat-card label="Ventas de mostrador hoy" [value]="(cut.value()?.total ?? 0) | money" />
-  <app-stat-card label="Tickets de hoy" [value]="cut.value()?.cantidadVentas ?? 0" />
+  <app-stat-card label="Ventas de mostrador hoy" [value]="(cutValue()?.total ?? 0) | money" />
+  <app-stat-card label="Tickets de hoy" [value]="cutValue()?.cantidadVentas ?? 0" />
   <app-stat-card label="Pedidos en línea por atender" [value]="pendingOrders()" hint="Pendientes, en preparación o listos" />
   <app-stat-card label="Insumos en mínimo" [value]="lowStock()" hint="Requieren reposición" />
 </section>
 
-<section class="mt-8 grid gap-4 sm:grid-cols-3">
+<section class="mt-8 grid gap-4 sm:grid-cols-3" aria-label="Accesos rápidos">
   <a
     routerLink="/backoffice/pos"
-    class="rounded-box border border-base-300 bg-base-100 p-5 transition-colors hover:bg-base-200"
+    class="flex items-center gap-4 rounded-box border border-base-300 bg-base-100 p-5 transition-colors hover:bg-base-200"
   >
-    <h2 class="text-base font-semibold">Abrir punto de venta</h2>
-    <p class="mt-1 text-sm text-base-content/60">Registrar una venta en mostrador.</p>
+    <span class="grid size-10 shrink-0 place-items-center rounded-field bg-primary/10 text-primary">
+      <app-icon name="pos" />
+    </span>
+    <span class="min-w-0 flex-1">
+      <span class="block text-base font-semibold">Abrir punto de venta</span>
+      <span class="mt-0.5 block text-sm text-base-content/60">Registrar una venta en mostrador.</span>
+    </span>
+    <app-icon name="chevron" class="text-base-content/40" />
   </a>
   <a
-    routerLink="/backoffice/inventory"
-    class="rounded-box border border-base-300 bg-base-100 p-5 transition-colors hover:bg-base-200"
+    routerLink="/backoffice/raw-materials"
+    class="flex items-center gap-4 rounded-box border border-base-300 bg-base-100 p-5 transition-colors hover:bg-base-200"
   >
-    <h2 class="text-base font-semibold">Revisar inventario</h2>
-    <p class="mt-1 text-sm text-base-content/60">Existencias y niveles de reposición.</p>
+    <span class="grid size-10 shrink-0 place-items-center rounded-field bg-primary/10 text-primary">
+      <app-icon name="sack" />
+    </span>
+    <span class="min-w-0 flex-1">
+      <span class="block text-base font-semibold">Revisar inventario</span>
+      <span class="mt-0.5 block text-sm text-base-content/60">Existencias y niveles de reposición.</span>
+    </span>
+    <app-icon name="chevron" class="text-base-content/40" />
   </a>
   <a
     routerLink="/backoffice/users"
-    class="rounded-box border border-base-300 bg-base-100 p-5 transition-colors hover:bg-base-200"
+    class="flex items-center gap-4 rounded-box border border-base-300 bg-base-100 p-5 transition-colors hover:bg-base-200"
   >
-    <h2 class="text-base font-semibold">Usuarios y roles</h2>
-    <p class="mt-1 text-sm text-base-content/60">Asignar roles y activar cuentas.</p>
+    <span class="grid size-10 shrink-0 place-items-center rounded-field bg-primary/10 text-primary">
+      <app-icon name="users" />
+    </span>
+    <span class="min-w-0 flex-1">
+      <span class="block text-base font-semibold">Usuarios y roles</span>
+      <span class="mt-0.5 block text-sm text-base-content/60">Asignar roles y activar cuentas.</span>
+    </span>
+    <app-icon name="chevron" class="text-base-content/40" />
   </a>
 </section>

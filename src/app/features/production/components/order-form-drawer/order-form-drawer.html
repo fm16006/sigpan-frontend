@@ -1,0 +1,139 @@
+<app-form-drawer
+  [open]="open()"
+  title="Nueva orden"
+  subtitle="Planificá una tanda y revisá si alcanzan los insumos"
+  (closed)="closed.emit()"
+>
+  <form id="orderForm" class="flex flex-col gap-5" [formGroup]="form" (ngSubmit)="save()">
+    @if (formError(); as message) {
+      <div role="alert" class="alert alert-error text-sm">{{ message }}</div>
+    }
+
+    <fieldset class="flex flex-col gap-3">
+      <legend class="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.09em] text-base-content/55">
+        Qué se produce
+      </legend>
+
+      <div>
+        <label class="label" for="ordenProducto"><span class="label-text">Producto</span></label>
+        <select
+          id="ordenProducto"
+          formControlName="productoId"
+          class="select select-bordered w-full"
+          [class.select-error]="!!errorFor('productoId')"
+        >
+          <option [ngValue]="0" disabled>Elegí un producto</option>
+          @for (product of producible(); track product.id) {
+            <option [ngValue]="product.id">{{ product.nombre }}</option>
+          }
+        </select>
+        @if (errorFor('productoId'); as message) {
+          <p class="mt-1 text-xs text-error">{{ message }}</p>
+        } @else if (producible().length === 0) {
+          <p class="mt-1 text-xs text-base-content/55">Todavía no hay productos con receta.</p>
+        }
+      </div>
+
+      <div>
+        <label class="label" for="ordenReceta"><span class="label-text">Receta</span></label>
+        <select
+          id="ordenReceta"
+          formControlName="formulaId"
+          class="select select-bordered w-full"
+          [class.select-error]="!!errorFor('formulaId')"
+        >
+          <option [ngValue]="0" disabled>Elegí una receta</option>
+          @for (item of productFormulas(); track item.id) {
+            <option [ngValue]="item.id">
+              {{ item.nombre }} · rinde {{ item.cantidadProduccion | number: '1.0-2' }}
+            </option>
+          }
+        </select>
+        @if (errorFor('formulaId'); as message) {
+          <p class="mt-1 text-xs text-error">{{ message }}</p>
+        }
+      </div>
+
+      <div>
+        <label class="label" for="ordenLotes"><span class="label-text">Lotes</span></label>
+        <input
+          id="ordenLotes"
+          type="number"
+          step="1"
+          min="1"
+          formControlName="cantidad"
+          class="input input-bordered w-full"
+          [class.input-error]="!!errorFor('cantidad')"
+        />
+        @if (errorFor('cantidad'); as message) {
+          <p class="mt-1 text-xs text-error">{{ message }}</p>
+        } @else if (formula()) {
+          <p class="mt-1 text-xs text-base-content/60">
+            = <strong class="tabular-nums">{{ units() | number: '1.0-3' }}</strong> unidades
+          </p>
+        }
+      </div>
+    </fieldset>
+
+    <fieldset class="flex flex-col gap-3">
+      <legend class="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.09em] text-base-content/55">
+        Planificación
+      </legend>
+
+      <div>
+        <label class="label" for="ordenFecha"><span class="label-text">Fecha planificada</span></label>
+        <input
+          id="ordenFecha"
+          type="date"
+          [min]="today"
+          formControlName="fechaPlanificada"
+          class="input input-bordered w-full"
+          [class.input-error]="!!errorFor('fechaPlanificada')"
+        />
+        @if (errorFor('fechaPlanificada'); as message) {
+          <p class="mt-1 text-xs text-error">{{ message }}</p>
+        }
+      </div>
+
+      <div>
+        <label class="label" for="ordenComentario"><span class="label-text">Comentario</span></label>
+        <input
+          id="ordenComentario"
+          type="text"
+          formControlName="comentario"
+          class="input input-bordered w-full"
+        />
+      </div>
+    </fieldset>
+
+    <fieldset class="flex flex-col gap-3">
+      <legend class="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.09em] text-base-content/55">
+        ¿Alcanzan los insumos?
+      </legend>
+
+      @if (formula()) {
+        <app-explosion-table
+          [explosion]="explosion.hasValue() ? explosion.value() : null"
+          [loading]="explosion.isLoading()"
+          [message]="explosionMessage()"
+        />
+        <p class="text-xs text-base-content/55">
+          Es una vista previa con la existencia de hoy. Si no alcanza, igual podés crear la orden:
+          el sistema vuelve a verificar los insumos cuando la terminés.
+        </p>
+      } @else {
+        <p class="text-sm text-base-content/55">Elegí el producto y la receta para ver los insumos que necesita.</p>
+      }
+    </fieldset>
+  </form>
+
+  <div footer class="contents">
+    <button type="button" class="btn btn-ghost" (click)="closed.emit()">Cancelar</button>
+    <button type="submit" form="orderForm" class="btn btn-primary" [disabled]="saving()">
+      @if (saving()) {
+        <span class="loading loading-spinner loading-sm"></span>
+      }
+      Guardar
+    </button>
+  </div>
+</app-form-drawer>

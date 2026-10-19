@@ -3,10 +3,13 @@ import { httpResource } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
 import { Id } from '../../../../core/models/api.model';
 import { AuditEvent, AuditLog } from '../../../../core/models/audit.model';
+import { Icon } from '../../../../shared/ui/icon/icon';
 import { PageHeader } from '../../../../shared/ui/page-header/page-header';
 import { ResourceState } from '../../../../shared/ui/resource-state/resource-state';
+import { StatusChip } from '../../../../shared/ui/status-chip/status-chip';
 import { AuditService } from '../../services/audit.service';
 import { formatearValor } from '../../audit-format';
+import { valueOr } from '../../../../core/http/resource-value';
 
 function isoDate(date: Date): string {
   const offset = date.getTimezoneOffset() * 60_000;
@@ -15,11 +18,13 @@ function isoDate(date: Date): string {
 
 @Component({
   selector: 'app-audit-log',
-  imports: [PageHeader, ResourceState, DatePipe],
+  imports: [PageHeader, ResourceState, DatePipe, Icon, StatusChip],
   templateUrl: './audit-log.html',
 })
 export class AuditLogPage {
   private readonly service = inject(AuditService);
+
+  protected readonly crumbs = [{ label: 'Administración' }, { label: 'Bitácora' }];
 
   private readonly today = new Date();
 
@@ -47,16 +52,17 @@ export class AuditLogPage {
   );
 
   /** Si la página vino llena, puede haber más registros en la siguiente. */
-  protected readonly hasNextPage = computed(() => this.logs.value().length === this.pageSize);
+  protected readonly logItems = computed(() => valueOr(this.logs, []));
+  protected readonly hasNextPage = computed(() => this.logItems().length === this.pageSize);
   protected readonly events = httpResource<AuditEvent[]>(() => this.service.eventsUrl(), {
     defaultValue: [],
   });
+  protected readonly eventItems = computed(() => valueOr(this.events, []));
 
   protected readonly items = computed(() => {
     const event = this.eventFilter();
     const term = this.term().toLowerCase();
-    return this.logs
-      .value()
+    return this.logItems()
       .filter((log) => !event || log.eventoTitulo === event)
       .filter((log) => !term || log.mensaje.toLowerCase().includes(term));
   });

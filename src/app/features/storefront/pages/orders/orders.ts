@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { httpResource } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
@@ -7,6 +7,7 @@ import { MoneyPipe } from '../../../../shared/pipes/money.pipe';
 import { PageHeader } from '../../../../shared/ui/page-header/page-header';
 import { ResourceState } from '../../../../shared/ui/resource-state/resource-state';
 import { OrderService } from '../../services/order.service';
+import { valueOr } from '../../../../core/http/resource-value';
 
 @Component({
   selector: 'app-orders',
@@ -22,4 +23,5 @@ export class Orders {
   protected readonly history = httpResource<Sale[]>(() => this.orders.myOrdersUrl(), {
     defaultValue: [],
   });
+  protected readonly historyItems = computed(() => valueOr(this.history, []));
 }

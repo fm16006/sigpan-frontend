@@ -1,0 +1,139 @@
+<app-resource-state
+  [loading]="ctx.productRes.isLoading() && !product()"
+  [failed]="!!ctx.productRes.error() && !product()"
+  [empty]="false"
+  (retry)="ctx.productRes.reload()"
+>
+  @if (product(); as p) {
+    <app-detail-header [crumbs]="crumbs()" [title]="p.nombre" [code]="p.codigo" [tabs]="tabs()">
+      <div media>
+        @if (p.imagenUrl) {
+          <img
+            [src]="p.imagenUrl"
+            [alt]="'Foto de ' + p.nombre"
+            class="size-[72px] shrink-0 rounded-2xl border border-base-300 object-cover"
+          />
+        } @else {
+          <div
+            role="img"
+            aria-label="Sin foto"
+            class="grid size-[72px] shrink-0 place-items-center rounded-2xl border border-base-300 bg-primary/10 font-serif text-3xl font-semibold text-primary"
+          >
+            {{ p.nombre.charAt(0).toUpperCase() }}
+          </div>
+        }
+      </div>
+
+      <div chips class="contents">
+        <span class="rounded-md bg-base-200 px-2 py-0.5 text-xs font-medium text-base-content/80">
+          {{ especialidadLabels[p.especialidad] }}
+        </span>
+        @if (state(); as s) {
+          <app-status-chip
+            [label]="s === 'inactivo' ? chips[s].label : chips[s].label + ' · ' + (p.disponible ?? 0) + ' u'"
+            [tone]="chips[s].tone"
+          />
+        }
+      </div>
+
+      <div actions class="contents">
+        <a routerLink="/backoffice/production" class="btn">Planificar producción</a>
+        @if (canEdit) {
+          <button type="button" class="btn btn-primary" (click)="ctx.openEditor()">
+            <app-icon name="edit" />
+            Editar
+          </button>
+        }
+        @if (canEdit) {
+          <div class="relative" data-more-menu>
+            <button
+              type="button"
+              class="btn btn-square"
+              aria-label="Más acciones"
+              aria-haspopup="menu"
+              [attr.aria-expanded]="menuOpen()"
+              [disabled]="busy()"
+              (click)="menuOpen.set(!menuOpen())"
+            >
+              @if (busy()) {
+                <span class="loading loading-spinner loading-sm"></span>
+              } @else {
+                <app-icon name="more" />
+              }
+            </button>
+            @if (menuOpen()) {
+              <ul
+                role="menu"
+                class="absolute right-0 top-full z-30 mt-1 flex w-52 flex-col rounded-box border border-base-300 bg-base-100 p-1 shadow-lg"
+              >
+                <li role="none">
+                  <button
+                    type="button"
+                    role="menuitem"
+                    class="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-base-200"
+                    (click)="photoInput.click(); menuOpen.set(false)"
+                  >
+                    {{ p.imagenUrl ? 'Cambiar foto' : 'Subir foto' }}
+                  </button>
+                </li>
+                @if (p.imagenUrl) {
+                  <li role="none">
+                    <button
+                      type="button"
+                      role="menuitem"
+                      class="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-base-200"
+                      (click)="removeImage()"
+                    >
+                      Quitar foto
+                    </button>
+                  </li>
+                }
+                @if (isAdmin) {
+                  <li role="none" class="mt-1 border-t border-base-300 pt-1">
+                    <button
+                      type="button"
+                      role="menuitem"
+                      class="w-full rounded-lg px-3 py-2 text-left text-sm text-error hover:bg-error/10"
+                      (click)="menuOpen.set(false); confirmDelete.set(true)"
+                    >
+                      Eliminar
+                    </button>
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+          <input
+            #photoInput
+            type="file"
+            class="hidden"
+            tabindex="-1"
+            aria-label="Elegir foto del producto"
+            [accept]="acceptedTypes"
+            (change)="uploadImage($event)"
+          />
+        }
+      </div>
+    </app-detail-header>
+
+    <router-outlet />
+
+    <app-product-drawer
+      [open]="ctx.editing()"
+      [product]="p"
+      (closed)="ctx.editing.set(false)"
+      (saved)="onSaved()"
+    />
+
+    <app-confirm-dialog
+      [open]="confirmDelete()"
+      title="Eliminar producto"
+      [message]="'Se va a eliminar «' + p.nombre + '» (' + p.codigo + ') del catálogo, junto con su foto. Esta acción no se puede deshacer.'"
+      confirmLabel="Eliminar"
+      tone="danger"
+      [busy]="busy()"
+      (confirmed)="remove()"
+      (cancelled)="confirmDelete.set(false)"
+    />
+  }
+</app-resource-state>

@@ -60,11 +60,21 @@ export const routes: Routes = [
         loadChildren: () =>
           import('./features/products/products.routes').then((m) => m.PRODUCTS_ROUTES),
       },
+      // El inventario se repartió entre Materia prima y Movimientos; la ruta vieja redirige.
+      { path: 'inventory', redirectTo: 'raw-materials', pathMatch: 'full' },
       {
-        path: 'inventory',
+        path: 'raw-materials',
         canActivate: [roleGuard(['ADMINISTRADOR', 'JEFE_PRODUCCION', 'BODEGUERO'])],
         loadChildren: () =>
-          import('./features/inventory/inventory.routes').then((m) => m.INVENTORY_ROUTES),
+          import('./features/raw-materials/raw-materials.routes').then(
+            (m) => m.RAW_MATERIALS_ROUTES,
+          ),
+      },
+      {
+        path: 'movements',
+        canActivate: [roleGuard(['ADMINISTRADOR', 'JEFE_PRODUCCION', 'BODEGUERO'])],
+        loadChildren: () =>
+          import('./features/movements/movements.routes').then((m) => m.MOVEMENTS_ROUTES),
       },
       {
         path: 'production',

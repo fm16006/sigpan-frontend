@@ -1,140 +1,141 @@
-<app-page-header title="Bitácora" [subtitle]="items().length + ' registro(s) en el periodo'">
-  <button type="button" class="btn btn-sm" [disabled]="logs.isLoading()" (click)="logs.reload()">
-    Actualizar
-  </button>
+<app-page-header
+  title="Bitácora"
+  [subtitle]="items().length + ' registro(s) en el periodo. Hacé clic en uno para ver el antes y el después.'"
+  [crumbs]="crumbs"
+>
+  <button type="button" class="btn" [disabled]="logs.isLoading()" (click)="logs.reload()">Actualizar</button>
 </app-page-header>
 
-<section class="mb-4 flex flex-wrap items-end gap-3">
-  <label class="grid gap-1 text-sm">
+<div class="mb-4 flex flex-wrap items-end gap-2.5">
+  <label
+    class="flex h-10 min-w-0 flex-[1_1_16rem] items-center gap-2 rounded-field border border-base-300 bg-base-100 px-3 text-base-content/60"
+  >
+    <app-icon name="search" />
+    <input
+      #search
+      type="search"
+      class="min-w-0 flex-1 bg-transparent text-sm text-base-content outline-none"
+      placeholder="Buscar en el mensaje"
+      aria-label="Buscar en la bitácora"
+      (input)="term.set(search.value.trim())"
+    />
+  </label>
+  <label class="grid gap-1 text-xs text-base-content/60">
     Desde
     <input
       #fromInput
       type="date"
-      class="input input-bordered input-sm"
+      class="input input-bordered h-10"
       [value]="from()"
       (change)="setRange(fromInput.value, toInput.value)"
     />
   </label>
-  <label class="grid gap-1 text-sm">
+  <label class="grid gap-1 text-xs text-base-content/60">
     Hasta
     <input
       #toInput
       type="date"
-      class="input input-bordered input-sm"
+      class="input input-bordered h-10"
       [value]="to()"
       (change)="setRange(fromInput.value, toInput.value)"
     />
   </label>
-  <label class="grid gap-1 text-sm">
+  <label class="grid gap-1 text-xs text-base-content/60">
     Evento
     <select
       #eventInput
-      class="select select-bordered select-sm"
+      class="select select-bordered h-10"
       (change)="eventFilter.set(eventInput.value)"
     >
       <option value="">Todos</option>
-      @for (option of events.value(); track option.id) {
+      @for (option of eventItems(); track option.id) {
         <option [value]="option.titulo">{{ option.titulo }}</option>
       }
     </select>
   </label>
-  <input
-    #search
-    type="search"
-    class="input input-bordered input-sm w-56"
-    placeholder="Buscar en el mensaje"
-    aria-label="Buscar en la bitácora"
-    (input)="term.set(search.value.trim())"
-  />
-</section>
+</div>
 
 <app-resource-state
-  [loading]="logs.isLoading() && logs.value().length === 0"
+  [loading]="logs.isLoading() && logItems().length === 0"
   [failed]="!!logs.error()"
   [empty]="items().length === 0"
   emptyTitle="Sin registros"
   emptyDescription="Las operaciones del sistema en el periodo elegido aparecen aquí."
   (retry)="logs.reload()"
 >
-  <div class="overflow-x-auto rounded-box border border-base-300 bg-base-100">
-    <table class="table">
-      <thead>
-        <tr>
-          <th scope="col">Fecha</th>
-          <th scope="col">Evento</th>
-          <th scope="col">Mensaje</th>
-          <th scope="col">Usuario</th>
-          <th scope="col" class="text-end">Detalle</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (log of items(); track log.id) {
-          <tr>
-            <td class="whitespace-nowrap text-sm">{{ log.fecha | date: 'short' }}</td>
-            <td>
-              <span class="badge badge-ghost badge-sm">{{ log.eventoTitulo ?? 'Sin evento' }}</span>
-            </td>
-            <td class="text-sm">{{ log.mensaje }}</td>
-            <td class="tabular-nums text-sm text-base-content/60">
-              {{ log.usuarioId ?? 'Sistema' }}
-            </td>
-            <td class="text-end">
-              <button
-                type="button"
-                class="btn btn-ghost btn-xs"
-                [attr.aria-expanded]="openId() === log.id"
-                (click)="toggle(log.id)"
-              >
-                {{ openId() === log.id ? 'Ocultar' : 'Ver' }}
-              </button>
-            </td>
-          </tr>
-          @if (openId() === log.id) {
-            <tr>
-              <td colspan="5" class="bg-base-200/40">
-                <dl class="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
-                  <div>
-                    <dt class="text-xs text-base-content/60">Fecha y hora</dt>
-                    <dd>{{ log.fecha | date: 'medium' }}</dd>
-                  </div>
-                  <div>
-                    <dt class="text-xs text-base-content/60">Usuario (ID)</dt>
-                    <dd class="tabular-nums">{{ log.usuarioId ?? 'Sistema' }}</dd>
-                  </div>
-                  <div>
-                    <dt class="text-xs text-base-content/60">Valor anterior</dt>
-                    <dd class="break-words">{{ formatValue(log.valorAnterior) }}</dd>
-                  </div>
-                  <div>
-                    <dt class="text-xs text-base-content/60">Valor posterior</dt>
-                    <dd class="break-words">{{ formatValue(log.valorPosterior) }}</dd>
-                  </div>
-                </dl>
-              </td>
-            </tr>
-          }
-        }
-      </tbody>
-    </table>
-  </div>
+  <section aria-label="Registros de la bitácora" class="overflow-hidden rounded-box border border-base-300 bg-base-100">
+    <div
+      class="list-row grid-cols-[10.5rem_11rem_minmax(0,1fr)_6rem_1rem] border-t-0 py-3.5 max-md:hidden hover:bg-transparent"
+    >
+      <span class="list-th">Fecha</span>
+      <span class="list-th">Evento</span>
+      <span class="list-th">Mensaje</span>
+      <span class="list-th">Usuario</span>
+      <span></span>
+    </div>
 
-  <nav class="mt-3 flex items-center justify-end gap-2" aria-label="Páginas de la bitácora">
-    <button
-      type="button"
-      class="btn btn-sm"
-      [disabled]="pageIndex() === 0 || logs.isLoading()"
-      (click)="goToPage(pageIndex() - 1)"
-    >
-      Anterior
-    </button>
-    <span class="text-sm">Página {{ pageIndex() + 1 }}</span>
-    <button
-      type="button"
-      class="btn btn-sm"
-      [disabled]="!hasNextPage() || logs.isLoading()"
-      (click)="goToPage(pageIndex() + 1)"
-    >
-      Siguiente
-    </button>
-  </nav>
+    @for (log of items(); track log.id) {
+      <button
+        type="button"
+        class="list-row w-full cursor-pointer grid-cols-[10.5rem_11rem_minmax(0,1fr)_6rem_1rem] text-start max-md:grid-cols-2 max-md:gap-y-2"
+        [attr.aria-expanded]="openId() === log.id"
+        (click)="toggle(log.id)"
+      >
+        <span class="whitespace-nowrap text-sm tabular-nums">{{ log.fecha | date: 'd MMM y, HH:mm' }}</span>
+        <app-status-chip [label]="log.eventoTitulo ?? 'Sin evento'" tone="neutral" />
+        <span class="text-sm max-md:col-span-2">{{ log.mensaje }}</span>
+        <span class="text-sm tabular-nums text-base-content/60">{{ log.usuarioId ?? 'Sistema' }}</span>
+        <app-icon
+          name="chevron"
+          class="text-base-content/40 transition-transform max-md:hidden"
+          [class.rotate-90]="openId() === log.id"
+        />
+      </button>
+      @if (openId() === log.id) {
+        <div class="border-t border-base-300 bg-base-200/40 px-5 py-4">
+          <dl class="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
+            <div>
+              <dt class="list-th">Fecha y hora</dt>
+              <dd class="mt-0.5">{{ log.fecha | date: 'd MMM y, HH:mm:ss' }}</dd>
+            </div>
+            <div>
+              <dt class="list-th">Usuario (ID)</dt>
+              <dd class="mt-0.5 tabular-nums">{{ log.usuarioId ?? 'Sistema' }}</dd>
+            </div>
+            <div>
+              <dt class="list-th">Valor anterior</dt>
+              <dd class="mt-0.5 break-words">{{ formatValue(log.valorAnterior) }}</dd>
+            </div>
+            <div>
+              <dt class="list-th">Valor posterior</dt>
+              <dd class="mt-0.5 break-words">{{ formatValue(log.valorPosterior) }}</dd>
+            </div>
+          </dl>
+        </div>
+      }
+    }
+
+    <div class="flex flex-wrap items-center justify-between gap-3 border-t border-base-300 px-5 py-3">
+      <span class="text-xs text-base-content/60">{{ items().length }} de {{ logItems().length }} registros de esta página</span>
+      <nav class="flex items-center gap-2" aria-label="Páginas de la bitácora">
+        <button
+          type="button"
+          class="btn btn-sm"
+          [disabled]="pageIndex() === 0 || logs.isLoading()"
+          (click)="goToPage(pageIndex() - 1)"
+        >
+          Anterior
+        </button>
+        <span class="text-sm">Página {{ pageIndex() + 1 }}</span>
+        <button
+          type="button"
+          class="btn btn-sm"
+          [disabled]="!hasNextPage() || logs.isLoading()"
+          (click)="goToPage(pageIndex() + 1)"
+        >
+          Siguiente
+        </button>
+      </nav>
+    </div>
+  </section>
 </app-resource-state>

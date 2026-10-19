@@ -1,10 +1,21 @@
-import { Component, DestroyRef, PLATFORM_ID, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  ElementRef,
+  PLATFORM_ID,
+  computed,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { HttpResourceRequest, httpResource } from '@angular/common/http';
-import { DatePipe, isPlatformBrowser } from '@angular/common';
+import { isPlatformBrowser } from '@angular/common';
 import { RouterLink } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { BUSINESS_INFO } from '../../../../core/config/business.config';
 import { Id } from '../../../../core/models/api.model';
 import { CatalogProduct } from '../../../../core/models/catalog.model';
-import { CashCut } from '../../../../core/models/order.model';
+import { PriceScale } from '../../../../core/models/price-scale.model';
 import { Quote, QuoteLine, ruleLabel } from '../../../../core/models/quote.model';
 import { QuoteService } from '../../../../core/services/quote.service';
 import { debouncedSignal } from '../../../../core/utils/debounced-signal';
@@ -13,17 +24,27 @@ import { Notifications } from '../../../../core/services/notifications';
 import { BackofficeMenu } from '../../../../shared/layout/backoffice-menu';
 import { MoneyPipe } from '../../../../shared/pipes/money.pipe';
 import { BrandMark } from '../../../../shared/ui/brand-mark/brand-mark';
+import { ConfirmDialog } from '../../../../shared/ui/confirm-dialog/confirm-dialog';
+import { Icon } from '../../../../shared/ui/icon/icon';
 import { ResourceState } from '../../../../shared/ui/resource-state/resource-state';
 import { ThemeToggle } from '../../../../shared/ui/theme-toggle/theme-toggle';
-import { OrderService } from '../../../storefront/services/order.service';
+import { PriceScaleService } from '../../../wholesale/services/price-scale.service';
 import { ProductService } from '../../../storefront/services/product.service';
 import { PosLine } from '../../models/checkout.model';
+import {
+  filterProducts,
+  findByCode,
+  nextTier,
+  posShortcut,
+  ruleBadge,
+  tierHintText,
+} from '../../pos-logic';
 import { CheckoutDialog } from '../../ui/checkout-dialog/checkout-dialog';
-import { KeypadKey, PosKeypad, applyKeypadKey } from '../../ui/pos-keypad/pos-keypad';
-import { ProductPreview } from '../../ui/product-preview/product-preview';
-import { todayIso } from '../../../../core/utils/dates';
+import { PosApertura } from '../../ui/pos-apertura/pos-apertura';
+import { PosCaja } from '../../ui/pos-caja/pos-caja';
+import { valueOr } from '../../../../core/http/resource-value';
 
-type PosTab = 'venta' | 'corte';
+type PosView = 'venta' | 'caja' | 'apertura';
 
 const POS_PATH = '/backoffice/pos';
 /** Existencias al día sin recargar la página, igual que la cola de despacho. */
@@ -42,6 +63,10 @@ const CATEGORY_TONES = [
   'border-success bg-success/10',
   'border-warning bg-warning/10',
 ] as const;
+const ROLE_NAMES: Readonly<Record<string, string>> = {
+  ADMINISTRADOR: 'Administración',
+  CAJERO: 'Cajero',
+};
 
 @Component({
   selector: 'app-pos-screen',
@@ -49,38 +74,53 @@ const CATEGORY_TONES = [
     RouterLink,
     ResourceState,
     MoneyPipe,
-    DatePipe,
     BrandMark,
     ThemeToggle,
-    ProductPreview,
-    PosKeypad,
+    Icon,
+    ConfirmDialog,
     CheckoutDialog,
+    PosCaja,
+    PosApertura,
   ],
   templateUrl: './pos-screen.html',
-  host: { class: 'drawer block h-dvh bg-base-200' },
+  host: {
+    class: 'drawer block h-dvh bg-base-200',
+    '(document:keydown)': 'onKeydown($event)',
+  },
 })
 export class PosScreen {
   private readonly products = inject(ProductService);
-  private readonly orders = inject(OrderService);
   private readonly notifications = inject(Notifications);
   private readonly menu = inject(BackofficeMenu);
+  private readonly priceScales = inject(PriceScaleService);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly auth = inject(Auth);
   protected readonly isAdmin = this.auth.hasAnyRole(['ADMINISTRADOR']);
+  protected readonly caja = BUSINESS_INFO.caja;
 
   private readonly ticket = signal<readonly PosLine[]>([]);
   private readonly now = signal(new Date());
+  /** Tramos de mayoreo por producto, consultados una sola vez por sesión (HU-33). */
+  protected readonly scales = signal<ReadonlyMap<Id, readonly PriceScale[]>>(new Map());
+  private readonly scaleRequests = new Set<Id>();
 
-  protected readonly tab = signal<PosTab>('venta');
+  protected readonly view = signal<PosView>('venta');
   protected readonly search = signal('');
   protected readonly category = signal('');
   protected readonly selectedId = signal<Id | null>(null);
-  protected readonly keypad = signal('');
   protected readonly checkoutOpen = signal(false);
-  protected readonly cutDate = signal(todayIso());
+  protected readonly clearOpen = signal(false);
+  protected readonly logoutOpen = signal(false);
+
+  private readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
 
   protected readonly clock = computed(() => TIME_FORMAT.format(this.now()));
   protected readonly day = computed(() => DAY_FORMAT.format(this.now()));
+  protected readonly roleName = computed(() => {
+    const role = this.auth.user()?.role;
+    return role ? (ROLE_NAMES[role] ?? role) : '';
+  });
 
   protected readonly adminLinks = computed(() =>
     this.menu.items().filter((item) => item.path !== POS_PATH),
@@ -102,13 +142,15 @@ export class PosScreen {
   });
   /** El ticket cambió y la cotización todavía no lo refleja: no se cobra en ese lapso. */
   protected readonly quotePending = computed(() => this.quoteLines() !== this.debouncedLines());
+  private readonly quoteValue = computed(() => valueOr(this.quote, undefined));
   protected readonly quoteByProduct = computed(
-    () => new Map((this.quote.value()?.lineas ?? []).map((line) => [line.productoId, line] as const)),
+    () => new Map((this.quoteValue()?.lineas ?? []).map((line) => [line.productoId, line] as const)),
   );
+  protected readonly subtotal = computed(() => this.quoteValue()?.subtotal ?? 0);
+  protected readonly descuento = computed(() => this.quoteValue()?.descuento ?? 0);
   /** Total que cobra el backend (promociones, combos y mayoreo ya aplicados). */
-  protected readonly total = computed(() => this.quote.value()?.total ?? 0);
-  protected readonly ahorro = computed(() => this.quote.value()?.ahorro ?? 0);
-  protected readonly reglaAplicada = computed(() => ruleLabel(this.quote.value()?.reglaAplicada));
+  protected readonly total = computed(() => this.quoteValue()?.total ?? 0);
+  protected readonly ahorro = computed(() => this.quoteValue()?.ahorro ?? 0);
   protected readonly ruleLabel = ruleLabel;
   protected readonly itemCount = computed(() =>
     this.ticket().reduce((sum, line) => sum + line.quantity, 0),
@@ -118,27 +160,20 @@ export class PosScreen {
     defaultValue: [],
   });
 
+  private readonly catalogItems = computed(() => valueOr(this.catalog, []));
+
   protected readonly categories = computed(() =>
-    [...new Set(this.catalog.value().map((product) => product.categoria))].sort((a, b) =>
+    [...new Set(this.catalogItems().map((product) => product.categoria))].sort((a, b) =>
       a.localeCompare(b),
     ),
   );
 
-  protected readonly visible = computed(() => {
-    const term = this.search().toLowerCase();
-    const category = this.category();
-    return this.catalog
-      .value()
-      .filter((product) => !category || product.categoria === category)
-      .filter(
-        (product) =>
-          !term || product.nombre.toLowerCase().includes(term) || String(product.id) === term,
-      )
-      .sort((a, b) => a.categoria.localeCompare(b.categoria) || a.nombre.localeCompare(b.nombre));
-  });
+  protected readonly visible = computed(() =>
+    filterProducts(this.catalogItems(), this.search(), this.category()),
+  );
 
   protected readonly selected = computed(
-    () => this.catalog.value().find((product) => product.id === this.selectedId()) ?? null,
+    () => this.catalogItems().find((product) => product.id === this.selectedId()) ?? null,
   );
 
   protected readonly selectedDetail = httpResource<CatalogProduct>(() => {
@@ -146,25 +181,17 @@ export class PosScreen {
     return id === null ? undefined : this.products.byIdUrl(id);
   });
 
-  protected readonly selectedAvailable = computed(() => {
-    const detail = this.selectedDetail.value();
-    return detail?.id === this.selectedId() ? (detail?.disponible ?? null) : null;
-  });
+  private readonly detailValue = computed(() => valueOr(this.selectedDetail, undefined));
 
   protected readonly selectedLine = computed(
     () => this.ticket().find((line) => line.product.id === this.selectedId()) ?? null,
   );
 
-  protected readonly cut = httpResource<CashCut>(() =>
-    this.tab() === 'corte' ? this.orders.cashCutUrl(this.cutDate()) : undefined,
-  );
-
   constructor() {
-    const destroyRef = inject(DestroyRef);
     if (isPlatformBrowser(inject(PLATFORM_ID))) {
       const clock = setInterval(() => this.now.set(new Date()), 30_000);
       const refresh = setInterval(() => this.catalog.reload(), CATALOG_REFRESH_MS);
-      destroyRef.onDestroy(() => {
+      this.destroyRef.onDestroy(() => {
         clearInterval(clock);
         clearInterval(refresh);
       });
@@ -174,6 +201,11 @@ export class PosScreen {
   protected toneFor(category: string): string {
     const index = this.categories().indexOf(category);
     return CATEGORY_TONES[Math.max(0, index) % CATEGORY_TONES.length];
+  }
+
+  /** Insignia de oferta: solo si la última cotización muestra una regla para ese producto. */
+  protected offerBadge(product: CatalogProduct): string {
+    return ruleBadge(this.quoteByProduct().get(product.id)?.regla);
   }
 
   protected pick(product: CatalogProduct): void {
@@ -197,63 +229,80 @@ export class PosScreen {
           )
         : [...lines, { product, quantity }],
     );
+    this.loadScales(product.id);
   }
 
-  protected addByCode(input: HTMLInputElement): void {
-    const code = Number(input.value.trim());
-    const product = this.catalog.value().find((item) => item.id === code);
+  /** Enter en el buscador: el código exacto agrega el producto; si no, el único resultado por nombre. */
+  protected scan(): void {
+    const text = this.search().trim();
+    if (!text) {
+      return;
+    }
+    const product =
+      findByCode(this.catalogItems(), text) ??
+      (this.visible().length === 1 ? this.visible()[0] : null);
 
     if (!product) {
-      this.notifications.error(`No existe un producto con el código ${input.value.trim()}.`);
-      input.select();
+      this.notifications.error(`No existe un producto con el código ${text}.`);
+      this.searchInput()?.nativeElement.select();
       return;
     }
 
     this.pick(product);
-    input.value = '';
-    input.focus();
+    this.search.set('');
+    this.focusSearch();
   }
 
-  protected step(amount: number): void {
-    const line = this.selectedLine();
+  protected focusSearch(): void {
+    this.searchInput()?.nativeElement.focus();
+  }
+
+  /** Línea sobre la que actúan +, − y Supr: la seleccionada o, si no hay, la última del ticket. */
+  private activeLine(): PosLine | null {
+    return this.selectedLine() ?? this.ticket().at(-1) ?? null;
+  }
+
+  protected step(amount: number, line: PosLine | null = this.activeLine()): void {
     if (line) {
+      this.selectedId.set(line.product.id);
       this.setQuantity(line.product.id, line.quantity + amount);
     }
   }
 
-  protected removeSelected(): void {
-    const line = this.selectedLine();
+  protected removeActive(): void {
+    const line = this.activeLine();
     if (line) {
       this.setQuantity(line.product.id, 0);
     }
   }
 
-  protected press(key: KeypadKey): void {
-    this.keypad.update((value) => applyKeypadKey(value, key));
-  }
-
-  protected applyQuantity(): void {
-    const line = this.selectedLine();
-    const quantity = Math.trunc(Number(this.keypad()));
-    if (!line) {
-      this.notifications.info('Seleccioná una línea del ticket para cambiar su cantidad.');
-      return;
-    }
-    if (!quantity) {
-      return;
-    }
-    if (this.setQuantity(line.product.id, quantity)) {
-      this.keypad.set('');
-    }
-  }
-
   protected clear(): void {
     this.ticket.set([]);
-    this.keypad.set('');
+    this.clearOpen.set(false);
+  }
+
+  protected requestLogout(): void {
+    if (this.ticket().length > 0) {
+      this.logoutOpen.set(true);
+    } else {
+      this.auth.logout();
+    }
   }
 
   protected lineQuote(line: PosLine): QuoteLine | undefined {
     return this.quoteByProduct().get(line.product.id);
+  }
+
+  /** Aviso del siguiente tramo de mayoreo para la línea, o null si no aplica (HU-33). */
+  protected tierHint(line: PosLine): string | null {
+    const scales = this.scales().get(line.product.id);
+    if (!scales?.length) {
+      return null;
+    }
+    const lineQuote = this.lineQuote(line);
+    const paying = lineQuote ? lineQuote.total / line.quantity : line.product.precio;
+    const hint = nextTier(scales, line.quantity, Math.min(line.product.precio, paying));
+    return hint ? tierHintText(hint) : null;
   }
 
   protected charge(): void {
@@ -266,26 +315,53 @@ export class PosScreen {
     this.checkoutOpen.set(false);
     // La venta descontó inventario: se recarga para que el POS vea la existencia nueva.
     this.catalog.reload();
-    this.clear();
+    this.ticket.set([]);
     this.selectedId.set(null);
     this.search.set('');
     this.category.set('');
+    this.focusSearch();
   }
 
-  protected showCut(): void {
-    this.tab.set('corte');
-    this.cut.reload();
+  protected onKeydown(event: KeyboardEvent): void {
+    if (this.view() !== 'venta' || this.checkoutOpen() || this.clearOpen() || this.logoutOpen()) {
+      return;
+    }
+    const target = event.target as HTMLElement | null;
+    const typing = !!target?.closest('input, textarea, select, [contenteditable="true"]');
+    const action = posShortcut(event.key, typing);
+    if (!action) {
+      return;
+    }
+
+    event.preventDefault();
+    switch (action) {
+      case 'buscar':
+        this.focusSearch();
+        break;
+      case 'cobrar':
+        this.charge();
+        break;
+      case 'mas':
+        this.step(1);
+        break;
+      case 'menos':
+        this.step(-1);
+        break;
+      case 'quitar':
+        this.removeActive();
+        break;
+    }
   }
 
   /** Lo dice el backend (agotado). Si el detalle recién consultado es del mismo producto, manda ese. */
   protected soldOut(product: CatalogProduct): boolean {
-    const detail = this.selectedDetail.value();
+    const detail = this.detailValue();
     return detail?.id === product.id ? detail.agotado : product.agotado;
   }
 
   /** Existencia conocida: la del detalle recién consultado o, si no, la del catálogo. */
   private stockOf(product: CatalogProduct): number | null {
-    const detail = this.selectedDetail.value();
+    const detail = this.detailValue();
     if (detail?.id === product.id && detail.disponible != null) {
       return detail.disponible;
     }
@@ -316,5 +392,23 @@ export class PosScreen {
         .filter((line) => line.quantity > 0),
     );
     return true;
+  }
+
+  /**
+   * Consulta los tramos del producto la primera vez que entra al ticket. Si falla queda
+   * sin aviso de tramo: la venta no depende de esto, y el interceptor ya avisó del error.
+   */
+  private loadScales(productId: Id): void {
+    if (this.scaleRequests.has(productId)) {
+      return;
+    }
+    this.scaleRequests.add(productId);
+    this.priceScales
+      .byProduct(productId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (scales) => this.scales.update((map) => new Map(map).set(productId, scales)),
+        error: () => this.scales.update((map) => new Map(map).set(productId, [])),
+      });
   }
 }

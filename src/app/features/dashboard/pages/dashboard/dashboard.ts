@@ -7,18 +7,21 @@ import { CashCut, Sale } from '../../../../core/models/order.model';
 import { RawMaterial } from '../../../../core/models/production.model';
 import { Auth } from '../../../../core/services/auth';
 import { MoneyPipe } from '../../../../shared/pipes/money.pipe';
+import { Icon } from '../../../../shared/ui/icon/icon';
 import { PageHeader } from '../../../../shared/ui/page-header/page-header';
 import { StatCard } from '../../../../shared/ui/stat-card/stat-card';
+import { valueOr } from '../../../../core/http/resource-value';
 
 @Component({
   selector: 'app-dashboard',
-  imports: [RouterLink, PageHeader, StatCard, MoneyPipe],
+  imports: [RouterLink, PageHeader, StatCard, Icon, MoneyPipe],
   templateUrl: './dashboard.html',
 })
 export class Dashboard {
   private readonly api = inject(ApiClient);
 
   protected readonly auth = inject(Auth);
+  protected readonly crumbs = [{ label: 'Inicio' }, { label: 'Panel' }];
 
   protected readonly cut = httpResource<CashCut>(() => this.api.url(API_ENDPOINTS.orders.cashCut));
   protected readonly orders = httpResource<Sale[]>(() => this.api.url(API_ENDPOINTS.orders.queue), {
@@ -29,10 +32,11 @@ export class Dashboard {
     { defaultValue: [] },
   );
 
+  protected readonly cutValue = computed(() => valueOr(this.cut, undefined));
   protected readonly pendingOrders = computed(
-    () => this.orders.value().filter((order) => ['PENDIENTE', 'EN_PREPARACION', 'LISTO'].includes(order.estado)).length,
+    () => valueOr(this.orders, []).filter((order) => ['PENDIENTE', 'EN_PREPARACION', 'LISTO'].includes(order.estado)).length,
   );
-  protected readonly lowStock = computed(() => this.materials.value().length);
+  protected readonly lowStock = computed(() => valueOr(this.materials, []).length);
   protected readonly loading = computed(
     () => this.cut.isLoading() || this.orders.isLoading() || this.materials.isLoading(),
   );

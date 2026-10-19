@@ -12,6 +12,7 @@ import {
 import { ProductCard } from '../../../../shared/ui/product-card/product-card';
 import { ProductService } from '../../../storefront/services/product.service';
 import { ShopCart } from '../../../storefront/services/shop-cart';
+import { valueOr } from '../../../../core/http/resource-value';
 
 interface Step {
   readonly title: string;
@@ -38,31 +39,32 @@ export class Home {
     defaultValue: [],
   });
 
+  private readonly catalogItems = computed(() => valueOr(this.catalog, []));
+  private readonly categoryItems = computed(() => valueOr(this.categoryList, []));
+
   protected readonly loading = computed(() => this.catalog.isLoading());
 
   /** Categorías con productos, con su ícono y cuántos productos tienen. */
   protected readonly categories = computed(() =>
-    this.categoryList
-      .value()
+    this.categoryItems()
       .map((category) => ({
         ...category,
         tone: KIND_TONES[categoryKind(category.nombre)],
-        total: this.catalog.value().filter((product) => product.categoriaId === category.id).length,
+        total: this.catalogItems().filter((product) => product.categoriaId === category.id).length,
       }))
       .filter((category) => category.total > 0),
   );
 
   /** Lo disponible primero, y con foto antes que sin foto. */
   protected readonly featured = computed(() =>
-    [...this.catalog.value()]
+    [...this.catalogItems()]
       .filter((product) => categoryKind(product.categoria) !== 'bebida')
       .sort((a, b) => rank(b) - rank(a))
       .slice(0, FEATURED_COUNT),
   );
 
   protected readonly drinks = computed(() =>
-    this.catalog
-      .value()
+    this.catalogItems()
       .filter((product) => categoryKind(product.categoria) === 'bebida')
       .slice(0, DRINKS_COUNT),
   );

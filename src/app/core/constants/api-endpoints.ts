@@ -31,10 +31,15 @@ export const API_ENDPOINTS = {
   materiasPrimas: {
     root: '/materias-primas',
     stockBajo: '/materias-primas/stock-bajo',
+    byId: (id: Id) => `/materias-primas/${id}`,
   },
   inventarios: {
     materiasPrimas: '/inventarios/materia-prima',
     productos: '/inventarios/producto',
+    /** Inventario de un producto, por id de producto. */
+    byProducto: (productoId: Id) => `/inventarios/producto/${productoId}`,
+    /** Inventario de una materia prima, por id de materia prima. */
+    byMateriaPrima: (materiaPrimaId: Id) => `/inventarios/${materiaPrimaId}/materia-prima`,
   },
   movimientos: {
     materiasPrimas: '/movimientos-inventario/materia-prima',
@@ -45,6 +50,7 @@ export const API_ENDPOINTS = {
   formulas: {
     root: '/formulas',
     byId: (id: Id) => `/formulas/${id}`,
+    byProducto: (productoId: Id) => `/formulas/producto/${productoId}`,
     /** Costo unitario calculado por el backend (solo administración y jefe de producción). */
     costoUnitario: (id: Id) => `/formulas/${id}/costo-unitario`,
     /** Explosion de materiales de la formula de un producto (administracion y jefe de produccion). */
@@ -54,10 +60,15 @@ export const API_ENDPOINTS = {
     root: '/formula-detalles',
     byId: (id: Id) => `/formula-detalles/${id}`,
     byFormula: (id: Id) => `/formula-detalles/formula/${id}`,
+    byMateriaPrima: (id: Id) => `/formula-detalles/materia-prima/${id}`,
   },
   producciones: {
     root: '/producciones',
+    byId: (id: Id) => `/producciones/${id}`,
     status: (id: Id) => `/producciones/${id}/estado`,
+  },
+  produccionDetalle: {
+    byProduccion: (id: Id) => `/produccion-detalle/produccion/${id}`,
   },
   logs: {
     root: '/logs',
@@ -73,6 +84,7 @@ export const API_ENDPOINTS = {
     root: '/promociones-productos',
     byId: (id: Id) => `/promociones-productos/${id}`,
     byPromocion: (id: Id) => `/promociones-productos/promocion/${id}`,
+    byProducto: (id: Id) => `/promociones-productos/producto/${id}`,
   },
   combos: {
     root: '/combos',
@@ -82,6 +94,7 @@ export const API_ENDPOINTS = {
     root: '/combos-detalles',
     byId: (id: Id) => `/combos-detalles/${id}`,
     byCombo: (id: Id) => `/combos-detalles/combo/${id}`,
+    byProducto: (id: Id) => `/combos-detalles/producto/${id}`,
   },
   escalasPrecio: {
     root: '/escalas-precio',

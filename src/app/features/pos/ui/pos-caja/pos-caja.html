@@ -1,0 +1,237 @@
+<header class="flex flex-wrap items-center gap-x-4 gap-y-1 bg-neutral px-4 py-2.5 text-neutral-content">
+  <button type="button" class="btn btn-ghost btn-sm text-neutral-content hover:bg-neutral-content/10" (click)="back.emit()">← Volver a vender</button>
+  <span class="font-serif text-lg font-semibold">Caja {{ caja }} · Caja y corte</span>
+  <span class="text-sm opacity-75">
+    {{ cashier() }}
+  </span>
+  <button
+    type="button"
+    class="btn btn-sm btn-ghost ms-auto border border-neutral-content/30 text-neutral-content hover:bg-neutral-content/10"
+    (click)="openRegister.emit()"
+  >
+    Abrir caja
+  </button>
+</header>
+
+<main class="flex flex-col gap-4 p-4 lg:p-6">
+  <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <div class="rounded-box border border-base-300 bg-base-100 p-4">
+      <p class="text-xs text-base-content/60">Ventas del día</p>
+      <p class="font-serif text-2xl font-semibold tabular-nums">{{ (cutValue()?.total ?? 0) | money }}</p>
+      <p class="text-xs text-base-content/60">
+        {{ cutValue()?.cantidadVentas ?? 0 }} ticket(s) · {{ cutValue()?.productosVendidos ?? 0 }}
+        producto(s)
+      </p>
+    </div>
+    <div class="rounded-box border border-base-300 bg-base-100 p-4">
+      <p class="text-xs text-base-content/60">En efectivo</p>
+      <p class="font-serif text-2xl font-semibold text-base-content/40">—</p>
+      <!-- Pendiente backend (HU-38): guardar el método de pago por venta -->
+      <p class="text-xs text-base-content/60">Próximamente</p>
+    </div>
+    <div class="rounded-box border border-base-300 bg-base-100 p-4">
+      <p class="text-xs text-base-content/60">Con tarjeta</p>
+      <p class="font-serif text-2xl font-semibold text-base-content/40">—</p>
+      <!-- Pendiente backend (HU-38): guardar el método de pago por venta -->
+      <p class="text-xs text-base-content/60">Próximamente</p>
+    </div>
+    <div class="rounded-box border border-base-300 bg-base-100 p-4">
+      <p class="text-xs text-base-content/60">Anuladas</p>
+      <p class="font-serif text-2xl font-semibold text-base-content/40">—</p>
+      <!-- Pendiente backend (HU-37): anulación de tickets -->
+      <p class="text-xs text-base-content/60">Próximamente</p>
+    </div>
+  </div>
+
+  <div class="grid items-start gap-4 lg:grid-cols-2">
+    <section class="panel flex flex-col gap-4" aria-labelledby="caja-cuadre">
+      <div class="flex items-center justify-between gap-3">
+        <h2 id="caja-cuadre" class="font-serif text-lg font-semibold">Cuadre de efectivo</h2>
+        <!-- Pendiente backend (HU-38): registrar retiros de caja -->
+        <button
+          type="button"
+          class="btn btn-sm"
+          disabled
+          title="Próximamente"
+          aria-label="Registrar retiro (próximamente)"
+        >
+          Registrar retiro
+        </button>
+      </div>
+
+      <dl class="text-sm tabular-nums">
+        <div class="flex justify-between border-b border-base-300 py-2">
+          <dt>Fondo inicial</dt>
+          <dd class="text-base-content/40">—</dd>
+        </div>
+        <div class="flex justify-between border-b border-base-300 py-2">
+          <dt>+ Ventas en efectivo</dt>
+          <dd class="text-base-content/40">—</dd>
+        </div>
+        <div class="flex justify-between border-b border-base-300 py-2">
+          <dt>− Retiros</dt>
+          <dd class="text-base-content/40">—</dd>
+        </div>
+        <div class="flex justify-between py-2 font-bold">
+          <dt>Efectivo esperado</dt>
+          <dd class="text-base-content/40">—</dd>
+        </div>
+      </dl>
+      <!-- Pendiente backend (HU-38): el cuadre depende de la apertura de turno -->
+      <div class="flex items-center gap-2">
+        <app-status-chip label="Próximamente" tone="neutral" />
+        <span class="text-xs text-base-content/60">
+          Fondo, retiros y efectivo esperado dependen de la apertura de turno.
+        </span>
+      </div>
+
+      <fieldset class="grid gap-2">
+        <legend
+          class="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.09em] text-base-content/55"
+        >
+          Arqueo · lo que hay en la gaveta
+        </legend>
+        @for (value of denominations; track value) {
+          <div class="grid grid-cols-[4.5rem_1fr_5.5rem] items-center gap-3 tabular-nums">
+            <span class="font-semibold">{{ label(value) }}</span>
+            <span class="flex items-center gap-2">
+              <button
+                type="button"
+                class="btn btn-sm btn-square"
+                [attr.aria-label]="'Quitar uno de ' + label(value)"
+                [disabled]="count(value) === 0"
+                (click)="adjust(value, -1)"
+              >
+                −
+              </button>
+              <output
+                class="grid h-9 min-w-12 place-items-center rounded-field border border-base-300 font-semibold"
+                [attr.aria-label]="'Cantidad de ' + label(value)"
+              >
+                {{ count(value) }}
+              </output>
+              <button
+                type="button"
+                class="btn btn-sm btn-square"
+                [attr.aria-label]="'Agregar uno de ' + label(value)"
+                (click)="adjust(value, 1)"
+              >
+                +
+              </button>
+            </span>
+            <span class="text-end">{{ value * count(value) | money }}</span>
+          </div>
+        }
+      </fieldset>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div class="rounded-box bg-base-200 px-4 py-3">
+          <p class="text-xs text-base-content/60">Contado</p>
+          <p class="font-serif text-2xl font-semibold tabular-nums">{{ counted() | money }}</p>
+        </div>
+        <div class="rounded-box bg-base-200 px-4 py-3">
+          <p class="text-xs text-base-content/60">Diferencia</p>
+          <p class="font-serif text-2xl font-semibold text-base-content/40">—</p>
+          <!-- Pendiente backend (HU-38): diferencia de cierre de turno -->
+          <p class="text-xs text-base-content/60">Próximamente</p>
+        </div>
+      </div>
+
+      <!-- Pendiente backend (HU-38): cerrar turno e imprimir corte -->
+      <button
+        type="button"
+        class="btn btn-primary btn-lg"
+        disabled
+        title="Próximamente"
+        aria-label="Cerrar turno e imprimir corte (próximamente)"
+      >
+        Cerrar turno e imprimir corte
+      </button>
+    </section>
+
+    <section class="panel flex flex-col gap-3" aria-labelledby="caja-ventas">
+      <div class="flex flex-wrap items-end justify-between gap-3">
+        <h2 id="caja-ventas" class="font-serif text-lg font-semibold">Ventas del día</h2>
+        <div class="flex items-end gap-2">
+          <label class="grid gap-1 text-xs text-base-content/60">
+            Fecha
+            <input
+              #date
+              type="date"
+              class="input input-sm"
+              [value]="cutDate()"
+              (change)="cutDate.set(date.value)"
+            />
+          </label>
+          <button type="button" class="btn btn-sm" (click)="cut.reload()">Actualizar</button>
+        </div>
+      </div>
+
+      @if (cut.isLoading()) {
+        <div class="h-24 animate-pulse rounded-box bg-base-200" aria-busy="true"></div>
+      } @else if (cut.error()) {
+        <div role="alert" class="alert alert-error">
+          <span>No pudimos calcular el corte.</span>
+          <button type="button" class="btn btn-sm" (click)="cut.reload()">Reintentar</button>
+        </div>
+      } @else if (cutValue(); as corte) {
+        @if (corte.ventas.length === 0) {
+          <p class="py-8 text-center text-sm text-base-content/55">
+            No hay ventas registradas en esta fecha.
+          </p>
+        } @else {
+          <div>
+            <div
+              class="list-th hidden grid-cols-[3.5rem_3rem_minmax(0,1fr)_4.5rem_5.5rem] gap-3 py-2 md:grid"
+            >
+              <span>Ticket</span>
+              <span>Hora</span>
+              <span>Detalle</span>
+              <span class="text-end">Total</span>
+              <span class="text-end">Anular</span>
+            </div>
+            @for (venta of corte.ventas; track venta.id) {
+              <div
+                class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 border-t border-base-300 py-2.5 text-sm md:grid-cols-[3.5rem_3rem_minmax(0,1fr)_4.5rem_5.5rem]"
+                [class.opacity-60]="isCancelled(venta.estado)"
+              >
+                <span class="font-mono">#{{ venta.id }}</span>
+                <span class="tabular-nums max-md:order-last">{{ venta.fecha | date: 'HH:mm' }}</span>
+                <span class="text-base-content/70 max-md:col-span-2">
+                  @for (linea of venta.detalles ?? []; track linea.id; let last = $last) {
+                    {{ linea.cantidad }} × {{ linea.producto }}{{ last ? '' : ', ' }}
+                  }
+                </span>
+                <span class="text-end font-semibold tabular-nums">{{ venta.total | money }}</span>
+                <span class="text-end">
+                  @if (isCancelled(venta.estado)) {
+                    <app-status-chip label="Anulada" tone="bad" />
+                  } @else {
+                    <!-- Pendiente backend (HU-37): anular tickets -->
+                    <button
+                      type="button"
+                      class="btn btn-xs btn-ghost text-error"
+                      disabled
+                      title="Próximamente"
+                      [attr.aria-label]="'Anular ticket ' + venta.id + ' (próximamente)'"
+                    >
+                      Anular
+                    </button>
+                  }
+                </span>
+              </div>
+            }
+          </div>
+        }
+        <!-- Pendiente backend (HU-37, HU-38): anulación con motivo y autorización, y método de pago por venta -->
+        <div class="flex items-center gap-2 border-t border-base-300 pt-3">
+          <app-status-chip label="Próximamente" tone="neutral" />
+          <span class="text-xs text-base-content/60">
+            Próximamente podrás anular tickets (con motivo y autorización) y ver el método de pago de
+            cada venta.
+          </span>
+        </div>
+      }
+    </section>
+  </div>
+</main>
