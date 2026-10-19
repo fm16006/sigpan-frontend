@@ -14,10 +14,17 @@ export interface AuditLog {
   readonly usuarioId: Id | null;
   readonly mensaje: string;
   readonly fecha: string;
-  readonly valor: string | null;
+  /** Estado previo del dato (JSON), o null si la operacion no modifica un valor existente. */
+  readonly valorAnterior: string | null;
+  /** Estado nuevo del dato (JSON), o null si no aplica. */
+  readonly valorPosterior: string | null;
 }
 
 export interface AuditLogQuery {
   readonly fechaDesde: string;
   readonly fechaHasta: string;
+  /** Número de página, desde 0 (el backend lo llama `init`). */
+  readonly init: number;
+  /** Registros por página (el backend lo llama `page`). */
+  readonly page: number;
 }

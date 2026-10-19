@@ -1,10 +1,13 @@
-import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
-import { httpResource } from '@angular/common/http';
-import { DatePipe } from '@angular/common';
+import { Component, DestroyRef, PLATFORM_ID, computed, inject, signal } from '@angular/core';
+import { HttpResourceRequest, httpResource } from '@angular/common/http';
+import { DatePipe, isPlatformBrowser } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { Id } from '../../../../core/models/api.model';
 import { CatalogProduct } from '../../../../core/models/catalog.model';
 import { CashCut } from '../../../../core/models/order.model';
+import { Quote, QuoteLine, ruleLabel } from '../../../../core/models/quote.model';
+import { QuoteService } from '../../../../core/services/quote.service';
+import { debouncedSignal } from '../../../../core/utils/debounced-signal';
 import { Auth } from '../../../../core/services/auth';
 import { Notifications } from '../../../../core/services/notifications';
 import { BackofficeMenu } from '../../../../shared/layout/backoffice-menu';
@@ -18,10 +21,13 @@ import { PosLine } from '../../models/checkout.model';
 import { CheckoutDialog } from '../../ui/checkout-dialog/checkout-dialog';
 import { KeypadKey, PosKeypad, applyKeypadKey } from '../../ui/pos-keypad/pos-keypad';
 import { ProductPreview } from '../../ui/product-preview/product-preview';
+import { todayIso } from '../../../../core/utils/dates';
 
 type PosTab = 'venta' | 'corte';
 
 const POS_PATH = '/backoffice/pos';
+/** Existencias al día sin recargar la página, igual que la cola de despacho. */
+const CATALOG_REFRESH_MS = 30_000;
 const TIME_FORMAT = new Intl.DateTimeFormat('es-SV', { hour: 'numeric', minute: '2-digit' });
 const DAY_FORMAT = new Intl.DateTimeFormat('es-SV', {
   weekday: 'long',
@@ -71,7 +77,7 @@ export class PosScreen {
   protected readonly selectedId = signal<Id | null>(null);
   protected readonly keypad = signal('');
   protected readonly checkoutOpen = signal(false);
-  protected readonly cutDate = signal(today());
+  protected readonly cutDate = signal(todayIso());
 
   protected readonly clock = computed(() => TIME_FORMAT.format(this.now()));
   protected readonly day = computed(() => DAY_FORMAT.format(this.now()));
@@ -82,9 +88,28 @@ export class PosScreen {
   protected readonly showStore = this.menu.showStore;
 
   protected readonly lines = this.ticket.asReadonly();
-  protected readonly total = computed(() =>
-    this.ticket().reduce((sum, line) => sum + Number(line.product.precio) * line.quantity, 0),
+  private readonly quotes = inject(QuoteService);
+
+  /** Canasta que se cotiza: solo producto y cantidad. El backend fija precios y descuentos. */
+  private readonly quoteLines = computed(() =>
+    this.ticket().map((line) => ({ productoId: line.product.id, cantidad: line.quantity })),
   );
+  private readonly debouncedLines = debouncedSignal(this.quoteLines, 250);
+
+  protected readonly quote = httpResource<Quote>((): HttpResourceRequest | undefined => {
+    const lineas = this.debouncedLines();
+    return lineas.length > 0 ? { url: this.quotes.url, method: 'POST', body: { lineas } } : undefined;
+  });
+  /** El ticket cambió y la cotización todavía no lo refleja: no se cobra en ese lapso. */
+  protected readonly quotePending = computed(() => this.quoteLines() !== this.debouncedLines());
+  protected readonly quoteByProduct = computed(
+    () => new Map((this.quote.value()?.lineas ?? []).map((line) => [line.productoId, line] as const)),
+  );
+  /** Total que cobra el backend (promociones, combos y mayoreo ya aplicados). */
+  protected readonly total = computed(() => this.quote.value()?.total ?? 0);
+  protected readonly ahorro = computed(() => this.quote.value()?.ahorro ?? 0);
+  protected readonly reglaAplicada = computed(() => ruleLabel(this.quote.value()?.reglaAplicada));
+  protected readonly ruleLabel = ruleLabel;
   protected readonly itemCount = computed(() =>
     this.ticket().reduce((sum, line) => sum + line.quantity, 0),
   );
@@ -135,8 +160,15 @@ export class PosScreen {
   );
 
   constructor() {
-    const timer = setInterval(() => this.now.set(new Date()), 30_000);
-    inject(DestroyRef).onDestroy(() => clearInterval(timer));
+    const destroyRef = inject(DestroyRef);
+    if (isPlatformBrowser(inject(PLATFORM_ID))) {
+      const clock = setInterval(() => this.now.set(new Date()), 30_000);
+      const refresh = setInterval(() => this.catalog.reload(), CATALOG_REFRESH_MS);
+      destroyRef.onDestroy(() => {
+        clearInterval(clock);
+        clearInterval(refresh);
+      });
+    }
   }
 
   protected toneFor(category: string): string {
@@ -150,6 +182,10 @@ export class PosScreen {
   }
 
   protected add(product: CatalogProduct, quantity = 1): void {
+    if (this.soldOut(product)) {
+      this.notifications.error(`${product.nombre} está agotado.`);
+      return;
+    }
     const current = this.ticket().find((line) => line.product.id === product.id)?.quantity ?? 0;
     if (!this.fitsStock(product, current + quantity)) {
       return;
@@ -216,8 +252,12 @@ export class PosScreen {
     this.keypad.set('');
   }
 
+  protected lineQuote(line: PosLine): QuoteLine | undefined {
+    return this.quoteByProduct().get(line.product.id);
+  }
+
   protected charge(): void {
-    if (this.ticket().length > 0) {
+    if (this.ticket().length > 0 && !this.quotePending() && !this.quote.error()) {
       this.checkoutOpen.set(true);
     }
   }
@@ -237,8 +277,10 @@ export class PosScreen {
     this.cut.reload();
   }
 
+  /** Lo dice el backend (agotado). Si el detalle recién consultado es del mismo producto, manda ese. */
   protected soldOut(product: CatalogProduct): boolean {
-    return this.stockOf(product) === 0;
+    const detail = this.selectedDetail.value();
+    return detail?.id === product.id ? detail.agotado : product.agotado;
   }
 
   /** Existencia conocida: la del detalle recién consultado o, si no, la del catálogo. */
@@ -275,10 +317,4 @@ export class PosScreen {
     );
     return true;
   }
-}
-
-function today(): string {
-  const now = new Date();
-  const offset = now.getTimezoneOffset() * 60_000;
-  return new Date(now.getTime() - offset).toISOString().slice(0, 10);
 }

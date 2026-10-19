@@ -4,14 +4,19 @@ import { CartStore } from './cart-store';
 
 const pan: CatalogProduct = {
   id: 3,
+  codigo: 'PF-001',
   nombre: 'Pan francés',
   descripcion: null,
   precio: 0.25,
   categoriaId: 1,
   categoria: 'Pan',
+  unidadVenta: 'unidad',
+  especialidad: 'PAN_FRANCES',
+  alergenos: null,
   activo: true,
   imagenUrl: null,
   stockMinimo: 1,
+  agotado: false,
 };
 
 describe('CartStore', () => {

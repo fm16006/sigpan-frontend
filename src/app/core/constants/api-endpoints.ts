@@ -44,8 +44,15 @@ export const API_ENDPOINTS = {
   },
   formulas: {
     root: '/formulas',
+    byId: (id: Id) => `/formulas/${id}`,
+    /** Costo unitario calculado por el backend (solo administración y jefe de producción). */
+    costoUnitario: (id: Id) => `/formulas/${id}/costo-unitario`,
+    /** Explosion de materiales de la formula de un producto (administracion y jefe de produccion). */
+    explosion: (productoId: Id) => `/formulas/producto/${productoId}/explosion`,
   },
   formulaDetalles: {
+    root: '/formula-detalles',
+    byId: (id: Id) => `/formula-detalles/${id}`,
     byFormula: (id: Id) => `/formula-detalles/formula/${id}`,
   },
   producciones: {
@@ -60,6 +67,26 @@ export const API_ENDPOINTS = {
   },
   promociones: {
     root: '/promociones',
+    byId: (id: Id) => `/promociones/${id}`,
+  },
+  promocionesProductos: {
+    root: '/promociones-productos',
+    byId: (id: Id) => `/promociones-productos/${id}`,
+    byPromocion: (id: Id) => `/promociones-productos/promocion/${id}`,
+  },
+  combos: {
+    root: '/combos',
+    byId: (id: Id) => `/combos/${id}`,
+  },
+  combosDetalles: {
+    root: '/combos-detalles',
+    byId: (id: Id) => `/combos-detalles/${id}`,
+    byCombo: (id: Id) => `/combos-detalles/combo/${id}`,
+  },
+  escalasPrecio: {
+    root: '/escalas-precio',
+    byId: (id: Id) => `/escalas-precio/${id}`,
+    byProducto: (id: Id) => `/escalas-precio/producto/${id}`,
   },
   orders: {
     place: '/ventas/pedido',
@@ -68,6 +95,8 @@ export const API_ENDPOINTS = {
     queue: '/ventas/pedidos',
     cashCut: '/ventas/corte',
     status: (id: Id) => `/ventas/${id}/estado`,
+    /** Cotiza una canasta con el motor de promociones. No guarda nada. */
+    quote: '/ventas/cotizar',
   },
 } as const;
 

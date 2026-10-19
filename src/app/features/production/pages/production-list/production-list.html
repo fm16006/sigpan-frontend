@@ -77,6 +77,23 @@
       </div>
 
       <div>
+        <label class="label" for="fechaPlanificada"
+          ><span class="label-text">Fecha planificada</span></label
+        >
+        <input
+          id="fechaPlanificada"
+          type="date"
+          [min]="today"
+          formControlName="fechaPlanificada"
+          class="input input-bordered w-full"
+          [class.input-error]="!!errorFor('fechaPlanificada')"
+        />
+        @if (errorFor('fechaPlanificada'); as message) {
+          <p class="mt-1 text-xs text-error">{{ message }}</p>
+        }
+      </div>
+
+      <div>
         <label class="label" for="comentario"><span class="label-text">Comentario</span></label>
         <input
           id="comentario"
@@ -115,7 +132,8 @@
           <th scope="col">Producto</th>
           <th scope="col">Receta</th>
           <th scope="col" class="text-end">Lotes</th>
-          <th scope="col">Fecha</th>
+          <th scope="col">Planificada</th>
+          <th scope="col">Registrada</th>
           <th scope="col">Estado</th>
           <th scope="col" class="text-end">Acción</th>
         </tr>
@@ -132,7 +150,10 @@
             </td>
             <td class="text-sm">{{ production.formula }}</td>
             <td class="text-end tabular-nums">{{ production.cantidad }}</td>
-            <td class="text-sm">{{ production.fecha | date: 'short' }}</td>
+            <td class="text-sm font-medium">
+              {{ production.fechaPlanificada | date: 'mediumDate' }}
+            </td>
+            <td class="text-sm text-base-content/60">{{ production.fecha | date: 'short' }}</td>
             <td>
               <span
                 class="badge badge-sm"

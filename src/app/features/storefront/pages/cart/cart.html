@@ -38,7 +38,18 @@
                     (change)="updateQuantity(line.productId, $any($event.target).value)"
                   />
                 </td>
-                <td class="text-end font-medium">{{ line.unitPrice * line.quantity | money }}</td>
+                <td class="text-end font-medium tabular-nums">
+                  @if (lineQuote(line.productId); as lq) {
+                    {{ lq.total | money }}
+                    @if (lq.descuento > 0) {
+                      <span class="block text-xs text-success">
+                        -{{ lq.descuento | money }} · {{ ruleLabel(lq.regla) }}
+                      </span>
+                    }
+                  } @else {
+                    <span class="text-base-content/40">—</span>
+                  }
+                </td>
                 <td class="text-end">
                   <button
                     type="button"
@@ -57,13 +68,32 @@
 
       <aside class="h-fit rounded-box border border-base-300 bg-base-100 p-5">
         <h2 class="text-base font-semibold">Resumen</h2>
-        <dl class="mt-4 flex items-baseline justify-between">
-          <dt class="text-sm text-base-content/60">Subtotal</dt>
-          <dd class="font-serif text-2xl font-semibold">{{ cart.subtotal() | money }}</dd>
+        <dl class="mt-4 grid gap-2" [class.opacity-50]="quotePending()">
+          @if (quote.value(); as q) {
+            @if (q.ahorro > 0) {
+              <div class="flex items-baseline justify-between text-success">
+                <dt class="text-sm font-medium">Ahorro</dt>
+                <dd class="text-sm font-semibold tabular-nums">
+                  {{ q.ahorro | money }}
+                  <span class="text-xs">{{ ruleLabel(q.reglaAplicada) }}</span>
+                </dd>
+              </div>
+            }
+            <div class="flex items-baseline justify-between">
+              <dt class="text-sm text-base-content/60">Total</dt>
+              <dd class="font-serif text-2xl font-semibold">{{ q.total | money }}</dd>
+            </div>
+          } @else {
+            <div class="flex items-baseline justify-between">
+              <dt class="text-sm text-base-content/60">Total</dt>
+              <dd class="text-sm text-base-content/55">
+                {{ auth.isAuthenticated() ? 'Calculando…' : 'Inicia sesión para ver el total' }}
+              </dd>
+            </div>
+          }
         </dl>
         <p class="mt-2 text-xs text-base-content/50">
-          El total definitivo, con impuestos y promociones vigentes, se confirma al procesar el
-          pedido.
+          El total incluye las promociones vigentes y se confirma al procesar el pedido.
         </p>
         <button
           type="button"
