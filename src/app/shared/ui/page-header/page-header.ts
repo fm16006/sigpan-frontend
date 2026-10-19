@@ -15,7 +15,7 @@ import { Breadcrumbs, Crumb } from '../breadcrumbs/breadcrumbs';
       }
       <div class="flex flex-wrap items-end justify-between gap-4">
         <div class="flex min-w-0 flex-col gap-1">
-          <h1 class="text-3xl font-semibold text-base-content">{{ title() }}</h1>
+          <h1 class="text-2xl font-semibold text-base-content sm:text-3xl">{{ title() }}</h1>
           @if (subtitle()) {
             <p class="max-w-3xl text-sm text-base-content/65">{{ subtitle() }}</p>
           }
