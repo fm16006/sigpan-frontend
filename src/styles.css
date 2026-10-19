@@ -225,31 +225,41 @@
   }
 }
 
-/* Impresión del ticket desde el punto de venta: solo se imprime el ticket,
-   con el ancho de un rollo térmico de 80 mm. */
+/* Impresión del ticket desde el punto de venta (servicio ReceiptPrint): mientras existe
+   #receipt-print-root, solo se imprime el ticket. Es hijo directo de body para que ningún
+   diálogo con alto máximo o scroll lo recorte. 40 columnas a 8 pt miden unos 68 mm: caben en
+   el área imprimible de un rollo de 80 mm (72 mm) y en cualquier hoja. El tamaño del papel lo
+   pone la impresora; `size: 80mm auto` no es válido y el navegador lo ignoraba. */
+#receipt-print-root {
+  display: none;
+}
+
 @media print {
   @page {
-    size: 80mm auto;
-    margin: 4mm;
+    margin: 3mm;
   }
 
-  body * {
-    visibility: hidden;
+  html:has(#receipt-print-root),
+  html:has(#receipt-print-root) body {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    background: #fff !important;
   }
 
-  .receipt-print,
-  .receipt-print * {
-    visibility: visible;
+  body:has(> #receipt-print-root) > :not(#receipt-print-root) {
+    display: none !important;
   }
 
-  .receipt-print {
-    position: absolute;
-    inset: 0 auto auto 0;
+  #receipt-print-root {
+    display: block;
+    width: 72mm;
     margin: 0;
     font-family: var(--font-mono);
-    font-size: 9pt;
-    line-height: 1.3;
+    font-size: 8pt;
+    line-height: 1.35;
     color: #000;
     white-space: pre;
+    overflow: visible;
   }
 }

@@ -1,6 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { httpResource } from '@angular/common/http';
-import { DOCUMENT, DatePipe } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { CompanyStore } from '../../../../core/services/company-store';
 import { valueOr } from '../../../../core/http/resource-value';
 import { CashCut, Sale } from '../../../../core/models/order.model';
@@ -23,6 +23,7 @@ import {
   yesterdayIso,
 } from '../../pos-pedidos-logic';
 import { formatReceipt } from '../../receipt/receipt-format';
+import { ReceiptPrint } from '../../services/receipt-print';
 
 const LONG_DAY = new Intl.DateTimeFormat('es-SV', {
   weekday: 'long',
@@ -50,7 +51,7 @@ function upperFirst(text: string): string {
 })
 export class PosHistorial {
   private readonly orders = inject(OrderService);
-  private readonly page = inject(DOCUMENT);
+  private readonly receiptPrint = inject(ReceiptPrint);
   private readonly company = inject(CompanyStore);
 
   protected readonly isAdmin = inject(Auth).hasAnyRole(['ADMINISTRADOR']);
@@ -103,8 +104,8 @@ export class PosHistorial {
     this.selectedId.set(null);
   }
 
-  /** Abre la impresión del navegador; la hoja de estilos de impresión deja solo el ticket. */
+  /** Abre la impresión del navegador solo con el ticket (ver ReceiptPrint). */
   protected print(): void {
-    this.page.defaultView?.print();
+    this.receiptPrint.print(this.receiptText());
   }
 }
