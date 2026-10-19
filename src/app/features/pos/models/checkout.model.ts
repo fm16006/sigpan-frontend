@@ -67,4 +67,8 @@ export interface Receipt {
   readonly recibido: number;
   readonly cambio: number;
   readonly tarjeta: CardPayment | null;
+  /** Venta ya registrada de la que no se guardó el pago: el ticket omite recibido y cambio. */
+  readonly sinDetallePago?: boolean;
+  /** Venta anulada: el ticket lo dice. */
+  readonly anulada?: boolean;
 }

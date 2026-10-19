@@ -49,10 +49,11 @@ import { PosOrdersStore } from '../../services/pos-orders.store';
 import { CheckoutDialog } from '../../ui/checkout-dialog/checkout-dialog';
 import { PosApertura } from '../../ui/pos-apertura/pos-apertura';
 import { PosCaja } from '../../ui/pos-caja/pos-caja';
+import { PosPedidos } from '../../ui/pos-pedidos/pos-pedidos';
 import { valueOr } from '../../../../core/http/resource-value';
 
-/** Qué ve el cajero: con la caja cerrada solo la apertura; abierta, la venta o el cierre. */
-type PosMode = 'apertura' | 'venta' | 'cierre';
+/** Qué ve el cajero: con la caja cerrada solo la apertura; abierta, la venta, el cierre o los pedidos. */
+type PosMode = 'apertura' | 'venta' | 'cierre' | 'pedidos';
 
 const POS_PATH = '/backoffice/pos';
 const PANEL_PATH = '/backoffice';
@@ -98,6 +99,7 @@ const ROLE_NAMES: Readonly<Record<string, string>> = {
     ConfirmDialog,
     CheckoutDialog,
     PosCaja,
+    PosPedidos,
     PosApertura,
   ],
   templateUrl: './pos-screen.html',
@@ -134,9 +136,14 @@ export class PosScreen {
 
   /** El cajero pidió ver el cierre de caja (solo aplica con la caja abierta). */
   protected readonly closing = signal(false);
-  protected readonly mode = computed<PosMode>(() =>
-    this.register.estado() === 'cerrada' ? 'apertura' : this.closing() ? 'cierre' : 'venta',
-  );
+  /** El cajero abrió la vista "Pedidos" (borradores y ventas anteriores). */
+  protected readonly viewingOrders = signal(false);
+  protected readonly mode = computed<PosMode>(() => {
+    if (this.register.estado() === 'cerrada') {
+      return 'apertura';
+    }
+    return this.closing() ? 'cierre' : this.viewingOrders() ? 'pedidos' : 'venta';
+  });
   protected readonly shift = this.register.turno;
   protected readonly shiftSince = computed(() => {
     const since = this.shift()?.abiertaEn;
@@ -402,6 +409,7 @@ export class PosScreen {
 
   protected confirmCloseRegister(): void {
     this.closeRegisterOpen.set(false);
+    this.viewingOrders.set(false);
     this.sheetOpen.set(false);
     this.closing.set(true);
   }
@@ -414,6 +422,7 @@ export class PosScreen {
     this.category.set('');
     this.sheetOpen.set(false);
     this.closing.set(false);
+    this.viewingOrders.set(false);
   }
 
   protected requestLogout(): void {
@@ -471,14 +480,36 @@ export class PosScreen {
     return hasLines(order) || this.orderList().length > 1;
   }
 
-  protected newOrder(): void {
+  /** Abre un pedido vacío y lo activa. Devuelve false (con aviso) si ya está el máximo. */
+  protected newOrder(): boolean {
     if (!this.orders.crear()) {
       this.notifications.info(
         `Ya hay ${MAX_ORDERS} pedidos abiertos. Cobrá o descartá uno para abrir otro.`,
       );
-      return;
+      return false;
     }
     this.onOrderChanged();
+    return true;
+  }
+
+  /** "Ver todos los pedidos" del menú. */
+  protected openOrdersView(): void {
+    this.menuOpen.set(false);
+    this.sheetOpen.set(false);
+    this.viewingOrders.set(true);
+  }
+
+  /** "Retomar" en la vista Pedidos: el borrador pasa a ser el activo y se vuelve a vender. */
+  protected resumeOrder(order: PosOrder): void {
+    this.switchTo(order.id);
+    this.viewingOrders.set(false);
+  }
+
+  /** "Nuevo pedido" en la vista Pedidos: abre uno vacío y vuelve a vender. */
+  protected newOrderFromView(): void {
+    if (this.newOrder()) {
+      this.viewingOrders.set(false);
+    }
   }
 
   protected switchTo(id: number): void {
