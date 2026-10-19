@@ -19,6 +19,8 @@
           <dd class="max-sm:mb-2">{{ p.categoria }}</dd>
           <dt class="text-base-content/60">Unidad de venta</dt>
           <dd class="max-sm:mb-2">{{ p.unidadVenta }}</dd>
+          <dt class="text-base-content/60">IVA</dt>
+          <dd class="max-sm:mb-2">{{ p.exentoIva ? "Exento de IVA" : "Gravado según la configuración de la empresa" }}</dd>
           <dt class="text-base-content/60">Alérgenos</dt>
           <dd class="flex flex-wrap gap-1.5 max-sm:mb-2">
             @for (item of alergenos(); track item) {

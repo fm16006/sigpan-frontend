@@ -1,5 +1,7 @@
-import { Component, computed, input, output } from '@angular/core';
+import { Component, computed, inject, input, output } from '@angular/core';
 import { CatalogProduct } from '../../../core/models/catalog.model';
+import { showsPlusTax } from '../../../core/models/tax.model';
+import { CompanyStore } from '../../../core/services/company-store';
 import { MoneyPipe } from '../../pipes/money.pipe';
 import { CategoryIcon, KIND_TONES, categoryKind } from '../category-icon/category-icon';
 
@@ -11,6 +13,8 @@ import { CategoryIcon, KIND_TONES, categoryKind } from '../category-icon/categor
   host: { class: 'block h-full' },
 })
 export class ProductCard {
+  private readonly company = inject(CompanyStore);
+
   readonly product = input.required<CatalogProduct>();
   readonly added = output<CatalogProduct>();
 
@@ -18,6 +22,9 @@ export class ProductCard {
     () => `${this.product().nombre} ${this.product().categoria}`,
   );
   protected readonly tone = computed(() => KIND_TONES[categoryKind(this.kindText())]);
+
+  /** El IVA no va incluido en el precio publicado: el catálogo avisa "+ IVA" sin inventar montos. */
+  protected readonly plusTax = computed(() => showsPlusTax(this.company.tax(), this.product().exentoIva));
 
   /** Lo decide el backend: agotado es true cuando disponible <= 0. */
   protected readonly soldOut = computed(() => this.product().agotado);

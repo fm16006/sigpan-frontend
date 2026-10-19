@@ -16,6 +16,8 @@ export interface AppError {
   readonly kind: AppErrorKind;
   readonly status: number;
   readonly message: string;
+  /** Código del backend (p. ej. TOTAL_CAMBIO), si lo trae. */
+  readonly code?: string;
   /** Errores por campo que informa el backend en un 400 o 422. */
   readonly fieldErrors: Readonly<Record<string, string>>;
 }
@@ -53,5 +55,6 @@ export function toAppError(response: HttpErrorResponse): AppError {
     // En 5xx se ignora el mensaje del backend: puede traer trazas internas.
     message: (kind === 'server' ? null : body?.message) ?? MESSAGES[kind],
     fieldErrors: body?.errors ?? {},
+    code: body?.code,
   };
 }

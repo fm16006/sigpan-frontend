@@ -158,6 +158,40 @@
       </div>
       <p class="text-xs text-base-content/55">El logo se cambia desde el menú «Más» de la ficha.</p>
     </fieldset>
+
+    <fieldset class="flex flex-col gap-3">
+      <legend class="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.09em] text-base-content/55">
+        Impuestos
+      </legend>
+      <label class="flex cursor-pointer items-center justify-between gap-3">
+        <span class="text-sm font-semibold">Aplicar IVA</span>
+        <input type="checkbox" class="toggle toggle-primary" formControlName="aplicaIva" />
+      </label>
+      <label class="flex items-center justify-between gap-3" [class.cursor-pointer]="applies()" [class.opacity-50]="!applies()">
+        <span class="text-sm font-semibold">IVA incluido en el precio de los productos</span>
+        <input type="checkbox" class="toggle toggle-primary" formControlName="ivaIncluido" />
+      </label>
+      <div>
+        <label class="mb-1.5 block text-sm font-semibold" for="tasaIva">Tasa de IVA (%)</label>
+        <input
+          id="tasaIva"
+          type="number"
+          inputmode="decimal"
+          step="0.01"
+          [attr.min]="rateBounds.min"
+          [attr.max]="rateBounds.max"
+          formControlName="tasaIva"
+          class="input input-bordered w-full sm:w-40"
+          [class.input-error]="!!errorFor('tasaIva')"
+        />
+        @if (errorFor('tasaIva'); as message) {
+          <p class="mt-1 text-xs text-error">{{ message }}</p>
+        }
+      </div>
+      <p class="rounded-box bg-base-200 px-3 py-2 text-xs leading-relaxed text-base-content/70" aria-live="polite">
+        {{ taxHelp() }} Cada producto puede marcarse como exento desde su ficha. El cambio aplica desde la próxima venta.
+      </p>
+    </fieldset>
   </form>
 
   <div footer class="contents">
@@ -170,3 +204,14 @@
     </button>
   </div>
 </app-form-drawer>
+
+<app-confirm-dialog
+  [open]="taxNotes() !== null"
+  title="¿Cambiar la configuración del IVA?"
+  message="Vas a modificar cómo se calcula el IVA en las ventas."
+  [details]="taxNotes() ?? []"
+  confirmLabel="Aplicar cambio"
+  tone="primary"
+  (confirmed)="confirmTaxChange()"
+  (cancelled)="dismissTaxChange()"
+/>

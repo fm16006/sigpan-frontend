@@ -2,7 +2,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { Observable, tap } from 'rxjs';
 import { API_ENDPOINTS } from '../constants/api-endpoints';
 import { ApiClient } from '../http/api-client';
-import { Company, CompanyDraft, toBusinessInfo } from '../models/company.model';
+import { Company, CompanyDraft, taxConfigOf, toBusinessInfo } from '../models/company.model';
 
 /**
  * Datos de la empresa, cargados una vez y compartidos (ticket, pie de la tienda, marca,
@@ -24,6 +24,8 @@ export class CompanyStore {
   readonly status = this.loadState.asReadonly();
   /** Datos listos para mostrar: reales o, en su defecto, los de respaldo. */
   readonly info = computed(() => toBusinessInfo(this.state()));
+  /** Configuración del IVA vigente (13 % incluido mientras no llegan los datos). */
+  readonly tax = computed(() => taxConfigOf(this.state()));
 
   /** Carga los datos una sola vez; con `force` vuelve a pedirlos. Un fallo deja el respaldo. */
   load(force = false): void {

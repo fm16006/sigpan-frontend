@@ -2,7 +2,6 @@ import { BusinessInfo } from '../../../core/config/business.config';
 import { Receipt } from '../models/checkout.model';
 
 export const RECEIPT_WIDTH = 40;
-export const IVA_RATE = 0.13;
 
 const DATE_FORMAT = new Intl.DateTimeFormat('es-SV', {
   day: '2-digit',
@@ -29,7 +28,8 @@ export function formatReceipt(
   const rule = '-'.repeat(width);
   const center = (text: string) => centerText(text, width);
   const row = (left: string, right: string) => spread(left, right, width);
-  const iva = receipt.total - receipt.total / (1 + IVA_RATE);
+  const tax = receipt.impuestos;
+  const creditNote = receipt.documento === 'CCF' && tax.aplicaIva;
 
   return [
     center(business.nombreComercial.toUpperCase()),
@@ -50,22 +50,27 @@ export function formatReceipt(
     ),
     fit(`Cajero: ${receipt.cajero}`, width),
     rule,
+    ...(creditNote ? [center('Precios unitarios sin IVA')] : []),
     itemRow('CANT', 'DESCRIPCION', 'P.UNIT', 'TOTAL', width),
     ...receipt.lineas.map((line) =>
-      itemRow(
-        String(line.cantidad),
-        line.descripcion,
-        money(line.precio),
-        money(line.importe),
-        width,
-      ),
+      creditNote
+        ? itemRow(
+            String(line.cantidad),
+            line.descripcion,
+            unitPrice(line.precioSinIva ?? line.precio),
+            money(line.importeSinIva ?? line.importe),
+            width,
+          )
+        : itemRow(
+            String(line.cantidad),
+            line.descripcion,
+            money(line.precio),
+            money(line.importe),
+            width,
+          ),
     ),
     rule,
-    row('SUMAS', money(receipt.total)),
-    row('VENTAS EXENTAS', money(0)),
-    row('VENTAS GRAVADAS', money(receipt.total)),
-    row('TOTAL A PAGAR', `$${money(receipt.total)}`),
-    row('IVA INCLUIDO (13%)', money(iva)),
+    ...(creditNote ? creditNoteTotals(receipt, row) : consumerTotals(receipt, row)),
     rule,
     ...withRule(paymentRows(receipt, row), rule),
     ...(receipt.anulada ? [center('*** VENTA ANULADA ***'), rule] : []),
@@ -126,4 +131,61 @@ function pad(value: number): string {
 
 function money(value: number): string {
   return Number(value).toFixed(2);
+}
+
+/** "13%", "16.5%". */
+function rateText(rate: number): string {
+  return `${Number(Number(rate).toFixed(2))}%`;
+}
+
+/**
+ * Totales del ticket de consumidor final (TICKET y FACTURA). Todo sale del desglose guardado con
+ * la venta: con IVA incluido las ventas gravadas llevan el IVA dentro y este se informa aparte;
+ * con IVA no incluido se suma. Si la empresa no aplicaba IVA no hay ninguna línea de IVA.
+ */
+function consumerTotals(receipt: Receipt, row: (left: string, right: string) => string): string[] {
+  const tax = receipt.impuestos;
+  const rows = [row('SUMAS', money(receipt.subtotal))];
+  if (receipt.descuento > 0) {
+    rows.push(row('DESCUENTOS', `-${money(receipt.descuento)}`));
+  }
+  if (tax.aplicaIva) {
+    rows.push(row('VENTAS EXENTAS', money(tax.ventasExentas)));
+    rows.push(
+      row('VENTAS GRAVADAS', money(tax.ivaIncluido ? tax.ventasGravadas + tax.iva : tax.ventasGravadas)),
+    );
+    if (!tax.ivaIncluido) {
+      rows.push(row(`IVA (${rateText(tax.tasa)})`, money(tax.iva)));
+    }
+  }
+  rows.push(row('TOTAL A PAGAR', `$${money(receipt.total)}`));
+  if (tax.aplicaIva && tax.ivaIncluido) {
+    rows.push(row(`IVA INCLUIDO (${rateText(tax.tasa)})`, money(tax.iva)));
+  }
+  return rows;
+}
+
+/** Totales del comprobante de crédito fiscal: suma gravada sin IVA, IVA por separado y total. */
+function creditNoteTotals(receipt: Receipt, row: (left: string, right: string) => string): string[] {
+  const tax = receipt.impuestos;
+  const lineSum = receipt.lineas.reduce((sum, line) => sum + (line.importeSinIva ?? line.importe), 0);
+  const discount = Math.round((lineSum - tax.ventasGravadas - tax.ventasExentas) * 100) / 100;
+  const rows: string[] = [];
+  if (discount >= 0.01) {
+    rows.push(row('SUMAS', money(lineSum)), row('DESCUENTOS', `-${money(discount)}`));
+  }
+  rows.push(
+    row('SUMA GRAVADA (SIN IVA)', money(tax.ventasGravadas)),
+    row('VENTAS EXENTAS', money(tax.ventasExentas)),
+    row(`IVA (${rateText(tax.tasa)})`, money(tax.iva)),
+    row('TOTAL A PAGAR', `$${money(receipt.total)}`),
+  );
+  return rows;
+}
+
+/** Precio unitario: dos decimales, y hasta cuatro cuando el precio sin IVA los necesita. */
+function unitPrice(value: number): string {
+  const long = Number(value).toFixed(4);
+  const text = long.endsWith('00') ? Number(value).toFixed(2) : long.replace(/0$/, '');
+  return text.length > 7 ? Number(value).toFixed(2) : text;
 }

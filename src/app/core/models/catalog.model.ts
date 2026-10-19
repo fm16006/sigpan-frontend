@@ -45,6 +45,8 @@ export interface CatalogProduct {
   readonly disponiblePos?: boolean;
   /** Interruptor manual de la tienda en línea. Ausente solo en respuestas viejas: se trata como habilitado. */
   readonly disponibleTienda?: boolean;
+  /** Exento de IVA (HU-36). Ausente solo en respuestas viejas: se trata como gravado. */
+  readonly exentoIva?: boolean;
   readonly stockMinimo: number | null;
   readonly disponible?: number | null;
   /** true cuando disponible <= 0. */
@@ -73,6 +75,7 @@ export interface CatalogProductDraft {
   readonly tipo: ProductType;
   readonly disponiblePos: boolean;
   readonly disponibleTienda: boolean;
+  readonly exentoIva: boolean;
 }
 
 export interface Category {

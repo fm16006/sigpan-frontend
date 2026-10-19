@@ -20,6 +20,8 @@ import {
 } from '../../../../core/models/catalog.model';
 import { Auth } from '../../../../core/services/auth';
 import { Notifications } from '../../../../core/services/notifications';
+import { ConfirmDialog } from '../../../../shared/ui/confirm-dialog/confirm-dialog';
+import { describeExemptChange } from '../../../../core/models/tax.model';
 import { FormDrawer } from '../../../../shared/ui/form-drawer/form-drawer';
 import { ProductAdminService } from '../../services/product-admin.service';
 import { isChannelOn } from '../../product-channels';
@@ -31,7 +33,7 @@ import { createProductForm } from './product-form';
  */
 @Component({
   selector: 'app-product-drawer',
-  imports: [ReactiveFormsModule, FormDrawer],
+  imports: [ReactiveFormsModule, FormDrawer, ConfirmDialog],
   templateUrl: './product-drawer.html',
 })
 export class ProductDrawer {
@@ -77,6 +79,8 @@ export class ProductDrawer {
   protected readonly savingCategory = signal(false);
   /** Error general del backend, que no pertenece a un campo. */
   protected readonly formError = signal<string | null>(null);
+  /** Aviso por confirmar al cambiar «Exento de IVA» en un producto que ya existe. */
+  protected readonly exemptNotes = signal<readonly string[] | null>(null);
 
   constructor() {
     // Cada vez que se abre, el formulario parte del producto (o vacío al crear).
@@ -106,7 +110,23 @@ export class ProductDrawer {
     return firstErrorMessage(this.form, field);
   }
 
+  private exemptConfirmed = false;
+
+  protected confirmExempt(): void {
+    this.exemptNotes.set(null);
+    this.exemptConfirmed = true;
+    this.save();
+  }
+
+  protected dismissExempt(): void {
+    this.exemptNotes.set(null);
+  }
+
   protected cancel(): void {
+    // Con la confirmación abierta, Escape solo cierra la confirmación.
+    if (this.exemptNotes()) {
+      return;
+    }
     this.closed.emit();
   }
 
@@ -116,9 +136,16 @@ export class ProductDrawer {
       return;
     }
 
+    const value = this.form.getRawValue();
+    const existing = this.product();
+    // Cambiar la exención cambia lo que paga el cliente desde la próxima venta: se avisa antes de guardar.
+    if (existing !== null && value.exentoIva !== (existing.exentoIva ?? false) && !this.exemptConfirmed) {
+      this.exemptNotes.set(describeExemptChange(value.exentoIva));
+      return;
+    }
+    this.exemptConfirmed = false;
     this.saving.set(true);
     this.formError.set(null);
-    const value = this.form.getRawValue();
     const draft: CatalogProductDraft = {
       ...value,
       codigo: value.codigo.trim(),
@@ -197,6 +224,7 @@ export class ProductDrawer {
         alergenos: product.alergenos ?? '',
         disponiblePos: isChannelOn(product, 'disponiblePos'),
         disponibleTienda: isChannelOn(product, 'disponibleTienda'),
+        exentoIva: product.exentoIva ?? false,
       });
     }
     if (this.isAdmin) {
