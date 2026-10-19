@@ -9,7 +9,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { HttpResourceRequest, httpResource } from '@angular/common/http';
-import { isPlatformBrowser } from '@angular/common';
+import { NgTemplateOutlet, isPlatformBrowser } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { BUSINESS_INFO } from '../../../../core/config/business.config';
@@ -39,17 +39,26 @@ import {
   ruleBadge,
   tierHintText,
 } from '../../pos-logic';
+import { CashRegisterStore } from '../../services/cash-register.store';
 import { CheckoutDialog } from '../../ui/checkout-dialog/checkout-dialog';
 import { PosApertura } from '../../ui/pos-apertura/pos-apertura';
 import { PosCaja } from '../../ui/pos-caja/pos-caja';
 import { valueOr } from '../../../../core/http/resource-value';
 
-type PosView = 'venta' | 'caja' | 'apertura';
+/** Qué ve el cajero: con la caja cerrada solo la apertura; abierta, la venta o el cierre. */
+type PosMode = 'apertura' | 'venta' | 'cierre';
 
 const POS_PATH = '/backoffice/pos';
 /** Existencias al día sin recargar la página, igual que la cola de despacho. */
 const CATALOG_REFRESH_MS = 30_000;
 const TIME_FORMAT = new Intl.DateTimeFormat('es-SV', { hour: 'numeric', minute: '2-digit' });
+const SHIFT_TIME_FORMAT = new Intl.DateTimeFormat('es-SV', {
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+});
+/** Desde `lg` el ticket va a la izquierda; debajo, barra inferior y hoja. Igual que Tailwind. */
+const DESKTOP_QUERY = '(min-width: 1024px)';
 const DAY_FORMAT = new Intl.DateTimeFormat('es-SV', {
   weekday: 'long',
   day: 'numeric',
@@ -72,6 +81,7 @@ const ROLE_NAMES: Readonly<Record<string, string>> = {
   selector: 'app-pos-screen',
   imports: [
     RouterLink,
+    NgTemplateOutlet,
     ResourceState,
     MoneyPipe,
     BrandMark,
@@ -94,6 +104,7 @@ export class PosScreen {
   private readonly menu = inject(BackofficeMenu);
   private readonly priceScales = inject(PriceScaleService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly register = inject(CashRegisterStore);
 
   protected readonly auth = inject(Auth);
   protected readonly isAdmin = this.auth.hasAnyRole(['ADMINISTRADOR']);
@@ -105,13 +116,26 @@ export class PosScreen {
   protected readonly scales = signal<ReadonlyMap<Id, readonly PriceScale[]>>(new Map());
   private readonly scaleRequests = new Set<Id>();
 
-  protected readonly view = signal<PosView>('venta');
+  /** El cajero pidió ver el cierre de caja (solo aplica con la caja abierta). */
+  protected readonly closing = signal(false);
+  protected readonly mode = computed<PosMode>(() =>
+    this.register.estado() === 'cerrada' ? 'apertura' : this.closing() ? 'cierre' : 'venta',
+  );
+  protected readonly shift = this.register.turno;
+  protected readonly shiftSince = computed(() => {
+    const since = this.shift()?.abiertaEn;
+    return since ? SHIFT_TIME_FORMAT.format(new Date(since)) : '';
+  });
+  /** Pantalla ancha: ticket fijo a la izquierda. En teléfono, barra inferior y hoja. */
+  protected readonly desktop = signal(true);
+  protected readonly sheetOpen = signal(false);
   protected readonly search = signal('');
   protected readonly category = signal('');
   protected readonly selectedId = signal<Id | null>(null);
   protected readonly checkoutOpen = signal(false);
   protected readonly clearOpen = signal(false);
   protected readonly logoutOpen = signal(false);
+  protected readonly closeRegisterOpen = signal(false);
 
   private readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
 
@@ -196,6 +220,18 @@ export class PosScreen {
         clearInterval(refresh);
       });
     }
+    this.watchViewport();
+  }
+
+  private watchViewport(): void {
+    if (typeof matchMedia !== 'function') {
+      return;
+    }
+    const query = matchMedia(DESKTOP_QUERY);
+    const sync = () => this.desktop.set(query.matches);
+    sync();
+    query.addEventListener('change', sync);
+    this.destroyRef.onDestroy(() => query.removeEventListener('change', sync));
   }
 
   protected toneFor(category: string): string {
@@ -279,6 +315,32 @@ export class PosScreen {
   protected clear(): void {
     this.ticket.set([]);
     this.clearOpen.set(false);
+    this.sheetOpen.set(false);
+  }
+
+  /** "Cerrar caja" de la barra: si hay un ticket sin cobrar, primero se confirma. */
+  protected requestCloseRegister(): void {
+    if (this.ticket().length > 0) {
+      this.closeRegisterOpen.set(true);
+    } else {
+      this.closing.set(true);
+    }
+  }
+
+  protected confirmCloseRegister(): void {
+    this.closeRegisterOpen.set(false);
+    this.sheetOpen.set(false);
+    this.closing.set(true);
+  }
+
+  /** El turno ya se cerró: el ticket pendiente se descarta y la pantalla vuelve a "Abrir caja". */
+  protected onRegisterClosed(): void {
+    this.ticket.set([]);
+    this.selectedId.set(null);
+    this.search.set('');
+    this.category.set('');
+    this.sheetOpen.set(false);
+    this.closing.set(false);
   }
 
   protected requestLogout(): void {
@@ -307,6 +369,7 @@ export class PosScreen {
 
   protected charge(): void {
     if (this.ticket().length > 0 && !this.quotePending() && !this.quote.error()) {
+      this.sheetOpen.set(false);
       this.checkoutOpen.set(true);
     }
   }
@@ -323,7 +386,17 @@ export class PosScreen {
   }
 
   protected onKeydown(event: KeyboardEvent): void {
-    if (this.view() !== 'venta' || this.checkoutOpen() || this.clearOpen() || this.logoutOpen()) {
+    if (
+      this.mode() !== 'venta' ||
+      this.checkoutOpen() ||
+      this.clearOpen() ||
+      this.logoutOpen() ||
+      this.closeRegisterOpen()
+    ) {
+      return;
+    }
+    if (event.key === 'Escape' && this.sheetOpen()) {
+      this.sheetOpen.set(false);
       return;
     }
     const target = event.target as HTMLElement | null;

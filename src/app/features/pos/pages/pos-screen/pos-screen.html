@@ -1,205 +1,95 @@
 <input id="pos-menu" type="checkbox" class="drawer-toggle" aria-hidden="true" />
 
 <div class="drawer-content flex h-dvh flex-col">
-  @if (view() === 'caja') {
+  @if (mode() === 'cierre') {
     <app-pos-caja
       [cashier]="auth.user()?.name ?? ''"
-      (back)="view.set('venta')"
-      (openRegister)="view.set('apertura')"
+      (back)="closing.set(false)"
+      (closed)="onRegisterClosed()"
     />
-  } @else if (view() === 'apertura') {
+  } @else if (mode() === 'apertura') {
     <app-pos-apertura
       [cashier]="auth.user()?.name ?? ''"
-      (back)="view.set('venta')"
-      (closing)="view.set('caja')"
+      [hasPanel]="adminLinks().length > 0"
+      (logout)="requestLogout()"
     />
   } @else {
     <header
-      class="flex flex-wrap items-center gap-x-4 gap-y-1 bg-neutral px-4 py-2.5 text-neutral-content"
+      class="flex shrink-0 items-center gap-x-3 bg-neutral px-3 py-2.5 text-neutral-content sm:gap-x-4 sm:px-4"
     >
       <span class="font-serif text-lg font-semibold">Caja {{ caja }}</span>
+      <span
+    class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-neutral-content/15 px-2.5 py-0.5 text-xs font-semibold text-neutral-content"
+  >
+    <span class="size-1.5 rounded-full bg-success" aria-hidden="true"></span>
+    <span>
+      Abierta <span class="max-sm:hidden">· desde</span><span class="sm:hidden">·</span>
+      {{ shiftSince() }}
+    </span>
+  </span>
       @if (auth.user(); as user) {
-        <span class="text-sm opacity-75">{{ user.name }} · {{ roleName() }}</span>
+        <span class="hidden min-w-0 truncate text-sm opacity-75 sm:inline">
+          {{ user.name }} · {{ roleName() }}
+        </span>
       }
-      <span class="hidden text-sm opacity-70 md:inline">
+      <span class="hidden text-sm opacity-70 xl:inline">
         <span class="tabular-nums">{{ clock() }}</span> · <span class="capitalize">{{ day() }}</span>
       </span>
 
-      <div class="ms-auto flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          class="btn btn-sm btn-ghost border border-neutral-content/30 text-neutral-content hover:bg-neutral-content/10"
-          (click)="view.set('apertura')"
-        >
-          Abrir caja
-        </button>
-        <button
-          type="button"
-          class="btn btn-sm btn-ghost border border-neutral-content/30 text-neutral-content hover:bg-neutral-content/10"
-          (click)="view.set('caja')"
-        >
-          Caja y corte
-        </button>
-        @if (adminLinks().length > 0) {
-          <label
-            for="pos-menu"
-            class="btn btn-sm btn-ghost border border-neutral-content/30 text-neutral-content hover:bg-neutral-content/10"
-            role="button"
-            tabindex="0"
-            aria-label="Abrir el menú del panel"
-            (keydown.enter)="$any($event.currentTarget).click()"
-          >
-            Panel
-          </label>
-        }
-        <button
-          type="button"
-          class="btn btn-sm btn-error"
-          (click)="requestLogout()"
-        >
-          Cerrar sesión
-        </button>
-      </div>
+      <button
+        type="button"
+        class="btn btn-sm btn-ghost ms-auto border border-neutral-content/30 text-neutral-content hover:bg-neutral-content/10"
+        (click)="requestCloseRegister()"
+      >
+        Cerrar caja
+      </button>
     </header>
 
     <div
-      class="grid min-h-0 flex-1 gap-3 overflow-y-auto p-3 lg:grid-cols-[minmax(22rem,28rem)_minmax(0,1fr)] lg:overflow-hidden"
+      class="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)] gap-3 overflow-hidden p-3 lg:grid-cols-[minmax(22rem,28rem)_minmax(0,1fr)]"
     >
-      <aside
-        class="flex min-h-96 flex-col rounded-box border border-base-300 bg-base-100 lg:min-h-0"
-        aria-label="Ticket actual"
-      >
-        <div class="flex items-center justify-between border-b border-base-300 px-4 py-3">
-          <div>
-            <h2 class="font-serif text-xl font-semibold">Ticket</h2>
-            <p class="text-xs text-base-content/60">
-              {{ itemCount() }} artículo(s) · {{ lines().length }} línea(s)
-            </p>
+      @if (desktop()) {
+        <aside
+          class="flex min-h-0 flex-col rounded-box border border-base-300 bg-base-100"
+          aria-label="Ticket actual"
+        >
+          <div class="flex items-center justify-between border-b border-base-300 px-4 py-3">
+            <div>
+              <h2 class="font-serif text-xl font-semibold">Ticket</h2>
+              <p class="text-xs text-base-content/60">
+                {{ itemCount() }} artículo(s) · {{ lines().length }} línea(s)
+              </p>
+            </div>
+            <button
+              type="button"
+              class="btn btn-ghost btn-sm text-error"
+              [disabled]="lines().length === 0"
+              (click)="clearOpen.set(true)"
+            >
+              Vaciar ticket
+            </button>
           </div>
-          <button
-            type="button"
-            class="btn btn-ghost btn-sm text-error"
-            [disabled]="lines().length === 0"
-            (click)="clearOpen.set(true)"
-          >
-            Vaciar ticket
-          </button>
-        </div>
 
-        <div class="min-h-40 flex-1 overflow-y-auto px-3">
-          @if (lines().length === 0) {
-            <p class="p-8 text-center text-sm text-base-content/55">
-              Escaneá un producto o tocá una tarjeta para empezar.
-            </p>
-          } @else {
-            <ul>
-              @for (line of lines(); track line.product.id) {
-                <li
-                  class="my-1 rounded-field border-t border-base-300 px-2 py-2.5 first:border-t-0"
-                  [class.bg-primary/10]="selectedId() === line.product.id"
-                >
-                  <div class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5">
-                    <button
-                      type="button"
-                      class="min-w-0 text-start"
-                      [attr.aria-pressed]="selectedId() === line.product.id"
-                      (click)="selectedId.set(line.product.id)"
-                    >
-                      <span class="block truncate font-semibold">{{ line.product.nombre }}</span>
-                      <span class="block text-xs text-base-content/60">
-                        {{ line.quantity }} × {{ line.product.precio | money }}
-                        @if (lineQuote(line); as lq) {
-                          @if (lq.descuento > 0) {
-                            · ahorra {{ lq.descuento | money }}
-                          }
-                        }
-                      </span>
-                    </button>
-                    <span class="text-end font-semibold tabular-nums">
-                      @if (lineQuote(line); as lq) {
-                        {{ lq.total | money }}
-                      } @else {
-                        <span class="text-base-content/40">—</span>
-                      }
-                    </span>
+          <ng-container *ngTemplateOutlet="ticketLines" />
 
-                    <span class="flex items-center gap-1.5">
-                      <button
-                        type="button"
-                        class="btn btn-sm btn-square"
-                        [attr.aria-label]="'Uno menos de ' + line.product.nombre"
-                        (click)="step(-1, line)"
-                      >
-                        −
-                      </button>
-                      <span class="min-w-8 text-center font-semibold tabular-nums">{{
-                        line.quantity
-                      }}</span>
-                      <button
-                        type="button"
-                        class="btn btn-sm btn-square"
-                        [attr.aria-label]="'Uno más de ' + line.product.nombre"
-                        (click)="step(1, line)"
-                      >
-                        +
-                      </button>
-                    </span>
-                    <span class="text-end">
-                      @if (lineQuote(line); as lq) {
-                        @if (lq.regla) {
-                          <span class="badge badge-success badge-soft badge-sm font-semibold">
-                            {{ ruleLabel(lq.regla) }}
-                          </span>
-                        }
-                      }
-                    </span>
-                  </div>
-                  @if (tierHint(line); as hint) {
-                    <p
-                      class="mt-2 rounded-field bg-warning/15 px-2.5 py-1.5 text-xs text-base-content/80"
-                    >
-                      {{ hint }}
-                    </p>
-                  }
-                </li>
-              }
-            </ul>
-          }
-        </div>
-
-        <div class="grid gap-1.5 border-t border-base-300 px-4 py-3 text-sm">
-          <div class="flex justify-between text-base-content/75">
-            <span>Subtotal</span>
-            <span class="tabular-nums">{{ subtotal() | money }}</span>
+          <div class="grid gap-1.5 border-t border-base-300 px-4 py-3 text-sm">
+            <ng-container *ngTemplateOutlet="ticketTotals" />
+            <button
+              type="button"
+              class="btn btn-primary btn-lg mt-1 h-16 justify-between text-xl"
+              [disabled]="lines().length === 0 || quotePending() || !!quote.error()"
+              (click)="charge()"
+            >
+              Cobrar
+              <kbd class="kbd kbd-sm text-base-content">F12</kbd>
+            </button>
           </div>
-          <div class="flex justify-between text-success">
-            <span>Descuentos</span>
-            <span class="tabular-nums">−{{ descuento() | money }}</span>
-          </div>
-          <div class="flex items-baseline justify-between pt-1" [class.opacity-50]="quotePending()">
-            <span class="font-semibold">Total</span>
-            <span class="font-serif text-4xl font-semibold tabular-nums">{{ total() | money }}</span>
-          </div>
-          @if (quote.error()) {
-            <p role="alert" class="text-xs text-error">
-              No pudimos cotizar el ticket. Revisá los productos antes de cobrar.
-            </p>
-          }
-          <button
-            type="button"
-            class="btn btn-primary btn-lg mt-1 h-16 justify-between text-xl"
-            [disabled]="lines().length === 0 || quotePending() || !!quote.error()"
-            (click)="charge()"
-          >
-            Cobrar
-            <kbd class="kbd kbd-sm text-base-content">F12</kbd>
-          </button>
-        </div>
-      </aside>
+        </aside>
+      }
 
       <section class="flex min-h-0 min-w-0 flex-col gap-3" aria-label="Productos">
         <label
-          class="flex h-13 items-center gap-2.5 rounded-box border-2 border-primary bg-base-100 px-3.5"
+          class="flex h-13 shrink-0 items-center gap-2.5 rounded-box border-2 border-primary bg-base-100 px-3.5"
         >
           <app-icon name="search" [size]="20" class="text-primary" />
           <input
@@ -213,11 +103,15 @@
             (input)="search.set(searchInput.value)"
             (keydown.enter)="scan()"
           />
-          <kbd class="kbd kbd-sm">F2</kbd>
+          <kbd class="kbd kbd-sm max-md:hidden">F2</kbd>
         </label>
 
         @if (categories().length > 1) {
-          <div class="flex flex-wrap gap-1.5" role="group" aria-label="Categorías">
+          <div
+            class="-mx-3 flex shrink-0 gap-1.5 overflow-x-auto px-3 pb-1 [scrollbar-width:none] lg:mx-0 lg:flex-wrap lg:overflow-visible lg:px-0 lg:pb-0 [&>button]:shrink-0 [&>button]:whitespace-nowrap"
+            role="group"
+            aria-label="Categorías"
+          >
             <button
               type="button"
               class="btn btn-sm"
@@ -241,7 +135,12 @@
           </div>
         }
 
-        <div class="min-h-0 flex-1 overflow-y-auto">
+        <div
+          class="min-h-0 flex-1 overflow-y-auto"
+          [style.padding-bottom]="
+            desktop() ? null : 'calc(5.5rem + env(safe-area-inset-bottom))'
+          "
+        >
           <app-resource-state
             [loading]="catalog.isLoading()"
             [failed]="!!catalog.error()"
@@ -301,7 +200,7 @@
           </app-resource-state>
         </div>
 
-        <p class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-base-content/60">
+        <p class="hidden shrink-0 flex-wrap gap-x-4 gap-y-1 text-xs text-base-content/60 md:flex">
           <span><kbd class="kbd kbd-xs">F2</kbd> buscar</span>
           <span><kbd class="kbd kbd-xs">+</kbd> <kbd class="kbd kbd-xs">−</kbd> cantidad</span>
           <span><kbd class="kbd kbd-xs">Supr</kbd> quitar línea</span>
@@ -309,8 +208,205 @@
         </p>
       </section>
     </div>
+
+    @if (!desktop()) {
+      <!-- Teléfono: el ticket es una barra fija abajo; tocarla abre la hoja con el detalle. -->
+      <div
+        class="fixed inset-x-0 bottom-0 z-30 flex items-center gap-2 border-t border-base-300 bg-base-100 px-3 pt-2 shadow-[0_-4px_14px_rgb(0_0_0/0.08)] pb-[max(0.5rem,env(safe-area-inset-bottom))]"
+      >
+        <button
+          type="button"
+          class="flex min-h-12 min-w-0 flex-1 items-center gap-2 rounded-field text-start"
+          aria-haspopup="dialog"
+          aria-label="Ver el ticket"
+          [attr.aria-expanded]="sheetOpen()"
+          (click)="sheetOpen.set(true)"
+        >
+          <app-icon name="chevron" [size]="18" class="-rotate-90 text-base-content/60" />
+          <span
+            class="truncate font-semibold tabular-nums"
+            [class.opacity-50]="quotePending()"
+          >
+            {{ itemCount() }} {{ itemCount() === 1 ? 'artículo' : 'artículos' }} ·
+            {{ total() | money }}
+          </span>
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary h-12 px-7 text-base"
+          [disabled]="lines().length === 0 || quotePending() || !!quote.error()"
+          (click)="charge()"
+        >
+          Cobrar
+        </button>
+      </div>
+
+      @if (sheetOpen()) {
+        <div class="fixed inset-0 z-40">
+          <button
+            type="button"
+            class="absolute inset-0 cursor-default bg-neutral/45"
+            aria-label="Cerrar el ticket"
+            tabindex="-1"
+            (click)="sheetOpen.set(false)"
+          ></button>
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-label="Ticket actual"
+            class="absolute inset-x-0 bottom-0 flex max-h-[90dvh] min-h-[50dvh] flex-col rounded-t-box border-t border-base-300 bg-base-100 shadow-xl"
+          >
+            <div class="flex items-center justify-between gap-2 border-b border-base-300 py-2 ps-4 pe-2">
+              <div class="min-w-0">
+                <h2 class="font-serif text-xl font-semibold">Ticket</h2>
+                <p class="text-xs text-base-content/60">
+                  {{ itemCount() }} artículo(s) · {{ lines().length }} línea(s)
+                </p>
+              </div>
+              <div class="flex items-center gap-1">
+                <button
+                  type="button"
+                  class="btn btn-ghost btn-sm text-error"
+                  [disabled]="lines().length === 0"
+                  (click)="clearOpen.set(true)"
+                >
+                  Vaciar ticket
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-ghost btn-square"
+                  aria-label="Cerrar el ticket"
+                  (click)="sheetOpen.set(false)"
+                >
+                  <app-icon name="close" [size]="20" />
+                </button>
+              </div>
+            </div>
+
+            <ng-container *ngTemplateOutlet="ticketLines" />
+
+            <div
+              class="grid gap-1.5 border-t border-base-300 px-4 pt-3 text-sm pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+            >
+              <ng-container *ngTemplateOutlet="ticketTotals" />
+              <button
+                type="button"
+                class="btn btn-primary btn-lg mt-1 h-14 text-lg"
+                [disabled]="lines().length === 0 || quotePending() || !!quote.error()"
+                (click)="charge()"
+              >
+                Cobrar
+              </button>
+            </div>
+          </section>
+        </div>
+      }
+    }
   }
 </div>
+
+<!-- Líneas del ticket: las comparten el panel de escritorio y la hoja del teléfono. -->
+<ng-template #ticketLines>
+  <div class="min-h-40 flex-1 overflow-y-auto px-3">
+    @if (lines().length === 0) {
+      <p class="p-8 text-center text-sm text-base-content/55">
+        Escaneá un producto o tocá una tarjeta para empezar.
+      </p>
+    } @else {
+      <ul>
+        @for (line of lines(); track line.product.id) {
+          <li
+            class="my-1 rounded-field border-t border-base-300 px-2 py-2.5 first:border-t-0"
+            [class.bg-primary/10]="selectedId() === line.product.id"
+          >
+            <div class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5">
+              <button
+                type="button"
+                class="min-w-0 text-start"
+                [attr.aria-pressed]="selectedId() === line.product.id"
+                (click)="selectedId.set(line.product.id)"
+              >
+                <span class="block truncate font-semibold">{{ line.product.nombre }}</span>
+                <span class="block text-xs text-base-content/60">
+                  {{ line.quantity }} × {{ line.product.precio | money }}
+                  @if (lineQuote(line); as lq) {
+                    @if (lq.descuento > 0) {
+                      · ahorra {{ lq.descuento | money }}
+                    }
+                  }
+                </span>
+              </button>
+              <span class="text-end font-semibold tabular-nums">
+                @if (lineQuote(line); as lq) {
+                  {{ lq.total | money }}
+                } @else {
+                  <span class="text-base-content/40">—</span>
+                }
+              </span>
+
+              <span class="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  class="btn btn-sm btn-square"
+                  [attr.aria-label]="'Uno menos de ' + line.product.nombre"
+                  (click)="step(-1, line)"
+                >
+                  −
+                </button>
+                <span class="min-w-8 text-center font-semibold tabular-nums">{{
+                  line.quantity
+                }}</span>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-square"
+                  [attr.aria-label]="'Uno más de ' + line.product.nombre"
+                  (click)="step(1, line)"
+                >
+                  +
+                </button>
+              </span>
+              <span class="text-end">
+                @if (lineQuote(line); as lq) {
+                  @if (lq.regla) {
+                    <span class="badge badge-success badge-soft badge-sm font-semibold">
+                      {{ ruleLabel(lq.regla) }}
+                    </span>
+                  }
+                }
+              </span>
+            </div>
+            @if (tierHint(line); as hint) {
+              <p class="mt-2 rounded-field bg-warning/15 px-2.5 py-1.5 text-xs text-base-content/80">
+                {{ hint }}
+              </p>
+            }
+          </li>
+        }
+      </ul>
+    }
+  </div>
+</ng-template>
+
+<!-- Subtotal, descuentos, total y error de cotización. -->
+<ng-template #ticketTotals>
+  <div class="flex justify-between text-base-content/75">
+    <span>Subtotal</span>
+    <span class="tabular-nums">{{ subtotal() | money }}</span>
+  </div>
+  <div class="flex justify-between text-success">
+    <span>Descuentos</span>
+    <span class="tabular-nums">−{{ descuento() | money }}</span>
+  </div>
+  <div class="flex items-baseline justify-between pt-1" [class.opacity-50]="quotePending()">
+    <span class="font-semibold">Total</span>
+    <span class="font-serif text-4xl font-semibold tabular-nums">{{ total() | money }}</span>
+  </div>
+  @if (quote.error()) {
+    <p role="alert" class="text-xs text-error">
+      No pudimos cotizar el ticket. Revisá los productos antes de cobrar.
+    </p>
+  }
+</ng-template>
 
 @if (checkoutOpen()) {
   <app-checkout-dialog
@@ -345,6 +441,19 @@
   confirmLabel="Cerrar sesión"
   (confirmed)="auth.logout()"
   (cancelled)="logoutOpen.set(false)"
+/>
+
+<app-confirm-dialog
+  [open]="closeRegisterOpen()"
+  title="¿Cerrar la caja?"
+  [message]="
+    'Hay un ticket sin cobrar con ' +
+    itemCount() +
+    ' artículo(s). Si cerrás la caja, se pierde. Vas a pasar al cierre para contar la gaveta.'
+  "
+  confirmLabel="Ir al cierre"
+  (confirmed)="confirmCloseRegister()"
+  (cancelled)="closeRegisterOpen.set(false)"
 />
 
 @if (adminLinks().length > 0) {

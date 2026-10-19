@@ -1,14 +1,34 @@
-<header class="flex flex-wrap items-center gap-x-4 gap-y-1 bg-neutral px-4 py-2.5 text-neutral-content">
-  <button type="button" class="btn btn-ghost btn-sm text-neutral-content hover:bg-neutral-content/10" (click)="back.emit()">← Volver a vender</button>
+<header
+  class="flex items-center gap-x-3 bg-neutral px-3 py-2.5 text-neutral-content sm:gap-x-4 sm:px-4"
+>
   <span class="font-serif text-lg font-semibold">Caja {{ caja }}</span>
-  <span class="text-sm opacity-75">{{ cashier() }}</span>
-  <button
-    type="button"
-    class="btn btn-sm btn-ghost ms-auto border border-neutral-content/30 text-neutral-content hover:bg-neutral-content/10"
-    (click)="closing.emit()"
+  <span
+    class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-neutral-content/15 px-2.5 py-0.5 text-xs font-semibold text-neutral-content"
   >
-    Caja y corte
-  </button>
+    <span class="size-1.5 rounded-full bg-warning" aria-hidden="true"></span>
+    Cerrada
+  </span>
+  @if (cashier()) {
+    <span class="hidden min-w-0 truncate text-sm opacity-75 sm:inline">{{ cashier() }}</span>
+  }
+
+  <div class="ms-auto flex items-center gap-2">
+    @if (hasPanel()) {
+      <label
+        for="pos-menu"
+        class="btn btn-sm btn-ghost border border-neutral-content/30 text-neutral-content hover:bg-neutral-content/10"
+        role="button"
+        tabindex="0"
+        aria-label="Abrir el menú del panel"
+        (keydown.enter)="$any($event.currentTarget).click()"
+      >
+        Ir al panel
+      </label>
+    }
+    <button type="button" class="btn btn-sm btn-error" (click)="logout.emit()">
+      Cerrar sesión
+    </button>
+  </div>
 </header>
 
 <main
@@ -18,7 +38,7 @@
     <div>
       <h1 id="apertura-titulo" class="font-serif text-3xl font-semibold">Abrir caja</h1>
       <p class="text-base-content/65">
-        Contá el efectivo con el que empezás el turno. Por ahora se puede vender sin abrir la caja.
+        La caja está cerrada. Contá el efectivo con el que empezás el turno para poder vender.
       </p>
     </div>
 
@@ -97,43 +117,49 @@
         rows="2"
         class="textarea w-full font-normal"
         placeholder="Por ejemplo, de quién recibís el fondo"
+        [value]="note()"
+        (input)="note.set($any($event.target).value)"
       ></textarea>
     </label>
 
-    <!-- Pendiente backend (HU-38): guardar el turno al abrirlo -->
-    <button
-      type="button"
-      class="btn btn-primary btn-lg"
-      disabled
-      title="Próximamente"
-      [attr.aria-label]="'Abrir turno con ' + fondo() + ' dólares (próximamente)'"
-    >
+    <button type="button" class="btn btn-primary btn-lg" (click)="open()">
       Abrir turno con {{ fondo() | money }}
     </button>
     <p class="-mt-2 text-center text-xs text-base-content/60">
-      El turno todavía no se guarda; podés contar el fondo igual.
+      Por ahora el turno se guarda solo en este navegador.
     </p>
   </section>
 
   <aside class="flex min-w-0 flex-col gap-4">
-    <section class="panel flex flex-col gap-3" aria-labelledby="apertura-anterior">
-      <h2 id="apertura-anterior" class="font-serif text-lg font-semibold">Turno anterior</h2>
-      <dl class="text-sm tabular-nums">
-        @for (row of ['Cerró a las', 'Ventas', 'Efectivo contado', 'Retirado a caja fuerte', 'Dejó en la gaveta', 'Diferencia del cierre']; track row) {
-          <div class="flex justify-between border-t border-base-300 py-2 first:border-t-0">
-            <dt>{{ row }}</dt>
-            <dd class="text-base-content/40">—</dd>
+    @if (previous(); as turno) {
+      <section class="panel flex flex-col gap-3" aria-labelledby="apertura-anterior">
+        <h2 id="apertura-anterior" class="font-serif text-lg font-semibold">Turno anterior</h2>
+        <dl class="text-sm tabular-nums">
+          <div class="flex justify-between gap-3 border-t border-base-300 py-2 first:border-t-0">
+            <dt>Abrió</dt>
+            <dd class="capitalize">{{ whenOf(turno.abiertaEn) }}</dd>
           </div>
-        }
-      </dl>
-      <!-- Pendiente backend (HU-38): guardar y exponer los turnos -->
-      <div class="flex items-center gap-2">
-        <app-status-chip label="Próximamente" tone="neutral" />
-        <span class="text-xs text-base-content/60">
-          Próximamente verás acá el cierre del turno anterior.
-        </span>
-      </div>
-    </section>
+          <div class="flex justify-between gap-3 border-t border-base-300 py-2">
+            <dt>Cerró</dt>
+            <dd class="capitalize">{{ whenOf(turno.cerradaEn) }}</dd>
+          </div>
+          <div class="flex justify-between gap-3 border-t border-base-300 py-2">
+            <dt>Fondo inicial</dt>
+            <dd>{{ turno.fondo | money }}</dd>
+          </div>
+          <div class="flex justify-between gap-3 border-t border-base-300 py-2">
+            <dt>Efectivo contado</dt>
+            <dd>{{ turno.contado | money }}</dd>
+          </div>
+          @if (turno.cajero) {
+            <div class="flex justify-between gap-3 border-t border-base-300 py-2">
+              <dt>Cajero</dt>
+              <dd class="truncate">{{ turno.cajero }}</dd>
+            </div>
+          }
+        </dl>
+      </section>
+    }
 
     <section class="panel flex flex-col gap-2" aria-labelledby="apertura-reglas">
       <h2 id="apertura-reglas" class="font-serif text-lg font-semibold">Reglas del turno</h2>

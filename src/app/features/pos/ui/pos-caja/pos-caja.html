@@ -1,19 +1,26 @@
-<header class="flex flex-wrap items-center gap-x-4 gap-y-1 bg-neutral px-4 py-2.5 text-neutral-content">
-  <button type="button" class="btn btn-ghost btn-sm text-neutral-content hover:bg-neutral-content/10" (click)="back.emit()">← Volver a vender</button>
-  <span class="font-serif text-lg font-semibold">Caja {{ caja }} · Caja y corte</span>
-  <span class="text-sm opacity-75">
-    {{ cashier() }}
-  </span>
+<header
+  class="flex items-center gap-x-3 bg-neutral px-3 py-2.5 text-neutral-content sm:gap-x-4 sm:px-4"
+>
   <button
     type="button"
-    class="btn btn-sm btn-ghost ms-auto border border-neutral-content/30 text-neutral-content hover:bg-neutral-content/10"
-    (click)="openRegister.emit()"
+    class="btn btn-ghost btn-sm text-neutral-content hover:bg-neutral-content/10"
+    (click)="back.emit()"
   >
-    Abrir caja
+    ← Volver a vender
   </button>
+  <span class="min-w-0 truncate font-serif text-lg font-semibold">
+    Caja {{ caja }}<span class="max-sm:hidden"> · Cierre de caja</span>
+  </span>
+  @if (cashier()) {
+    <span class="ms-auto hidden min-w-0 truncate text-sm opacity-75 sm:inline">{{
+      cashier()
+    }}</span>
+  }
 </header>
 
-<main class="flex flex-col gap-4 p-4 lg:p-6">
+<main class="flex flex-col gap-4 p-3 sm:p-4 lg:p-6">
+  <h1 class="font-serif text-2xl font-semibold">Cierre de caja</h1>
+
   <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
     <div class="rounded-box border border-base-300 bg-base-100 p-4">
       <p class="text-xs text-base-content/60">Ventas del día</p>
@@ -59,29 +66,44 @@
         </button>
       </div>
 
+      @if (turno(); as shift) {
+        <dl class="grid grid-cols-2 gap-3 rounded-box bg-base-200 px-4 py-3 text-sm">
+          <div>
+            <dt class="text-xs text-base-content/60">Turno abierto</dt>
+            <dd class="font-semibold capitalize tabular-nums">
+              {{ shift.abiertaEn | date: 'EEE d MMM, HH:mm' }}
+            </dd>
+          </div>
+          <div>
+            <dt class="text-xs text-base-content/60">Fondo inicial</dt>
+            <dd class="font-semibold tabular-nums">{{ shift.fondo | money }}</dd>
+          </div>
+        </dl>
+      }
+
       <dl class="text-sm tabular-nums">
         <div class="flex justify-between border-b border-base-300 py-2">
           <dt>Fondo inicial</dt>
-          <dd class="text-base-content/40">—</dd>
+          <dd>{{ turno()?.fondo ?? 0 | money }}</dd>
         </div>
         <div class="flex justify-between border-b border-base-300 py-2">
           <dt>+ Ventas en efectivo</dt>
-          <dd class="text-base-content/40">—</dd>
+          <dd class="text-base-content/40">Próximamente</dd>
         </div>
         <div class="flex justify-between border-b border-base-300 py-2">
           <dt>− Retiros</dt>
-          <dd class="text-base-content/40">—</dd>
+          <dd class="text-base-content/40">Próximamente</dd>
         </div>
         <div class="flex justify-between py-2 font-bold">
           <dt>Efectivo esperado</dt>
-          <dd class="text-base-content/40">—</dd>
+          <dd class="text-base-content/40">Próximamente</dd>
         </div>
       </dl>
-      <!-- Pendiente backend (HU-38): el cuadre depende de la apertura de turno -->
+      <!-- Pendiente backend (HU-38): ventas en efectivo y retiros dependen del método de pago por venta -->
       <div class="flex items-center gap-2">
         <app-status-chip label="Próximamente" tone="neutral" />
         <span class="text-xs text-base-content/60">
-          Fondo, retiros y efectivo esperado dependen de la apertura de turno.
+          Las ventas en efectivo y los retiros dependen de guardar el método de pago.
         </span>
       </div>
 
@@ -132,20 +154,13 @@
         <div class="rounded-box bg-base-200 px-4 py-3">
           <p class="text-xs text-base-content/60">Diferencia</p>
           <p class="font-serif text-2xl font-semibold text-base-content/40">—</p>
-          <!-- Pendiente backend (HU-38): diferencia de cierre de turno -->
+          <!-- Pendiente backend (HU-38): diferencia contra fondo + ventas en efectivo -->
           <p class="text-xs text-base-content/60">Próximamente</p>
         </div>
       </div>
 
-      <!-- Pendiente backend (HU-38): cerrar turno e imprimir corte -->
-      <button
-        type="button"
-        class="btn btn-primary btn-lg"
-        disabled
-        title="Próximamente"
-        aria-label="Cerrar turno e imprimir corte (próximamente)"
-      >
-        Cerrar turno e imprimir corte
+      <button type="button" class="btn btn-primary btn-lg" (click)="confirmOpen.set(true)">
+        Cerrar caja
       </button>
     </section>
 
@@ -235,3 +250,17 @@
     </section>
   </div>
 </main>
+
+<app-confirm-dialog
+  [open]="confirmOpen()"
+  title="¿Cerrar la caja?"
+  [message]="
+    'Se cierra el turno con ' +
+    (counted() | money) +
+    ' contados. Para vender otra vez tendrás que abrir la caja.'
+  "
+  confirmLabel="Cerrar caja"
+  tone="primary"
+  (confirmed)="closeRegister()"
+  (cancelled)="confirmOpen.set(false)"
+/>
