@@ -37,11 +37,19 @@
       </span>
 
       <button
+        #menuTrigger
         type="button"
-        class="btn btn-sm btn-ghost ms-auto border border-neutral-content/30 text-neutral-content hover:bg-neutral-content/10"
-        (click)="requestCloseRegister()"
+        class="btn btn-sm btn-ghost ms-auto gap-2 border border-neutral-content/30 text-neutral-content hover:bg-neutral-content/10"
+        aria-label="Abrir menú"
+        aria-haspopup="dialog"
+        aria-controls="pos-menu-panel"
+        [attr.aria-expanded]="menuOpen()"
+        (click)="openMenu()"
       >
-        Cerrar caja
+        <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+          <path d="M4 7h16M4 12h16M4 17h16" stroke-width="1.8" stroke-linecap="round" />
+        </svg>
+        <span class="max-sm:hidden">Menú</span>
       </button>
     </header>
 
@@ -53,11 +61,14 @@
           class="flex min-h-0 flex-col rounded-box border border-base-300 bg-base-100"
           aria-label="Ticket actual"
         >
+          <div class="border-b border-base-300 px-3 py-2.5">
+            <ng-container *ngTemplateOutlet="orderTabs; context: { closable: true }" />
+          </div>
           <div class="flex items-center justify-between border-b border-base-300 px-4 py-3">
             <div>
               <h2 class="font-serif text-xl font-semibold">Ticket</h2>
               <p class="text-xs text-base-content/60">
-                {{ itemCount() }} artículo(s) · {{ lines().length }} línea(s)
+                {{ activeName() }} · {{ itemCount() }} artículo(s) · {{ lines().length }} línea(s)
               </p>
             </div>
             <button
@@ -138,7 +149,7 @@
         <div
           class="min-h-0 flex-1 overflow-y-auto"
           [style.padding-bottom]="
-            desktop() ? null : 'calc(5.5rem + env(safe-area-inset-bottom))'
+            desktop() ? null : 'calc(8.5rem + env(safe-area-inset-bottom))'
           "
         >
           <app-resource-state
@@ -205,6 +216,11 @@
           <span><kbd class="kbd kbd-xs">+</kbd> <kbd class="kbd kbd-xs">−</kbd> cantidad</span>
           <span><kbd class="kbd kbd-xs">Supr</kbd> quitar línea</span>
           <span><kbd class="kbd kbd-xs">F12</kbd> cobrar</span>
+          <span>
+            <kbd class="kbd kbd-xs">F3</kbd> o <kbd class="kbd kbd-xs">Ctrl</kbd>+<kbd class="kbd kbd-xs">N</kbd>
+            nuevo pedido
+          </span>
+          <span><kbd class="kbd kbd-xs">Ctrl</kbd>+<kbd class="kbd kbd-xs">Tab</kbd> cambiar de pedido</span>
         </p>
       </section>
     </div>
@@ -212,8 +228,12 @@
     @if (!desktop()) {
       <!-- Teléfono: el ticket es una barra fija abajo; tocarla abre la hoja con el detalle. -->
       <div
-        class="fixed inset-x-0 bottom-0 z-30 flex items-center gap-2 border-t border-base-300 bg-base-100 px-3 pt-2 shadow-[0_-4px_14px_rgb(0_0_0/0.08)] pb-[max(0.5rem,env(safe-area-inset-bottom))]"
+        class="fixed inset-x-0 bottom-0 z-30 border-t border-base-300 bg-base-100 px-3 pt-2 shadow-[0_-4px_14px_rgb(0_0_0/0.08)] pb-[max(0.5rem,env(safe-area-inset-bottom))]"
       >
+        <div class="pb-1.5">
+          <ng-container *ngTemplateOutlet="orderTabs; context: { closable: false }" />
+        </div>
+        <div class="flex items-center gap-2">
         <button
           type="button"
           class="flex min-h-12 min-w-0 flex-1 items-center gap-2 rounded-field text-start"
@@ -239,6 +259,7 @@
         >
           Cobrar
         </button>
+        </div>
       </div>
 
       @if (sheetOpen()) {
@@ -260,7 +281,7 @@
               <div class="min-w-0">
                 <h2 class="font-serif text-xl font-semibold">Ticket</h2>
                 <p class="text-xs text-base-content/60">
-                  {{ itemCount() }} artículo(s) · {{ lines().length }} línea(s)
+                  {{ activeName() }} · {{ itemCount() }} artículo(s) · {{ lines().length }} línea(s)
                 </p>
               </div>
               <div class="flex items-center gap-1">
@@ -281,6 +302,10 @@
                   <app-icon name="close" [size]="20" />
                 </button>
               </div>
+            </div>
+
+            <div class="border-b border-base-300 px-3 py-2">
+              <ng-container *ngTemplateOutlet="orderTabs; context: { closable: true }" />
             </div>
 
             <ng-container *ngTemplateOutlet="ticketLines" />
@@ -408,6 +433,178 @@
   }
 </ng-template>
 
+<!-- Pedidos abiertos: pestañas con el total de cada uno y "+" para abrir otro. -->
+<ng-template #orderTabs let-closable="closable">
+  <div
+    class="flex items-center gap-1.5 overflow-x-auto py-0.5 [scrollbar-width:none]"
+    role="group"
+    aria-label="Pedidos abiertos"
+  >
+    @for (order of orderList(); track order.id) {
+      <div
+        class="inline-flex shrink-0 items-center rounded-full border text-xs font-semibold transition-colors"
+        [class]="
+          order.id === activeOrderId()
+            ? 'border-primary bg-primary text-primary-content'
+            : 'border-base-300 bg-base-200 text-base-content/80 hover:border-primary/50'
+        "
+      >
+        <button
+          type="button"
+          class="min-h-8 whitespace-nowrap rounded-full px-3 tabular-nums"
+          [class.pe-1]="closable && order.id === activeOrderId() && canDiscard(order)"
+          [attr.aria-current]="order.id === activeOrderId() ? 'true' : null"
+          (click)="switchTo(order.id)"
+        >
+          {{ order.nombre }}
+          @if (orderHasLines(order)) {
+            <span class="opacity-80">· {{ pillTotal(order) | money }}</span>
+          }
+        </button>
+        @if (closable && order.id === activeOrderId() && canDiscard(order)) {
+          <button
+            type="button"
+            class="grid size-8 place-items-center rounded-full hover:bg-primary-content/15"
+            [attr.aria-label]="'Descartar ' + order.nombre"
+            (click)="requestDiscard(order)"
+          >
+            <app-icon name="close" [size]="14" />
+          </button>
+        }
+      </div>
+    }
+    <button
+      type="button"
+      class="grid size-8 shrink-0 place-items-center rounded-full border border-dashed border-base-content/30 text-base-content/70 hover:border-primary hover:text-primary"
+      aria-label="Nuevo pedido"
+      title="Nuevo pedido"
+      (click)="newOrder()"
+    >
+      <app-icon name="plus" [size]="16" />
+    </button>
+  </div>
+</ng-template>
+
+@if (menuOpen()) {
+  <!-- Menú de caja: panel desde la derecha, igual que el menú móvil del panel administrativo. -->
+  <div class="fixed inset-0 z-50 flex justify-end">
+    <button
+      type="button"
+      class="absolute inset-0 cursor-default bg-neutral/45"
+      aria-label="Cerrar menú"
+      tabindex="-1"
+      (click)="closeMenu()"
+    ></button>
+    <aside
+      id="pos-menu-panel"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Menú de caja"
+      class="relative flex h-full w-80 max-w-[85vw] flex-col bg-base-100 shadow-xl"
+    >
+      <div class="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-base-300 ps-4 pe-2">
+        <app-brand-mark [size]="1.75" label="SigPan" labelClass="text-base" />
+        <div class="flex items-center gap-1">
+          <app-theme-toggle />
+          <button
+            #menuClose
+            type="button"
+            class="btn btn-ghost btn-sm btn-circle"
+            aria-label="Cerrar menú"
+            (click)="closeMenu()"
+          >
+            <app-icon name="close" />
+          </button>
+        </div>
+      </div>
+
+      <div class="min-h-0 flex-1 overflow-y-auto p-3">
+        <section aria-labelledby="menu-pedidos">
+          <div class="flex items-baseline justify-between px-1 pb-1.5">
+            <h2 id="menu-pedidos" class="text-xs font-semibold uppercase tracking-wide text-base-content/60">
+              Pedidos
+            </h2>
+            <span class="text-xs text-base-content/55">{{ orderList().length }} de {{ maxOrders }}</span>
+          </div>
+          <ul class="grid gap-1">
+            @for (order of orderList(); track order.id) {
+              <li>
+                <button
+                  type="button"
+                  class="flex w-full items-center justify-between gap-3 rounded-field px-3 py-2.5 text-start text-sm"
+                  [class]="
+                    order.id === activeOrderId()
+                      ? 'bg-primary/10 font-semibold text-primary'
+                      : 'hover:bg-base-200'
+                  "
+                  [attr.aria-current]="order.id === activeOrderId() ? 'true' : null"
+                  (click)="switchTo(order.id)"
+                >
+                  <span class="min-w-0">
+                    <span class="block truncate">{{ order.nombre }}</span>
+                    <span class="block text-xs font-normal text-base-content/60">
+                      @if (orderHasLines(order)) {
+                        {{ orderItems(order) }} artículo(s)
+                      } @else {
+                        Vacío
+                      }
+                    </span>
+                  </span>
+                  @if (orderHasLines(order)) {
+                    <span class="font-serif text-base tabular-nums">{{ pillTotal(order) | money }}</span>
+                  }
+                </button>
+              </li>
+            }
+          </ul>
+          <button
+            type="button"
+            class="btn btn-outline btn-sm mt-2 w-full"
+            (click)="newOrder(); menuOpen.set(false)"
+          >
+            <app-icon name="plus" [size]="16" />
+            Nuevo pedido
+          </button>
+        </section>
+
+        @if (onlineOrdersLink() || panelLink()) {
+          <nav class="mt-4 grid gap-1 border-t border-base-300 pt-3" aria-label="Administración">
+            @if (onlineOrdersLink(); as link) {
+              <a
+                [routerLink]="link.path"
+                class="flex items-center gap-2.5 rounded-field px-3 py-2.5 text-sm hover:bg-base-200"
+                (click)="menuOpen.set(false)"
+              >
+                <app-icon [name]="link.icon" />
+                {{ link.label }}
+              </a>
+            }
+            @if (panelLink()) {
+              <button
+                type="button"
+                class="flex items-center gap-2.5 rounded-field px-3 py-2.5 text-start text-sm hover:bg-base-200"
+                (click)="requestPanel()"
+              >
+                <app-icon name="home" />
+                Panel administrativo
+              </button>
+            }
+          </nav>
+        }
+      </div>
+
+      <div class="grid shrink-0 gap-2 border-t border-base-300 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+        <button type="button" class="btn btn-outline" (click)="requestCloseRegister()">
+          Cerrar caja
+        </button>
+        <button type="button" class="btn btn-error btn-outline" (click)="requestLogout()">
+          Cerrar sesión
+        </button>
+      </div>
+    </aside>
+  </div>
+}
+
 @if (checkoutOpen()) {
   <app-checkout-dialog
     [lines]="lines()"
@@ -433,10 +630,27 @@
 />
 
 <app-confirm-dialog
+  [open]="discardTarget() !== null"
+  [title]="'¿Descartar ' + (discardTarget()?.nombre ?? 'el pedido') + '?'"
+  [message]="
+    'Se quitan los ' +
+    (discardTarget() ? orderItems(discardTarget()!) : 0) +
+    ' artículo(s) de este pedido. No se registra ninguna venta.'
+  "
+  confirmLabel="Descartar pedido"
+  (confirmed)="discard(discardTarget()!)"
+  (cancelled)="discardTarget.set(null)"
+/>
+
+<app-confirm-dialog
   [open]="logoutOpen()"
   title="¿Cerrar sesión?"
   [message]="
-    'Hay un ticket sin cobrar con ' + itemCount() + ' artículo(s). Si cerrás sesión, se pierde.'
+    'Hay ' +
+    pending().length +
+    ' pedido(s) sin cobrar con ' +
+    pendingItems() +
+    ' artículo(s). Quedan guardados en este navegador y los retomás cuando vuelvas a entrar.'
   "
   confirmLabel="Cerrar sesión"
   (confirmed)="auth.logout()"
@@ -444,12 +658,30 @@
 />
 
 <app-confirm-dialog
+  [open]="panelOpen()"
+  title="¿Ir al panel administrativo?"
+  [message]="
+    'Hay ' +
+    pending().length +
+    ' pedido(s) sin cobrar con ' +
+    pendingItems() +
+    ' artículo(s). No se pierden: quedan guardados y los encontrás al volver al punto de venta.'
+  "
+  confirmLabel="Ir al panel"
+  tone="primary"
+  (confirmed)="goToPanel()"
+  (cancelled)="panelOpen.set(false)"
+/>
+
+<app-confirm-dialog
   [open]="closeRegisterOpen()"
   title="¿Cerrar la caja?"
   [message]="
-    'Hay un ticket sin cobrar con ' +
-    itemCount() +
-    ' artículo(s). Si cerrás la caja, se pierde. Vas a pasar al cierre para contar la gaveta.'
+    'Hay ' +
+    pending().length +
+    ' pedido(s) sin cobrar con ' +
+    pendingItems() +
+    ' artículo(s). Si cerrás la caja, se descartan. Vas a pasar al cierre para contar la gaveta.'
   "
   confirmLabel="Ir al cierre"
   (confirmed)="confirmCloseRegister()"
