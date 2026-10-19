@@ -30,6 +30,7 @@ import {
   stockPercent,
   stockState,
 } from '../../product-view';
+import { CHANNEL_FILTERS, CHANNEL_KEYS, CHANNEL_LABELS, ChannelFilter, isChannelOn } from '../../product-channels';
 import { ProductAdminService } from '../../services/product-admin.service';
 import { ProductDrawer } from '../../ui/product-drawer/product-drawer';
 
@@ -69,6 +70,10 @@ export class ProductList {
     label: PRODUCT_TYPE_LABELS[value],
   }));
   protected readonly isResale = isResale;
+  protected readonly channelFilters = CHANNEL_FILTERS;
+  protected readonly channelLabels = CHANNEL_LABELS;
+  protected readonly channelKeys = CHANNEL_KEYS;
+  protected readonly isChannelOn = isChannelOn;
 
   protected readonly products = httpResource<CatalogProduct[]>(() => this.service.productsUrl(this.scope.params()), {
     defaultValue: [],
@@ -79,6 +84,7 @@ export class ProductList {
   protected readonly segment = signal<StockSegment>('todos');
   protected readonly especialidad = signal<Especialidad | ''>('');
   protected readonly tipo = signal<ProductType | ''>('');
+  protected readonly canal = signal<ChannelFilter>('');
   protected readonly drawerOpen = signal(false);
 
   protected readonly kpis = computed(() => productKpis(this.all()));
@@ -89,6 +95,7 @@ export class ProductList {
       segment: this.segment(),
       especialidad: this.especialidad(),
       tipo: this.tipo(),
+      canal: this.canal(),
     }).map((product) => {
       const state = stockState(product);
       return { product, state, percent: stockPercent(product) };
@@ -101,6 +108,10 @@ export class ProductList {
 
   protected setTipo(value: string): void {
     this.tipo.set(value as ProductType | '');
+  }
+
+  protected setCanal(value: string): void {
+    this.canal.set(value as ChannelFilter);
   }
 
   protected onSaved(): void {

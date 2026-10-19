@@ -253,7 +253,7 @@ export class PosScreen {
     () => this.register.lugar()?.sucursalId ?? this.auth.user()?.sucursalId ?? null,
   );
 
-  protected readonly catalog = httpResource<CatalogProduct[]>(() => this.products.activeUrl(this.branchId()), {
+  protected readonly catalog = httpResource<CatalogProduct[]>(() => this.products.activePosUrl(this.branchId()), {
     defaultValue: [],
   });
 

@@ -11,6 +11,8 @@ const valid = () => ({
   tipo: 'ELABORADO' as const,
   especialidad: 'PAN_FRANCES' as const,
   alergenos: '',
+  disponiblePos: true,
+  disponibleTienda: true,
 });
 
 describe('createProductForm', () => {
@@ -42,6 +44,20 @@ describe('createProductForm', () => {
     const form = createProductForm();
     form.setValue({ ...valid(), alergenos: '' });
     expect(form.controls.alergenos.valid).toBe(true);
+  });
+
+  it('un producto nuevo parte habilitado en el punto de venta y en la tienda en línea', () => {
+    const form = createProductForm();
+    expect(form.controls.disponiblePos.value).toBe(true);
+    expect(form.controls.disponibleTienda.value).toBe(true);
+  });
+
+  it('cada canal se puede apagar sin afectar al otro ni la validez del formulario', () => {
+    const form = createProductForm();
+    form.setValue({ ...valid(), disponiblePos: false });
+    expect(form.valid).toBe(true);
+    expect(form.getRawValue().disponiblePos).toBe(false);
+    expect(form.getRawValue().disponibleTienda).toBe(true);
   });
 
   it('limita el código a 30 caracteres', () => {
