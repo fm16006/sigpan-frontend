@@ -1,6 +1,6 @@
 <app-page-header
   title="Mayoreo"
-  subtitle="Precio unitario según la cantidad comprada. El tramo se elige por la cantidad total del producto en la canasta."
+  subtitle="Precio especial por unidad cuando el cliente lleva varias unidades del mismo producto. Se aplica solo, en el punto de venta y en la tienda."
   [crumbs]="crumbs"
 >
   <button type="button" class="btn btn-primary" [disabled]="productId() === null" (click)="openCreate()">
@@ -28,8 +28,9 @@
 </div>
 
 @if (productId() === null) {
-  <div class="rounded-box border border-dashed border-base-300 bg-base-100 px-6 py-10 text-center text-sm text-base-content/60">
-    Elegí un producto para ver y editar sus tramos de mayoreo.
+  <div class="rounded-box border border-dashed border-base-300 bg-base-100 px-6 py-10 text-center text-sm text-base-content/70">
+    <p class="font-semibold text-base-content">Empezá eligiendo un producto arriba.</p>
+    <p class="mt-1">Después tocá «Nuevo tramo» para darle un precio más bajo a quien lleve muchas unidades, por ejemplo la docena.</p>
   </div>
 } @else {
   <div class="grid items-start gap-6 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
@@ -79,9 +80,13 @@
             <app-icon name="chevron" class="text-base-content/40 max-md:hidden" />
           </button>
         } @empty {
-          <p class="border-t border-base-300 px-5 py-8 text-center text-sm text-base-content/60">
-            Este producto no tiene tramos. Agregá uno con «Nuevo tramo» para ofrecer precio especial por cantidad.
-          </p>
+          <div class="flex flex-col items-center gap-3 border-t border-base-300 px-5 py-8 text-center text-sm text-base-content/65">
+            <p>Este producto se cobra siempre a su precio base. Creá un tramo para cobrar menos por unidad cuando llevan más.</p>
+            <button type="button" class="btn btn-primary btn-sm" (click)="openCreate()">
+              <app-icon name="plus" />
+              Crear el primer tramo
+            </button>
+          </div>
         }
 
         <div class="border-t border-base-300 px-5 py-3 text-xs text-base-content/60">
@@ -90,6 +95,21 @@
       </section>
     </app-resource-state>
 
+    <div class="flex flex-col gap-4">
+    @if (product(); as p) {
+      <section class="panel bg-primary/5" aria-label="Cómo funciona el mayoreo">
+        <h2 class="font-serif text-lg font-semibold">¿Cómo funciona?</h2>
+        <p class="text-sm leading-relaxed text-base-content/75">
+          Un tramo dice: <strong>desde cuántas unidades</strong> y <strong>a qué precio por unidad</strong>.
+          Por ejemplo, un tramo desde <strong>{{ example().cantidadMinima }} unidades a {{ example().precioUnitario | money }}</strong>
+          hace que quien lleve {{ example().cantidadMinima }} o más «{{ p.nombre }}» pague {{ example().precioUnitario | money }}
+          cada una en lugar de {{ basePrice() | money }}.
+        </p>
+        <p class="text-xs text-base-content/60">
+          Podés tener varios tramos (6, 12, 24…); cada uno más barato que el anterior. El sistema elige solo el que corresponde.
+        </p>
+      </section>
+    }
     <section class="panel" aria-label="Vista previa de precios">
       <div class="flex flex-col gap-0.5">
         <h2 class="font-serif text-xl font-semibold">¿Cuánto se cobra?</h2>
@@ -110,6 +130,7 @@
         }
       </ul>
     </section>
+    </div>
   </div>
 }
 
@@ -129,23 +150,48 @@
         Tramo
       </legend>
       <label class="form-control">
-        <span class="label-text mb-1">Cantidad mínima</span>
+        <span class="label-text mb-1">Desde cuántas unidades</span>
         <input type="number" min="1" step="1" formControlName="cantidadMinima" class="input input-bordered w-full" />
+        <span class="mt-2 flex flex-wrap gap-1.5" aria-label="Cantidades rápidas">
+          @for (cantidad of quickQuantities; track cantidad) {
+            <button
+              type="button"
+              class="btn btn-xs"
+              [class.btn-primary]="draftPreview().cantidad === cantidad"
+              (click)="setQuantity(cantidad)"
+            >
+              {{ cantidad === 12 ? 'Docena (12)' : cantidad === 6 ? 'Media docena (6)' : cantidad }}
+            </button>
+          }
+        </span>
         @if (fieldError('cantidadMinima'); as message) {
           <span class="mt-1 text-sm text-error">{{ message }}</span>
         }
       </label>
       <label class="form-control">
-        <span class="label-text mb-1">Precio unitario</span>
+        <span class="label-text mb-1">Precio por unidad desde esa cantidad</span>
         <input type="number" min="0.01" step="0.01" formControlName="precioUnitario" class="input input-bordered w-full" />
-        <span class="mt-1 text-xs text-base-content/55">
-          Debe ser menor que el del tramo anterior y mayor que el del siguiente.
+        <span class="mt-1 text-xs text-base-content/60">
+          Tiene que ser menor que {{ bounds().menorQue | money }}, que es lo que hoy se cobra por unidad a esa cantidad@if (bounds().mayorQue !== null) {, y mayor que {{ bounds().mayorQue! | money }} del siguiente tramo}.
         </span>
         @if (fieldError('precioUnitario'); as message) {
           <span class="mt-1 text-sm text-error">{{ message }}</span>
         }
       </label>
     </fieldset>
+
+    <div class="rounded-box border border-base-300 bg-base-200/60 px-4 py-3 text-sm" aria-live="polite">
+      <p class="font-semibold">Así se cobraría</p>
+      <p class="mt-1 text-base-content/75">
+        {{ draftPreview().cantidad }} unidades × {{ draftPreview().precio | money }} =
+        <strong class="text-base-content">{{ draftPreview().total | money }}</strong>
+        @if (draftPreview().ahorro > 0) {
+          <span class="text-success">· el cliente ahorra {{ draftPreview().ahorro | money }} (antes {{ draftPreview().antes | money }})</span>
+        } @else {
+          <span class="text-warning">· no es más barato que lo que se cobra hoy ({{ draftPreview().antes | money }})</span>
+        }
+      </p>
+    </div>
 
     <fieldset class="grid gap-2">
       <legend class="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.09em] text-base-content/55">

@@ -66,3 +66,36 @@ export function previewPrice(cantidad: number, tramos: readonly PriceScale[], ba
   const precioUnitario = tramo ? tramo.precioUnitario : basePrice;
   return { cantidad, precioUnitario, total: round2(cantidad * precioUnitario), tramo };
 }
+
+/** Cantidades que el formulario ofrece con un toque. */
+export const QUICK_QUANTITIES: readonly number[] = [6, 12, 24, 50];
+
+export interface TierBounds {
+  /** Precio unitario que hoy se cobra a esa cantidad: el tramo nuevo tiene que ser menor. */
+  readonly menorQue: number;
+  /** Precio del siguiente tramo activo (más cantidad): el nuevo tiene que ser mayor; null si no hay. */
+  readonly mayorQue: number | null;
+}
+
+/** Entre qué precios tiene que quedar un tramo que arranca en `cantidad` (sin contar el que se edita). */
+export function tierBounds(cantidad: number, otros: readonly PriceScale[], basePrice: number): TierBounds {
+  const siguiente = otros
+    .filter((tramo) => tramo.activo && tramo.cantidadMinima > cantidad)
+    .sort((a, b) => a.cantidadMinima - b.cantidadMinima)[0];
+  return {
+    menorQue: previewPrice(Math.max(1, cantidad), otros, basePrice).precioUnitario,
+    mayorQue: siguiente ? siguiente.precioUnitario : null,
+  };
+}
+
+/**
+ * Tramo sugerido al abrir el formulario: la docena si no hay tramos (o la siguiente docena libre),
+ * con un 10 % menos que lo que hoy se cobra a esa cantidad.
+ */
+export function suggestTier(tramos: readonly PriceScale[], basePrice: number): { cantidadMinima: number; precioUnitario: number } {
+  const usadas = new Set(tramos.map((tramo) => tramo.cantidadMinima));
+  let cantidadMinima = 12;
+  while (usadas.has(cantidadMinima)) cantidadMinima += 12;
+  const actual = previewPrice(cantidadMinima, tramos, basePrice).precioUnitario;
+  return { cantidadMinima, precioUnitario: Math.max(0.01, round2(actual * 0.9)) };
+}

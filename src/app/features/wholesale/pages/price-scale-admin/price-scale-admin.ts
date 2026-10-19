@@ -1,4 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { httpResource } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -19,11 +20,14 @@ import { StatusChip } from '../../../../shared/ui/status-chip/status-chip';
 import { PriceScaleService } from '../../services/price-scale.service';
 import {
   PREVIEW_QUANTITIES,
+  QUICK_QUANTITIES,
   baseRangeLabel,
   buildScaleRows,
   previewPrice,
   rangeLabel,
   ScaleRow,
+  suggestTier,
+  tierBounds,
 } from '../../wholesale-utils';
 import { valueOr } from '../../../../core/http/resource-value';
 
@@ -103,6 +107,37 @@ export class PriceScaleAdmin {
     activo: [true],
   });
 
+  protected readonly quickQuantities = QUICK_QUANTITIES;
+  private readonly formValue = toSignal(this.form.valueChanges, { initialValue: this.form.getRawValue() });
+
+  /** Los demás tramos del producto (sin el que se edita), para validar y previsualizar. */
+  private readonly otherTramos = computed(() => {
+    const current = this.editing();
+    return this.tramoItems().filter((tramo) => tramo.id !== current?.id);
+  });
+
+  /** Entre qué precios tiene que quedar el tramo del formulario. */
+  protected readonly bounds = computed(() =>
+    tierBounds(Number(this.formValue().cantidadMinima) || 1, this.otherTramos(), this.basePrice()),
+  );
+
+  /** "Con este tramo, 12 unidades cuestan $27.60 en lugar de $30.72". */
+  protected readonly draftPreview = computed(() => {
+    const cantidad = Math.max(1, Math.trunc(Number(this.formValue().cantidadMinima) || 0));
+    const precio = Number(this.formValue().precioUnitario) || 0;
+    const total = Math.round(cantidad * precio * 100) / 100;
+    const antes = Math.round(cantidad * this.bounds().menorQue * 100) / 100;
+    return { cantidad, precio, total, antes, ahorro: Math.round((antes - total) * 100) / 100 };
+  });
+
+  /** Ejemplo con el producto elegido para explicar qué es un tramo. */
+  protected readonly example = computed(() => suggestTier([], this.basePrice()));
+
+  protected setQuantity(cantidad: number): void {
+    this.form.controls.cantidadMinima.setValue(cantidad);
+    this.form.controls.cantidadMinima.markAsDirty();
+  }
+
   protected selectProduct(value: string): void {
     const id = Number(value);
     this.productId.set(id > 0 ? id : null);
@@ -112,7 +147,7 @@ export class PriceScaleAdmin {
   protected openCreate(): void {
     this.editing.set(null);
     this.formError.set(null);
-    this.form.reset({ cantidadMinima: 1, precioUnitario: 0, activo: true });
+    this.form.reset({ ...suggestTier(this.tramoItems(), this.basePrice()), activo: true });
     this.drawerOpen.set(true);
   }
 

@@ -1,5 +1,5 @@
 import { PriceScale } from '../../core/models/price-scale.model';
-import { baseRangeLabel, buildScaleRows, previewPrice, rangeLabel } from './wholesale-utils';
+import { baseRangeLabel, buildScaleRows, previewPrice, rangeLabel, suggestTier, tierBounds } from './wholesale-utils';
 
 function scale(id: number, cantidadMinima: number, precioUnitario: number, activo = true): PriceScale {
   return { id, productoId: 1, producto: 'Concha', cantidadMinima, precioUnitario, activo };
@@ -50,5 +50,28 @@ describe('previewPrice', () => {
   it('ignora los tramos inactivos', () => {
     const tramos = [scale(1, 12, 0.4, false)];
     expect(previewPrice(12, tramos, 0.45).precioUnitario).toBe(0.45);
+  });
+});
+
+describe('tierBounds y suggestTier', () => {
+  const tramo = (id: number, cantidadMinima: number, precioUnitario: number, activo = true): PriceScale =>
+    ({ id, productoId: 1, producto: 'Pan', cantidadMinima, precioUnitario, activo });
+
+  it('sin tramos, el nuevo tiene que ser menor que el precio base y no tiene piso', () => {
+    expect(tierBounds(12, [], 2.56)).toEqual({ menorQue: 2.56, mayorQue: null });
+  });
+
+  it('entre dos tramos: menor que el anterior y mayor que el siguiente', () => {
+    const otros = [tramo(1, 6, 2.4), tramo(2, 24, 2.0)];
+    expect(tierBounds(12, otros, 2.56)).toEqual({ menorQue: 2.4, mayorQue: 2.0 });
+  });
+
+  it('ignora los tramos inactivos', () => {
+    expect(tierBounds(12, [tramo(1, 24, 2.0, false)], 2.56)).toEqual({ menorQue: 2.56, mayorQue: null });
+  });
+
+  it('sugiere la docena con 10 % menos y, si ya existe, la siguiente docena', () => {
+    expect(suggestTier([], 2.56)).toEqual({ cantidadMinima: 12, precioUnitario: 2.3 });
+    expect(suggestTier([tramo(1, 12, 2.3)], 2.56)).toEqual({ cantidadMinima: 24, precioUnitario: 2.07 });
   });
 });
