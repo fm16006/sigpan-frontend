@@ -64,6 +64,37 @@
       <legend class="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.09em] text-base-content/55">
         Clasificación
       </legend>
+      <div>
+        <span class="mb-1.5 block text-sm font-semibold" id="tipo-label">Tipo de producto</span>
+        <div role="radiogroup" aria-labelledby="tipo-label" class="grid gap-2 sm:grid-cols-2">
+          @for (option of productTypes; track option.value) {
+            <label
+              class="flex cursor-pointer items-start gap-2.5 rounded-box border p-3 transition-colors"
+              [class]="
+                form.controls.tipo.value === option.value
+                  ? 'border-primary bg-primary/5'
+                  : 'border-base-300 hover:bg-base-200/60'
+              "
+            >
+              <input
+                type="radio"
+                class="radio radio-sm radio-primary mt-0.5"
+                formControlName="tipo"
+                [value]="option.value"
+              />
+              <span class="flex flex-col gap-0.5">
+                <span class="text-sm font-semibold">{{ option.label }}</span>
+                <span class="text-xs leading-snug text-base-content/60">{{ option.hint }}</span>
+              </span>
+            </label>
+          }
+        </div>
+        @if (editing && form.controls.tipo.value === 'REVENTA' && product()?.tipo !== 'REVENTA') {
+          <p class="mt-1.5 text-xs text-base-content/60">
+            Un producto con receta u órdenes de producción no puede pasar a reventa.
+          </p>
+        }
+      </div>
       <div class="grid gap-3 sm:grid-cols-2">
         <div>
           <label class="mb-1.5 block text-sm font-semibold" for="especialidad">Especialidad</label>

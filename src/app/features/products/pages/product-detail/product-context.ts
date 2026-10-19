@@ -6,11 +6,13 @@ import { map } from 'rxjs';
 import { API_ENDPOINTS } from '../../../../core/constants/api-endpoints';
 import { ApiClient } from '../../../../core/http/api-client';
 import { Id } from '../../../../core/models/api.model';
-import { CatalogProduct } from '../../../../core/models/catalog.model';
+import { CatalogProduct, isResale } from '../../../../core/models/catalog.model';
 import { Combo, ComboLine } from '../../../../core/models/combo.model';
 import { PriceScale } from '../../../../core/models/price-scale.model';
 import { Formula, FormulaCost, FormulaLine } from '../../../../core/models/production.model';
 import { Promotion, PromotionProductLink } from '../../../../core/models/promotion.model';
+import { ItemPurchase } from '../../../../core/models/purchase.model';
+import { PurchaseService } from '../../../purchases/services/purchase.service';
 import { ProductInventory } from '../../models/product-detail.model';
 import { marginPercent } from '../../product-view';
 
@@ -24,6 +26,7 @@ import { marginPercent } from '../../product-view';
 export class ProductContext {
   private readonly api = inject(ApiClient);
   private readonly route = inject(ActivatedRoute);
+  private readonly purchaseService = inject(PurchaseService);
 
   readonly id = toSignal(this.route.paramMap.pipe(map((params) => Number(params.get('id')))), {
     initialValue: Number(this.route.snapshot.paramMap.get('id')),
@@ -57,7 +60,19 @@ export class ProductContext {
     defaultValue: [],
   });
 
+  /** Últimas compras con su proveedor: solo se piden para los productos de reventa. */
+  readonly purchasesRes = httpResource<ItemPurchase[]>(() => {
+    const product = this.product();
+    return product && isResale(product)
+      ? this.purchaseService.latestUrl('producto', product.id, 10)
+      : undefined;
+  });
+
   readonly product = computed(() => (this.productRes.hasValue() ? this.productRes.value() : null));
+  readonly resale = computed(() => isResale(this.product()));
+  readonly purchases = computed<readonly ItemPurchase[]>(() =>
+    this.purchasesRes.hasValue() ? this.purchasesRes.value() : [],
+  );
   readonly stock = computed(() => (this.stockRes.hasValue() ? this.stockRes.value() : null));
 
   readonly formula = computed<Formula | null>(() => {
@@ -81,7 +96,13 @@ export class ProductContext {
     this.linesRes.hasValue() ? this.linesRes.value() : [],
   );
   readonly cost = computed(() => (this.costRes.hasValue() ? this.costRes.value() : null));
+  /** Reventa: promedio ponderado de sus compras. Elaborado: costo unitario de su receta. */
   readonly costoUnitario = computed(() => {
+    const product = this.product();
+    if (isResale(product)) {
+      const promedio = Number(product?.costoPromedio ?? 0);
+      return promedio > 0 ? promedio : null;
+    }
     const cost = this.cost();
     return cost ? Number(cost.costoUnitario) : null;
   });
@@ -142,5 +163,6 @@ export class ProductContext {
   reloadProduct(): void {
     this.productRes.reload();
     this.stockRes.reload();
+    this.purchasesRes.reload();
   }
 }

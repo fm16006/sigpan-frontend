@@ -8,6 +8,7 @@ const valid = () => ({
   categoriaId: 1,
   stockMinimo: 10,
   unidadVenta: 'unidad',
+  tipo: 'ELABORADO' as const,
   especialidad: 'PAN_FRANCES' as const,
   alergenos: '',
 });

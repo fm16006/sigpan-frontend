@@ -3,6 +3,7 @@ import { httpResource } from '@angular/common/http';
 import { Component, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { AppError } from '../../../core/http/app-error';
 import {
   applyFieldErrors,
@@ -10,16 +11,22 @@ import {
   formLevelMessage,
 } from '../../../core/http/form-errors';
 import { Id } from '../../../core/models/api.model';
-import {
-  DOCUMENTO_MAX_LENGTH,
-  RawMaterialStock,
-  StockMovement,
-} from '../../../core/models/inventory.model';
+import { RawMaterialStock, StockMovement } from '../../../core/models/inventory.model';
 import { RawMaterial } from '../../../core/models/production.model';
+import {
+  DOCUMENT_TYPES,
+  DOCUMENT_TYPE_LABELS,
+  DocumentType,
+  PURCHASE_DOCUMENT_MAX_LENGTH,
+  Supplier,
+} from '../../../core/models/purchase.model';
 import { Notifications } from '../../../core/services/notifications';
+import { todayIso } from '../../../core/utils/dates';
 import { MoneyPipe } from '../../../shared/pipes/money.pipe';
 import { FormDrawer } from '../../../shared/ui/form-drawer/form-drawer';
 import { StatusChip } from '../../../shared/ui/status-chip/status-chip';
+import { PurchaseService } from '../../purchases/services/purchase.service';
+import { SupplierService } from '../../suppliers/services/supplier.service';
 import {
   MATERIAL_STATUS_CHIP,
   latestCost,
@@ -30,17 +37,18 @@ import { valueOr } from '../../../core/http/resource-value';
 import { InventoryService } from '../services/inventory.service';
 
 /**
- * Registrar una compra: una ENTRADA de materia prima con documento y costo unitario.
- * Muestra cómo quedan la existencia y el costo promedio antes de guardar.
+ * Registrar una compra rápida de un insumo: una compra a un proveedor con una sola línea (el
+ * backend crea la ENTRADA de inventario). Muestra cómo quedan la existencia y el costo promedio
+ * antes de guardar. Para facturas con varios artículos está Compras › Nueva compra.
  */
 @Component({
   selector: 'app-purchase-drawer',
-  imports: [ReactiveFormsModule, DecimalPipe, MoneyPipe, FormDrawer, StatusChip],
+  imports: [ReactiveFormsModule, RouterLink, DecimalPipe, MoneyPipe, FormDrawer, StatusChip],
   template: `
     <app-form-drawer
       [open]="open()"
       title="Registrar compra"
-      subtitle="Sube la existencia y recalcula el costo promedio."
+      subtitle="Compra a un proveedor: sube la existencia y recalcula el costo promedio."
       (closed)="closed.emit()"
     >
       <form id="purchase-form" class="flex flex-col gap-6" [formGroup]="form" (ngSubmit)="save()">
@@ -52,6 +60,30 @@ import { InventoryService } from '../services/inventory.service';
           <legend class="text-[0.68rem] font-semibold uppercase tracking-[0.09em] text-base-content/55">
             Compra
           </legend>
+          <div>
+            <label class="label" for="pc-proveedor"><span class="label-text">Proveedor</span></label>
+            <select
+              id="pc-proveedor"
+              formControlName="proveedorId"
+              class="select select-bordered w-full"
+              [class.select-error]="!!errorFor('proveedorId')"
+            >
+              <option [ngValue]="0" disabled>Elegí un proveedor</option>
+              @for (supplier of supplierOptions(); track supplier.id) {
+                <option [ngValue]="supplier.id">{{ supplier.nombre }}</option>
+              }
+            </select>
+            @if (errorFor('proveedorId'); as message) {
+              <p class="mt-1 text-xs text-error">{{ message }}</p>
+            } @else if (suppliersLoaded() && supplierOptions().length === 0) {
+              <p class="mt-1 text-xs text-warning">
+                No hay proveedores activos.
+                <a routerLink="/backoffice/suppliers" class="font-semibold underline">Registrá uno</a>
+                para poder cargar compras.
+              </p>
+            }
+          </div>
+
           <div>
             <label class="label" for="pc-insumo"><span class="label-text">Insumo</span></label>
             <select
@@ -82,20 +114,43 @@ import { InventoryService } from '../services/inventory.service';
             </div>
           }
 
+          <div class="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
+            <div>
+              <label class="label" for="pc-tipo"><span class="label-text">Documento</span></label>
+              <select id="pc-tipo" formControlName="tipoDocumento" class="select select-bordered w-full">
+                @for (type of documentTypes; track type) {
+                  <option [value]="type">{{ typeLabels[type] }}</option>
+                }
+              </select>
+            </div>
+            <div>
+              <label class="label" for="pc-documento"><span class="label-text">N.º de documento</span></label>
+              <input
+                id="pc-documento"
+                type="text"
+                [maxLength]="documentoMax"
+                placeholder="Ej. 000322"
+                formControlName="documento"
+                class="input input-bordered w-full"
+                [class.input-error]="!!errorFor('documento')"
+              />
+              @if (errorFor('documento'); as message) {
+                <p class="mt-1 text-xs text-error">{{ message }}</p>
+              }
+            </div>
+          </div>
+
           <div>
-            <label class="label" for="pc-documento"
-              ><span class="label-text">N.º de documento (factura o CCF)</span></label
-            >
+            <label class="label" for="pc-fecha"><span class="label-text">Fecha del documento</span></label>
             <input
-              id="pc-documento"
-              type="text"
-              [maxLength]="documentoMax"
-              placeholder="Ej. CCF 000322"
-              formControlName="documento"
+              id="pc-fecha"
+              type="date"
+              [max]="today"
+              formControlName="fecha"
               class="input input-bordered w-full"
-              [class.input-error]="!!errorFor('documento')"
+              [class.input-error]="!!errorFor('fecha')"
             />
-            @if (errorFor('documento'); as message) {
+            @if (errorFor('fecha'); as message) {
               <p class="mt-1 text-xs text-error">{{ message }}</p>
             }
           </div>
@@ -172,6 +227,16 @@ import { InventoryService } from '../services/inventory.service';
             </p>
           }
         </section>
+
+        <p class="text-xs text-base-content/60">
+          ¿Una factura con varios artículos?
+          <a
+            routerLink="/backoffice/purchases"
+            [queryParams]="{ nueva: 1 }"
+            class="font-semibold text-primary hover:underline"
+            >Registrala completa en Compras</a
+          >.
+        </p>
       </form>
 
       <div footer class="contents">
@@ -193,6 +258,8 @@ import { InventoryService } from '../services/inventory.service';
 })
 export class PurchaseDrawer {
   private readonly service = inject(InventoryService);
+  private readonly purchases = inject(PurchaseService);
+  private readonly suppliers = inject(SupplierService);
   private readonly notifications = inject(Notifications);
   private readonly fb = inject(FormBuilder).nonNullable;
 
@@ -202,15 +269,21 @@ export class PurchaseDrawer {
   readonly closed = output<void>();
   readonly saved = output<void>();
 
-  protected readonly documentoMax = DOCUMENTO_MAX_LENGTH;
+  protected readonly documentoMax = PURCHASE_DOCUMENT_MAX_LENGTH;
+  protected readonly documentTypes = DOCUMENT_TYPES;
+  protected readonly typeLabels = DOCUMENT_TYPE_LABELS;
+  protected readonly today = todayIso();
   protected readonly saving = signal(false);
   protected readonly opening = signal(false);
   protected readonly formError = signal<string | null>(null);
   private readonly selectedId = signal(0);
 
   protected readonly form = this.fb.group({
+    proveedorId: [0, [Validators.min(1)]],
     materiaPrimaId: [0, [Validators.min(1)]],
-    documento: ['', [Validators.required, Validators.maxLength(DOCUMENTO_MAX_LENGTH)]],
+    tipoDocumento: ['FACTURA' as DocumentType, [Validators.required]],
+    documento: ['', [Validators.required, Validators.maxLength(PURCHASE_DOCUMENT_MAX_LENGTH)]],
+    fecha: [todayIso(), [Validators.required]],
     cantidad: [0, [Validators.required, Validators.min(0.001)]],
     // El backend llama costoInicial al costo unitario de una entrada.
     costoInicial: [0, [Validators.required, Validators.min(0)]],
@@ -218,6 +291,15 @@ export class PurchaseDrawer {
   private readonly values = toSignal(this.form.valueChanges, {
     initialValue: this.form.getRawValue(),
   });
+
+  private readonly supplierRes = httpResource<Supplier[]>(
+    () => (this.open() ? this.suppliers.suppliersUrl(true) : undefined),
+    { defaultValue: [] },
+  );
+  protected readonly suppliersLoaded = computed(() => this.supplierRes.hasValue());
+  protected readonly supplierOptions = computed(() =>
+    [...valueOr(this.supplierRes, [])].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')),
+  );
 
   private readonly materials = httpResource<RawMaterial[]>(
     () => (this.open() ? this.service.materialsUrl() : undefined),
@@ -291,6 +373,7 @@ export class PurchaseDrawer {
   protected errorFor(field: string): string | null {
     const control = this.form.get(field);
     if (control?.hasError('min') && control.touched) {
+      if (field === 'proveedorId') return 'Elegí un proveedor.';
       if (field === 'materiaPrimaId') return 'Elegí un insumo.';
       return field === 'cantidad'
         ? 'Ingresá una cantidad mayor que cero.'
@@ -325,14 +408,19 @@ export class PurchaseDrawer {
 
     this.saving.set(true);
     this.formError.set(null);
-    this.service
-      .registerMovement('materia-prima', {
-        inventarioId: stock.id,
-        tipo: 'ENTRADA',
-        cantidad: Number(value.cantidad),
-        motivo: 'Compra',
-        documento: value.documento.trim(),
-        costoInicial: Number(value.costoInicial),
+    this.purchases
+      .create({
+        proveedorId: Number(value.proveedorId),
+        tipoDocumento: value.tipoDocumento,
+        numeroDocumento: value.documento.trim(),
+        fecha: value.fecha,
+        lineas: [
+          {
+            materiaPrimaId: Number(value.materiaPrimaId),
+            cantidad: Number(value.cantidad),
+            costoUnitario: Number(value.costoInicial),
+          },
+        ],
       })
       .subscribe({
         next: () => {
@@ -344,8 +432,14 @@ export class PurchaseDrawer {
         },
         error: (error: AppError) => {
           this.saving.set(false);
+          if (error.kind === 'conflict') {
+            // 409: el proveedor ya tiene una compra con ese documento.
+            this.form.controls.documento.setErrors({ server: error.message });
+            this.form.controls.documento.markAsTouched();
+            return;
+          }
           applyFieldErrors(this.form, error);
-          this.formError.set(formLevelMessage(error));
+          this.formError.set(formLevelMessage(error) ?? Object.values(error.fieldErrors).join(' '));
         },
       });
   }
@@ -353,8 +447,11 @@ export class PurchaseDrawer {
   private reset(fixed: Id | null): void {
     this.formError.set(null);
     this.form.reset({
+      proveedorId: 0,
       materiaPrimaId: fixed ?? 0,
+      tipoDocumento: 'FACTURA',
       documento: '',
+      fecha: todayIso(),
       cantidad: 0,
       costoInicial: 0,
     });

@@ -71,6 +71,18 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'purchases',
+        canActivate: [roleGuard(['ADMINISTRADOR', 'JEFE_PRODUCCION', 'BODEGUERO'])],
+        loadChildren: () =>
+          import('./features/purchases/purchases.routes').then((m) => m.PURCHASES_ROUTES),
+      },
+      {
+        path: 'suppliers',
+        canActivate: [roleGuard(['ADMINISTRADOR', 'JEFE_PRODUCCION', 'BODEGUERO'])],
+        loadChildren: () =>
+          import('./features/suppliers/suppliers.routes').then((m) => m.SUPPLIERS_ROUTES),
+      },
+      {
         path: 'movements',
         canActivate: [roleGuard(['ADMINISTRADOR', 'JEFE_PRODUCCION', 'BODEGUERO'])],
         loadChildren: () =>

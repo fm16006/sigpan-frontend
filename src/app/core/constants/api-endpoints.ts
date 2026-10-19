@@ -101,6 +101,17 @@ export const API_ENDPOINTS = {
     byId: (id: Id) => `/escalas-precio/${id}`,
     byProducto: (id: Id) => `/escalas-precio/producto/${id}`,
   },
+  proveedores: {
+    root: '/proveedores',
+    byId: (id: Id) => `/proveedores/${id}`,
+    activo: (id: Id) => `/proveedores/${id}/activo`,
+  },
+  compras: {
+    root: '/compras',
+    byId: (id: Id) => `/compras/${id}`,
+    /** Últimas compras de un insumo (?materiaPrimaId) o de un producto de reventa (?productoId). */
+    ultimas: '/compras/ultimas',
+  },
   orders: {
     place: '/ventas/pedido',
     counter: '/ventas/mostrador',
