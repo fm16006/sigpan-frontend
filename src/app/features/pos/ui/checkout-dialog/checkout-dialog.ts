@@ -10,6 +10,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   Observable,
@@ -113,6 +114,12 @@ export class CheckoutDialog {
   protected readonly error = signal<string | null>(null);
   protected readonly receipt = signal<Receipt | null>(null);
   protected readonly printed = signal<readonly string[]>([]);
+  /** El ticket completo, para la impresión del navegador (solo se ve al imprimir). */
+  protected readonly receiptText = computed(() => {
+    const receipt = this.receipt();
+    return receipt ? formatReceipt(receipt, BUSINESS_INFO).join('\n') : '';
+  });
+  private readonly page = inject(DOCUMENT);
   protected readonly cardScreen = signal<TerminalScreen>({ kind: 'conectando' });
   private cardCharge: Subscription | null = null;
 
@@ -340,11 +347,9 @@ export class CheckoutDialog {
       });
   }
 
-  protected reprint(): void {
-    const receipt = this.receipt();
-    if (receipt) {
-      this.print(receipt);
-    }
+  /** Abre la impresión del navegador; la hoja de estilos de impresión deja solo el ticket. */
+  protected printReceipt(): void {
+    this.page.defaultView?.print();
   }
 
   protected finish(): void {
