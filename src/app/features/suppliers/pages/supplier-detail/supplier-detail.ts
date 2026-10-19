@@ -81,7 +81,7 @@ type Drawer = 'edit' | 'purchase' | null;
 
         <div class="grid items-start gap-4 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
           <section class="panel min-w-0" aria-labelledby="h-compras">
-            <h2 id="h-compras" class="font-serif text-lg font-semibold">Compras</h2>
+            <h2 id="h-compras" class="font-serif text-base font-semibold sm:text-lg">Compras</h2>
             <app-resource-state
               [loading]="purchasesRes.isLoading() && !purchasesRes.hasValue()"
               [failed]="!!purchasesRes.error()"
@@ -90,7 +90,7 @@ type Drawer = 'edit' | 'purchase' | null;
               emptyDescription="Todavía no se le compró a este proveedor."
               (retry)="purchasesRes.reload()"
             >
-              <div class="-mx-[1.375rem] -mb-5 overflow-hidden border-t border-base-300">
+              <div class="-mx-4 sm:-mx-[1.375rem] -mb-4 sm:-mb-5 overflow-hidden border-t border-base-300">
                 @for (purchase of purchases(); track purchase.id) {
                   <a
                     class="list-row grid-cols-[minmax(0,1fr)_auto_1rem] gap-y-0.5"
@@ -113,7 +113,7 @@ type Drawer = 'edit' | 'purchase' | null;
           </section>
 
           <section class="panel" aria-labelledby="h-contacto">
-            <h2 id="h-contacto" class="font-serif text-lg font-semibold">Contacto</h2>
+            <h2 id="h-contacto" class="font-serif text-base font-semibold sm:text-lg">Contacto</h2>
             <dl class="grid grid-cols-[6rem_minmax(0,1fr)] gap-x-4 gap-y-2.5 text-sm">
               <dt class="text-base-content/60">Persona</dt>
               <dd>{{ s.contacto }}</dd>

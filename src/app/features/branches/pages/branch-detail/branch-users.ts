@@ -11,7 +11,7 @@ import { BranchDetailStore } from './branch-detail.store';
   template: `
     <section class="panel" aria-labelledby="suc-usuarios">
       <div class="flex flex-col gap-0.5">
-        <h2 id="suc-usuarios" class="font-serif text-lg font-semibold">Personal asignado</h2>
+        <h2 id="suc-usuarios" class="font-serif text-base font-semibold sm:text-lg">Personal asignado</h2>
         <p class="text-xs text-base-content/60">
           Para mover a alguien de sucursal, editá su cuenta en
           <a routerLink="/backoffice/users" class="link">Usuarios</a>.

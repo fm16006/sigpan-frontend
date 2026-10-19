@@ -53,13 +53,13 @@ import { PurchaseService } from '../../services/purchase.service';
 
         <section class="panel" aria-labelledby="h-lineas">
           <div>
-            <h2 id="h-lineas" class="font-serif text-lg font-semibold">Líneas de la compra</h2>
+            <h2 id="h-lineas" class="font-serif text-base font-semibold sm:text-lg">Líneas de la compra</h2>
             <p class="text-xs text-base-content/55">
               Cada línea sumó su cantidad a la existencia y entró al costo promedio del artículo.
             </p>
           </div>
 
-          <div class="-mx-[1.375rem] -mb-5 overflow-hidden border-t border-base-300">
+          <div class="-mx-4 sm:-mx-[1.375rem] -mb-4 sm:-mb-5 overflow-hidden border-t border-base-300">
             <div
               class="grid items-center gap-x-4 px-5 py-3 max-md:hidden md:grid-cols-[minmax(0,1.6fr)_7rem_6rem_6.5rem_1rem]"
             >

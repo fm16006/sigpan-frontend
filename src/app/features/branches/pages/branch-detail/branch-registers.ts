@@ -18,7 +18,7 @@ import { BranchDetailStore } from './branch-detail.store';
       <section class="panel" aria-labelledby="suc-cajas">
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div class="flex flex-col gap-0.5">
-            <h2 id="suc-cajas" class="font-serif text-lg font-semibold">Cajas</h2>
+            <h2 id="suc-cajas" class="font-serif text-base font-semibold sm:text-lg">Cajas</h2>
             <p class="text-xs text-base-content/60">
               Los cajeros eligen una caja activa al abrir el punto de venta. Nombre y código son únicos en la
               sucursal.

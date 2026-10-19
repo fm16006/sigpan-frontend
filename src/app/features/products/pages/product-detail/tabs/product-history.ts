@@ -9,7 +9,7 @@ import { Auth } from '../../../../../core/services/auth';
   template: `
     <section class="panel max-w-3xl" aria-labelledby="h-hist">
       <div class="flex flex-col gap-0.5">
-        <h2 id="h-hist" class="font-serif text-lg font-semibold">Cambios en este producto</h2>
+        <h2 id="h-hist" class="font-serif text-base font-semibold sm:text-lg">Cambios en este producto</h2>
         <span class="text-xs text-base-content/60">Quién cambió qué y cuándo, tomado de la bitácora.</span>
       </div>
       <!-- Pendiente backend: permitir filtrar la bitácora por producto -->
