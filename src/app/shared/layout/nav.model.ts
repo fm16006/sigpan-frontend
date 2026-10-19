@@ -28,6 +28,8 @@ export const BACKOFFICE_NAV: readonly NavItem[] = [
   },
   { label: 'Recetas', path: '/backoffice/recipes', roles: ['ADMINISTRADOR', 'JEFE_PRODUCCION'] },
   { label: 'Promociones', path: '/backoffice/promotions', roles: ['ADMINISTRADOR'] },
+  { label: 'Combos', path: '/backoffice/combos', roles: ['ADMINISTRADOR'] },
+  { label: 'Mayoreo', path: '/backoffice/wholesale', roles: ['ADMINISTRADOR'] },
   { label: 'Usuarios', path: '/backoffice/users', roles: ['ADMINISTRADOR'] },
   { label: 'Bitácora', path: '/backoffice/audit', roles: ['ADMINISTRADOR'] },
 ];

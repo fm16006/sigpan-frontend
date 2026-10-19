@@ -1,10 +1,13 @@
 import { Component, DestroyRef, PLATFORM_ID, computed, inject, signal } from '@angular/core';
-import { httpResource } from '@angular/common/http';
+import { HttpResourceRequest, httpResource } from '@angular/common/http';
 import { DatePipe, isPlatformBrowser } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { Id } from '../../../../core/models/api.model';
 import { CatalogProduct } from '../../../../core/models/catalog.model';
 import { CashCut } from '../../../../core/models/order.model';
+import { Quote, QuoteLine, ruleLabel } from '../../../../core/models/quote.model';
+import { QuoteService } from '../../../../core/services/quote.service';
+import { debouncedSignal } from '../../../../core/utils/debounced-signal';
 import { Auth } from '../../../../core/services/auth';
 import { Notifications } from '../../../../core/services/notifications';
 import { BackofficeMenu } from '../../../../shared/layout/backoffice-menu';
@@ -85,9 +88,28 @@ export class PosScreen {
   protected readonly showStore = this.menu.showStore;
 
   protected readonly lines = this.ticket.asReadonly();
-  protected readonly total = computed(() =>
-    this.ticket().reduce((sum, line) => sum + Number(line.product.precio) * line.quantity, 0),
+  private readonly quotes = inject(QuoteService);
+
+  /** Canasta que se cotiza: solo producto y cantidad. El backend fija precios y descuentos. */
+  private readonly quoteLines = computed(() =>
+    this.ticket().map((line) => ({ productoId: line.product.id, cantidad: line.quantity })),
   );
+  private readonly debouncedLines = debouncedSignal(this.quoteLines, 250);
+
+  protected readonly quote = httpResource<Quote>((): HttpResourceRequest | undefined => {
+    const lineas = this.debouncedLines();
+    return lineas.length > 0 ? { url: this.quotes.url, method: 'POST', body: { lineas } } : undefined;
+  });
+  /** El ticket cambió y la cotización todavía no lo refleja: no se cobra en ese lapso. */
+  protected readonly quotePending = computed(() => this.quoteLines() !== this.debouncedLines());
+  protected readonly quoteByProduct = computed(
+    () => new Map((this.quote.value()?.lineas ?? []).map((line) => [line.productoId, line] as const)),
+  );
+  /** Total que cobra el backend (promociones, combos y mayoreo ya aplicados). */
+  protected readonly total = computed(() => this.quote.value()?.total ?? 0);
+  protected readonly ahorro = computed(() => this.quote.value()?.ahorro ?? 0);
+  protected readonly reglaAplicada = computed(() => ruleLabel(this.quote.value()?.reglaAplicada));
+  protected readonly ruleLabel = ruleLabel;
   protected readonly itemCount = computed(() =>
     this.ticket().reduce((sum, line) => sum + line.quantity, 0),
   );
@@ -230,8 +252,12 @@ export class PosScreen {
     this.keypad.set('');
   }
 
+  protected lineQuote(line: PosLine): QuoteLine | undefined {
+    return this.quoteByProduct().get(line.product.id);
+  }
+
   protected charge(): void {
-    if (this.ticket().length > 0) {
+    if (this.ticket().length > 0 && !this.quotePending() && !this.quote.error()) {
       this.checkoutOpen.set(true);
     }
   }
