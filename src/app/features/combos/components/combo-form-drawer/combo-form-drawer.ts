@@ -1,17 +1,22 @@
 import { Component, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { httpResource } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { AppError } from '../../../../core/http/app-error';
 import {
   applyFieldErrors,
   firstErrorMessage,
   formLevelMessage,
 } from '../../../../core/http/form-errors';
+import { valueOr } from '../../../../core/http/resource-value';
+import { Category } from '../../../../core/models/catalog.model';
 import { Combo, ComboDraft } from '../../../../core/models/combo.model';
 import { Notifications } from '../../../../core/services/notifications';
 import { MoneyPipe } from '../../../../shared/pipes/money.pipe';
 import { FormDrawer } from '../../../../shared/ui/form-drawer/form-drawer';
 import { StatusChip } from '../../../../shared/ui/status-chip/status-chip';
+import { selectableCategories } from '../../../categories/category-view';
 import { comboSaving } from '../../combo-summary';
 import { ComboService } from '../../services/combo.service';
 
@@ -21,7 +26,7 @@ import { ComboService } from '../../services/combo.service';
  */
 @Component({
   selector: 'app-combo-form-drawer',
-  imports: [ReactiveFormsModule, FormDrawer, StatusChip, MoneyPipe],
+  imports: [ReactiveFormsModule, RouterLink, FormDrawer, StatusChip, MoneyPipe],
   templateUrl: './combo-form-drawer.html',
 })
 export class ComboFormDrawer {
@@ -47,7 +52,18 @@ export class ComboFormDrawer {
     nombre: ['', [Validators.required, Validators.maxLength(150)]],
     descripcion: [''],
     precio: [0, [Validators.required, Validators.min(0.01)]],
+    /** Categoría en el punto de venta; sin categoría el combo va a «Combos». */
+    categoriaId: this.fb.control<number | null>(null),
   });
+
+  protected readonly categories = httpResource<Category[]>(
+    () => (this.open() ? this.combos.categoriesUrl() : undefined),
+    { defaultValue: [] },
+  );
+  /** Solo las categorías activas (y la que el combo ya tiene, aunque se haya desactivado). */
+  protected readonly categoryOptions = computed(() =>
+    selectableCategories(valueOr(this.categories, []), this.combo()?.categoriaId),
+  );
 
   private readonly price = toSignal(this.form.controls.precio.valueChanges, { initialValue: 0 });
 
@@ -72,6 +88,7 @@ export class ComboFormDrawer {
           nombre: combo?.nombre ?? '',
           descripcion: combo?.descripcion ?? '',
           precio: combo?.precio ?? 0,
+          categoriaId: combo?.categoriaId ?? null,
         });
       });
     });
@@ -93,6 +110,7 @@ export class ComboFormDrawer {
       nombre: raw.nombre.trim(),
       descripcion: raw.descripcion.trim() || null,
       precio: Number(raw.precio),
+      categoriaId: raw.categoriaId,
     };
     const current = this.combo();
 

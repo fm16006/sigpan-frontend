@@ -1,6 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { API_CONFIG, ApiConfig } from '../../../../core/config/api.config';
 import { CatalogProduct } from '../../../../core/models/catalog.model';
 import { SessionStore } from '../../../../core/services/session-store';
@@ -58,7 +59,12 @@ describe('Formulario de producto: exento de IVA (HU-36)', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [provideHttpClient(), provideHttpClientTesting(), { provide: API_CONFIG, useValue: CONFIG }],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: API_CONFIG, useValue: CONFIG },
+      ],
     });
     httpMock = TestBed.inject(HttpTestingController);
   });

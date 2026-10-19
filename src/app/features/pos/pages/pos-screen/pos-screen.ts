@@ -18,6 +18,7 @@ import { Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Id } from '../../../../core/models/api.model';
 import { CatalogProduct } from '../../../../core/models/catalog.model';
+import { PosCombo } from '../../../../core/models/combo.model';
 import { PriceScale } from '../../../../core/models/price-scale.model';
 import { Quote, QuoteLine, ruleLabel } from '../../../../core/models/quote.model';
 import { QuoteService } from '../../../../core/services/quote.service';
@@ -33,13 +34,20 @@ import { Icon } from '../../../../shared/ui/icon/icon';
 import { ResourceState } from '../../../../shared/ui/resource-state/resource-state';
 import { ThemeToggle } from '../../../../shared/ui/theme-toggle/theme-toggle';
 import { PriceScaleService } from '../../../wholesale/services/price-scale.service';
+import { ComboService } from '../../../combos/services/combo.service';
 import { ProductService } from '../../../storefront/services/product.service';
 import { PosLine } from '../../models/checkout.model';
 import {
-  filterProducts,
+  PosTile,
+  comboContents,
+  comboSoldOut,
   findByCode,
+  mergeLines,
   nextTier,
+  planComboAdd,
+  posCategories,
   posShortcut,
+  posTiles,
   ruleBadge,
   tierHintText,
 } from '../../pos-logic';
@@ -112,6 +120,7 @@ const ROLE_NAMES: Readonly<Record<string, string>> = {
 })
 export class PosScreen {
   private readonly products = inject(ProductService);
+  private readonly comboService = inject(ComboService);
   private readonly notifications = inject(Notifications);
   private readonly menu = inject(BackofficeMenu);
   private readonly priceScales = inject(PriceScaleService);
@@ -263,14 +272,24 @@ export class PosScreen {
 
   private readonly catalogItems = computed(() => valueOr(this.catalog, []));
 
+  /**
+   * Combos activos que se pueden vender, con cuántos alcanzan en la sucursal de la caja. Si esta
+   * consulta falla, el punto de venta sigue vendiendo productos (los combos simplemente no salen).
+   */
+  protected readonly comboCatalog = httpResource<PosCombo[]>(
+    () => this.comboService.posUrl(this.branchId()),
+    { defaultValue: [] },
+  );
+  private readonly comboItems = computed(() => valueOr(this.comboCatalog, []));
+
+  /** Categorías de productos y de combos: una categoría con solo combos también aparece. */
   protected readonly categories = computed(() =>
-    [...new Set(this.catalogItems().map((product) => product.categoria))].sort((a, b) =>
-      a.localeCompare(b),
-    ),
+    posCategories(this.catalogItems(), this.comboItems()),
   );
 
-  protected readonly visible = computed(() =>
-    filterProducts(this.catalogItems(), this.search(), this.category()),
+  /** Tarjetas de la cuadrícula: productos y combos agrupados por categoría. */
+  protected readonly tiles = computed(() =>
+    posTiles(this.catalogItems(), this.comboItems(), this.search(), this.category()),
   );
 
   protected readonly selected = computed(
@@ -291,7 +310,10 @@ export class PosScreen {
   constructor() {
     if (isPlatformBrowser(inject(PLATFORM_ID))) {
       const clock = setInterval(() => this.now.set(new Date()), 30_000);
-      const refresh = setInterval(() => this.catalog.reload(), CATALOG_REFRESH_MS);
+      const refresh = setInterval(() => {
+        this.catalog.reload();
+        this.comboCatalog.reload();
+      }, CATALOG_REFRESH_MS);
       this.destroyRef.onDestroy(() => {
         clearInterval(clock);
         clearInterval(refresh);
@@ -335,6 +357,35 @@ export class PosScreen {
     return ruleBadge(this.quoteByProduct().get(product.id)?.regla);
   }
 
+  protected pickTile(tile: PosTile): void {
+    if (tile.kind === 'combo') {
+      this.addCombo(tile.combo);
+    } else {
+      this.pick(tile.product);
+    }
+  }
+
+  protected tileKey(tile: PosTile): string {
+    return tile.kind === 'combo' ? `c${tile.combo.id}` : `p${tile.product.id}`;
+  }
+
+  protected readonly comboSoldOut = comboSoldOut;
+  protected readonly comboContents = comboContents;
+
+  /**
+   * Agrega al pedido activo todos los productos del combo con sus cantidades (suma si ya estaban).
+   * El precio del combo lo aplica el motor de promociones al cotizar; la venta sigue mandando productos.
+   */
+  protected addCombo(combo: PosCombo): void {
+    const plan = planComboAdd(combo, this.catalogItems(), this.ticket());
+    if (plan.error) {
+      this.notifications.error(plan.error);
+      return;
+    }
+    this.orders.cambiarLineas((lines) => mergeLines(lines, plan.lines));
+    plan.lines.forEach((line) => this.loadScales(line.product.id));
+  }
+
   protected pick(product: CatalogProduct): void {
     this.selectedId.set(product.id);
     this.add(product);
@@ -365,17 +416,21 @@ export class PosScreen {
     if (!text) {
       return;
     }
-    const product =
-      findByCode(this.catalogItems(), text) ??
-      (this.visible().length === 1 ? this.visible()[0] : null);
+    const product = findByCode(this.catalogItems(), text);
+    // Sin código exacto, el único resultado por nombre (producto o combo).
+    const only = product ? null : this.tiles().length === 1 ? this.tiles()[0] : null;
 
-    if (!product) {
-      this.notifications.error(`No existe un producto con el código ${text}.`);
+    if (!product && !only) {
+      this.notifications.error(`No existe un producto o combo con el código ${text}.`);
       this.searchInput()?.nativeElement.select();
       return;
     }
 
-    this.pick(product);
+    if (product) {
+      this.pick(product);
+    } else if (only) {
+      this.pickTile(only);
+    }
     this.search.set('');
     this.focusSearch();
   }
@@ -591,6 +646,7 @@ export class PosScreen {
     this.checkoutOpen.set(false);
     // La venta descontó inventario: se recarga para que el POS vea la existencia nueva.
     this.catalog.reload();
+    this.comboCatalog.reload();
     // Pedido cobrado: sale de la lista y el siguiente queda activo (o uno vacío si era el único).
     this.orders.quitar(this.activeOrderId());
     this.selectedId.set(null);
