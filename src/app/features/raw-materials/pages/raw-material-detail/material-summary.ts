@@ -43,7 +43,7 @@ import { CONSUMPTION_DAYS, MaterialDetailStore } from './material-detail.store';
       <div class="mt-5 grid items-start gap-5 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
         <section class="panel" aria-labelledby="mp-recetas">
           <div class="flex flex-col gap-0.5">
-            <h2 id="mp-recetas" class="font-serif text-lg font-semibold">Usada en estas recetas</h2>
+            <h2 id="mp-recetas" class="font-serif text-base font-semibold sm:text-lg">Usada en estas recetas</h2>
             <p class="text-xs text-base-content/60">
               Un cambio de costo en este insumo recalcula el costo de estos productos.
             </p>
@@ -65,7 +65,7 @@ import { CONSUMPTION_DAYS, MaterialDetailStore } from './material-detail.store';
               Ninguna receta usa este insumo todavía.
             </p>
           } @else {
-            <div class="-mx-[1.375rem] overflow-hidden">
+            <div class="-mx-4 sm:-mx-[1.375rem] overflow-hidden">
               <div
                 class="list-row max-md:hidden border-t-0! py-2! grid-cols-[minmax(0,1fr)_7rem_7rem_1rem]"
                 aria-hidden="true"
@@ -113,7 +113,7 @@ import { CONSUMPTION_DAYS, MaterialDetailStore } from './material-detail.store';
 
         <section class="panel" aria-labelledby="mp-compras">
           <div class="flex items-baseline justify-between gap-3">
-            <h2 id="mp-compras" class="font-serif text-lg font-semibold">Últimas compras</h2>
+            <h2 id="mp-compras" class="font-serif text-base font-semibold sm:text-lg">Últimas compras</h2>
             <a
               class="text-sm font-semibold text-primary hover:underline"
               [routerLink]="['/backoffice/raw-materials', store.id(), 'movimientos']"
@@ -132,7 +132,7 @@ import { CONSUMPTION_DAYS, MaterialDetailStore } from './material-detail.store';
               Todavía no hay compras a proveedores registradas para este insumo.
             </p>
           } @else {
-            <ul class="-mx-[1.375rem] -mb-5 overflow-hidden">
+            <ul class="-mx-4 sm:-mx-[1.375rem] -mb-4 sm:-mb-5 overflow-hidden">
               @for (item of store.purchaseList(); track item.compraId + '-' + $index) {
                 <li>
                   <a
