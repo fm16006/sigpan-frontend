@@ -6,6 +6,7 @@ import { AuditEvent, AuditLog } from '../../../../core/models/audit.model';
 import { PageHeader } from '../../../../shared/ui/page-header/page-header';
 import { ResourceState } from '../../../../shared/ui/resource-state/resource-state';
 import { AuditService } from '../../services/audit.service';
+import { formatearValor } from '../../audit-format';
 
 function isoDate(date: Date): string {
   const offset = date.getTimezoneOffset() * 60_000;
@@ -30,10 +31,23 @@ export class AuditLogPage {
   protected readonly term = signal('');
   protected readonly openId = signal<Id | null>(null);
 
+  // El backend devuelve la bitácora por páginas (lo más reciente primero).
+  protected readonly pageSize = 50;
+  protected readonly pageIndex = signal(0);
+
   protected readonly logs = httpResource<AuditLog[]>(
-    () => this.service.logsUrl({ fechaDesde: this.from(), fechaHasta: this.to() }),
+    () =>
+      this.service.logsUrl({
+        fechaDesde: this.from(),
+        fechaHasta: this.to(),
+        init: this.pageIndex(),
+        page: this.pageSize,
+      }),
     { defaultValue: [] },
   );
+
+  /** Si la página vino llena, puede haber más registros en la siguiente. */
+  protected readonly hasNextPage = computed(() => this.logs.value().length === this.pageSize);
   protected readonly events = httpResource<AuditEvent[]>(() => this.service.eventsUrl(), {
     defaultValue: [],
   });
@@ -51,6 +65,14 @@ export class AuditLogPage {
     if (from && to && from <= to) {
       this.from.set(from);
       this.to.set(to);
+      this.pageIndex.set(0);
+    }
+  }
+
+  protected goToPage(index: number): void {
+    if (index >= 0) {
+      this.pageIndex.set(index);
+      this.openId.set(null);
     }
   }
 
@@ -58,14 +80,5 @@ export class AuditLogPage {
     this.openId.update((current) => (current === id ? null : id));
   }
 
-  protected detail(log: AuditLog): string {
-    if (!log.valor) {
-      return 'Sin detalle.';
-    }
-    try {
-      return JSON.stringify(JSON.parse(log.valor), null, 2);
-    } catch {
-      return log.valor;
-    }
-  }
+  protected readonly formatValue = formatearValor;
 }
