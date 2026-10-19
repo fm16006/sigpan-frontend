@@ -92,9 +92,24 @@
           @if (openId() === log.id) {
             <tr>
               <td colspan="5" class="bg-base-200/40">
-                <pre class="max-h-80 overflow-auto whitespace-pre-wrap text-xs">{{
-                  detail(log)
-                }}</pre>
+                <dl class="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
+                  <div>
+                    <dt class="text-xs text-base-content/60">Fecha y hora</dt>
+                    <dd>{{ log.fecha | date: 'medium' }}</dd>
+                  </div>
+                  <div>
+                    <dt class="text-xs text-base-content/60">Usuario (ID)</dt>
+                    <dd class="tabular-nums">{{ log.usuarioId ?? 'Sistema' }}</dd>
+                  </div>
+                  <div>
+                    <dt class="text-xs text-base-content/60">Valor anterior</dt>
+                    <dd class="break-words">{{ formatValue(log.valorAnterior) }}</dd>
+                  </div>
+                  <div>
+                    <dt class="text-xs text-base-content/60">Valor posterior</dt>
+                    <dd class="break-words">{{ formatValue(log.valorPosterior) }}</dd>
+                  </div>
+                </dl>
               </td>
             </tr>
           }
@@ -102,4 +117,24 @@
       </tbody>
     </table>
   </div>
+
+  <nav class="mt-3 flex items-center justify-end gap-2" aria-label="Páginas de la bitácora">
+    <button
+      type="button"
+      class="btn btn-sm"
+      [disabled]="pageIndex() === 0 || logs.isLoading()"
+      (click)="goToPage(pageIndex() - 1)"
+    >
+      Anterior
+    </button>
+    <span class="text-sm">Página {{ pageIndex() + 1 }}</span>
+    <button
+      type="button"
+      class="btn btn-sm"
+      [disabled]="!hasNextPage() || logs.isLoading()"
+      (click)="goToPage(pageIndex() + 1)"
+    >
+      Siguiente
+    </button>
+  </nav>
 </app-resource-state>
