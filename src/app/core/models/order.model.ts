@@ -24,6 +24,11 @@ export interface Sale {
   readonly id: Id;
   readonly usuarioId: Id | null;
   readonly usuario: string | null;
+  readonly sucursalId?: Id | null;
+  readonly sucursal?: string | null;
+  /** Nulo en los pedidos en línea. */
+  readonly cajaId?: Id | null;
+  readonly caja?: string | null;
   readonly tipo: string;
   readonly estado: string;
   readonly fecha: string;
@@ -35,6 +40,14 @@ export interface Sale {
 
 export interface SaleRequest {
   readonly lineas: readonly { readonly productoId: Id; readonly cantidad: number }[];
+  /** Solo en la venta de mostrador: caja donde se cobra (de la sucursal del cajero). */
+  readonly cajaId?: Id;
+}
+
+/** Filtro del corte y de los listados de ventas. */
+export interface SaleFilter {
+  readonly sucursalId?: Id | null;
+  readonly cajaId?: Id | null;
 }
 
 export interface CashCut {

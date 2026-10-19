@@ -28,6 +28,15 @@ export const API_ENDPOINTS = {
   roles: {
     root: '/roles',
   },
+  sucursales: {
+    root: '/sucursales',
+    byId: (id: Id) => `/sucursales/${id}`,
+    /** Sucursal del usuario de la sesión, con sus cajas activas. */
+    mine: '/sucursales/mi-sucursal',
+    usuarios: (id: Id) => `/sucursales/${id}/usuarios`,
+    cajas: (id: Id) => `/sucursales/${id}/cajas`,
+    cajaById: (id: Id, cajaId: Id) => `/sucursales/${id}/cajas/${cajaId}`,
+  },
   materiasPrimas: {
     root: '/materias-primas',
     stockBajo: '/materias-primas/stock-bajo',

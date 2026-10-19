@@ -6,7 +6,6 @@ export interface BusinessInfo {
   readonly nit: string;
   readonly nrc: string;
   readonly telefono: string;
-  readonly caja: string;
   /** Horario que se muestra en la tienda en línea. */
   readonly horario: readonly { readonly dias: string; readonly horas: string }[];
 }
@@ -19,7 +18,6 @@ export const BUSINESS_INFO: BusinessInfo = {
   nit: '0000-000000-000-0',
   nrc: '000000-0',
   telefono: '0000-0000',
-  caja: '01',
   horario: [
     { dias: 'Lunes a viernes', horas: '6:00 a. m. – 7:00 p. m.' },
     { dias: 'Sábado', horas: '6:00 a. m. – 6:00 p. m.' },

@@ -4,6 +4,14 @@ import { SessionStore } from '../../../core/services/session-store';
 
 export type CashRegisterState = 'cerrada' | 'abierta';
 
+/** Sucursal y caja donde se abrió el turno. */
+export interface ShiftPlace {
+  readonly sucursalId: number | null;
+  readonly sucursal: string;
+  readonly cajaId: number | null;
+  readonly caja: string;
+}
+
 /** Turno abierto en la caja. */
 export interface CashShift {
   /** Instante de apertura, ISO 8601. */
@@ -12,6 +20,8 @@ export interface CashShift {
   readonly fondo: number;
   readonly nota: string;
   readonly cajero: string;
+  /** Caja del turno. Los turnos guardados antes de HU-60 no la traen. */
+  readonly lugar?: ShiftPlace;
 }
 
 /** Último turno cerrado, para mostrarlo como "turno anterior" al abrir. */
@@ -54,9 +64,11 @@ export class CashRegisterStore {
   readonly turno = computed(() => this.data().turno);
   readonly estado = computed<CashRegisterState>(() => (this.data().turno ? 'abierta' : 'cerrada'));
   readonly ultimoCierre = computed(() => this.data().ultimoCierre);
+  /** Sucursal y caja del turno abierto; null con la caja cerrada o en turnos anteriores a HU-60. */
+  readonly lugar = computed(() => this.data().turno?.lugar ?? null);
 
-  /** Abre el turno con el fondo contado. Si ya hay uno abierto no hace nada. */
-  abrir(fondo: number, nota: string): void {
+  /** Abre el turno con el fondo contado en la caja elegida. Si ya hay uno abierto no hace nada. */
+  abrir(fondo: number, nota: string, lugar?: ShiftPlace): void {
     if (this.data().turno) {
       return;
     }
@@ -65,6 +77,7 @@ export class CashRegisterStore {
       fondo,
       nota: nota.trim(),
       cajero: this.session.user()?.name ?? '',
+      ...(lugar ? { lugar } : {}),
     };
     this.save({ ...this.data(), turno });
   }
@@ -103,13 +116,27 @@ export class CashRegisterStore {
       }
       const parsed = JSON.parse(raw) as Partial<Persisted> | null;
       return {
-        turno: isShift(parsed?.turno) ? parsed.turno : null,
-        ultimoCierre: isClosed(parsed?.ultimoCierre) ? parsed.ultimoCierre : null,
+        turno: isShift(parsed?.turno) ? withPlace(parsed.turno) : null,
+        ultimoCierre: isClosed(parsed?.ultimoCierre) ? withPlace(parsed.ultimoCierre) : null,
       };
     } catch {
       return EMPTY;
     }
   }
+}
+
+function isPlace(value: unknown): value is ShiftPlace {
+  const place = value as Partial<ShiftPlace> | null | undefined;
+  return !!place && typeof place.sucursal === 'string' && typeof place.caja === 'string';
+}
+
+/** Descarta una caja guardada con forma inválida en vez de rechazar todo el turno. */
+function withPlace<T extends CashShift>(shift: T): T {
+  if (shift.lugar === undefined || isPlace(shift.lugar)) {
+    return shift;
+  }
+  const { lugar: _descartado, ...rest } = shift;
+  return rest as T;
 }
 
 function isShift(value: unknown): value is CashShift {

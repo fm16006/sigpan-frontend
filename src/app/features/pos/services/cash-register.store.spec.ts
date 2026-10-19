@@ -107,6 +107,48 @@ describe('CashRegisterStore', () => {
     expect(again.store.turno()).toBeNull();
   });
 
+  it('abrir guarda la sucursal y la caja elegidas, y sobreviven a una recarga', () => {
+    const lugar = { sucursalId: 1, sucursal: 'Principal', cajaId: 11, caja: 'Caja 02' };
+    store.abrir(30, '', lugar);
+
+    expect(store.lugar()).toEqual(lugar);
+
+    const again = reload();
+    again.sessionStore.set(session(7, 'ana@sigpan.test'));
+    expect(again.store.lugar()).toEqual(lugar);
+
+    again.store.cerrar(30);
+    expect(again.store.lugar()).toBeNull();
+    expect(again.store.ultimoCierre()?.lugar).toEqual(lugar);
+  });
+
+  it('un turno guardado antes de HU-60, sin caja, sigue siendo válido', () => {
+    store.abrir(10, '');
+
+    expect(store.estado()).toBe('abierta');
+    expect(store.lugar()).toBeNull();
+  });
+
+  it('descarta una caja guardada con forma inválida sin perder el turno', () => {
+    localStorage.setItem(
+      'sigpan.caja.7',
+      JSON.stringify({
+        turno: {
+          abiertaEn: '2026-10-19T10:00:00.000Z',
+          fondo: 5,
+          nota: '',
+          cajero: 'Ana',
+          lugar: { sucursal: 7 },
+        },
+      }),
+    );
+    const again = reload();
+    again.sessionStore.set(session(7, 'ana@sigpan.test'));
+
+    expect(again.store.estado()).toBe('abierta');
+    expect(again.store.lugar()).toBeNull();
+  });
+
   it('sigue funcionando en memoria si localStorage falla', () => {
     const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new Error('cuota llena');
