@@ -5,6 +5,7 @@ export type AppErrorKind =
   | 'network'
   | 'validation'
   | 'auth'
+  | 'locked'
   | 'forbidden'
   | 'notFound'
   | 'conflict'
@@ -23,6 +24,7 @@ const MESSAGES: Readonly<Record<AppErrorKind, string>> = {
   network: 'No pudimos conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.',
   validation: 'Revisa los datos ingresados.',
   auth: 'Tu sesión expiró. Vuelve a iniciar sesión.',
+  locked: 'La cuenta está bloqueada temporalmente. Inténtalo más tarde.',
   forbidden: 'No tienes permisos para realizar esta acción.',
   notFound: 'No encontramos el recurso solicitado.',
   conflict: 'El registro ya existe.',
@@ -32,6 +34,7 @@ const MESSAGES: Readonly<Record<AppErrorKind, string>> = {
 function kindFor(status: number): AppErrorKind {
   if (status === 0) return 'network';
   if (status === 401) return 'auth';
+  if (status === 423) return 'locked';
   if (status === 403) return 'forbidden';
   if (status === 404) return 'notFound';
   if (status === 409) return 'conflict';
