@@ -1,6 +1,4 @@
-<input id="pos-menu" type="checkbox" class="drawer-toggle" aria-hidden="true" />
-
-<div class="drawer-content flex h-dvh flex-col">
+<div class="flex h-dvh flex-col">
   @if (mode() === 'cierre') {
     <app-pos-caja
       [cashier]="auth.user()?.name ?? ''"
@@ -17,7 +15,8 @@
   } @else if (mode() === 'apertura') {
     <app-pos-apertura
       [cashier]="auth.user()?.name ?? ''"
-      [hasPanel]="adminLinks().length > 0"
+      [hasPanel]="!!panelLink()"
+      (panel)="requestPanel()"
       (logout)="requestLogout()"
     />
   } @else {
@@ -704,29 +703,3 @@
   (cancelled)="closeRegisterOpen.set(false)"
 />
 
-@if (adminLinks().length > 0) {
-  <div class="drawer-side z-50">
-    <label for="pos-menu" class="drawer-overlay" aria-label="Cerrar menú"></label>
-    <aside class="flex min-h-full w-72 flex-col bg-base-100">
-      <div class="flex h-14 items-center justify-between border-b border-base-300 px-4">
-        <app-brand-mark [size]="1.75" label="SigPan" labelClass="text-base" />
-        <app-theme-toggle />
-      </div>
-      <nav class="flex flex-1 flex-col gap-1 p-3" aria-label="Administración">
-        @for (item of adminLinks(); track item.path) {
-          <a
-            [routerLink]="item.path"
-            class="rounded-field px-3 py-2 text-sm text-base-content/75 hover:bg-base-200"
-          >
-            {{ item.label }}
-          </a>
-        }
-      </nav>
-      @if (showStore()) {
-        <div class="border-t border-base-300 p-3">
-          <a routerLink="/" class="btn btn-ghost btn-sm w-full justify-start">Ver tienda</a>
-        </div>
-      }
-    </aside>
-  </div>
-}

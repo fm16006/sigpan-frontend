@@ -37,6 +37,7 @@ export class PosApertura {
   readonly cashier = input('');
   /** El usuario tiene enlaces del panel: se muestra "Ir al panel". */
   readonly hasPanel = input(false);
+  readonly panel = output<void>();
   readonly logout = output<void>();
 
   /** Sucursal del cajero con sus cajas activas. */
