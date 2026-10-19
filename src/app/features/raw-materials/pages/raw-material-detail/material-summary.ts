@@ -1,7 +1,9 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { ItemPurchase } from '../../../../core/models/purchase.model';
 import { MoneyPipe } from '../../../../shared/pipes/money.pipe';
+import { documentLabel } from '../../../purchases/purchase-calc';
 import { Icon } from '../../../../shared/ui/icon/icon';
 import { StatCard } from '../../../../shared/ui/stat-card/stat-card';
 import { CONSUMPTION_DAYS, MaterialDetailStore } from './material-detail.store';
@@ -113,39 +115,38 @@ import { CONSUMPTION_DAYS, MaterialDetailStore } from './material-detail.store';
               >Ver movimientos →</a
             >
           </div>
-          @if (store.movements.isLoading()) {
+          @if (store.purchases.isLoading() && !store.purchases.hasValue()) {
             <div class="h-24 animate-pulse rounded-box bg-base-200" aria-busy="true"></div>
-          } @else if (!!store.movements.error()) {
+          } @else if (!!store.purchases.error()) {
             <div role="alert" class="alert alert-error text-sm">
               <span>No pudimos cargar las compras.</span>
-              <button type="button" class="btn btn-sm" (click)="store.reload()">Reintentar</button>
+              <button type="button" class="btn btn-sm" (click)="store.purchases.reload()">Reintentar</button>
             </div>
-          } @else if (store.purchases().length === 0) {
+          } @else if (store.purchaseList().length === 0) {
             <p class="rounded-box bg-base-200 px-4 py-3 text-sm text-base-content/65">
-              Todavía no hay compras registradas.
+              Todavía no hay compras a proveedores registradas para este insumo.
             </p>
           } @else {
-            <ul class="-mx-[1.375rem] overflow-hidden">
-              @for (line of store.purchases(); track line.movement.id) {
+            <ul class="-mx-[1.375rem] -mb-5 overflow-hidden">
+              @for (item of store.purchaseList(); track item.compraId + '-' + $index) {
                 <li>
                   <a
                     class="list-row grid-cols-[minmax(0,1fr)_auto_1rem] gap-y-0.5"
-                    [routerLink]="['/backoffice/raw-materials', store.id(), 'movimientos']"
+                    [routerLink]="['/backoffice/purchases', item.compraId]"
+                    [attr.aria-label]="'Abrir la compra ' + label(item)"
                   >
                     <span class="flex min-w-0 flex-col">
-                      <span class="truncate text-sm font-medium">
-                        {{ line.movement.documento ?? 'Sin documento' }}
-                      </span>
+                      <span class="truncate text-sm font-medium">{{ item.proveedor }}</span>
                       <span class="text-xs text-base-content/60">
-                        {{ line.movement.fecha | date: 'd MMM y' }}
+                        {{ label(item) }} · {{ item.fecha | date: 'd MMM y' }}
                       </span>
                     </span>
                     <span class="flex flex-col items-end text-sm tabular-nums">
                       <span class="font-semibold text-success">
-                        +{{ line.movement.cantidad | number: '1.0-3' }} {{ row.unidad }}
+                        +{{ item.cantidad | number: '1.0-3' }} {{ row.unidad }}
                       </span>
                       <span class="text-xs text-base-content/60">
-                        {{ line.movement.costoInicial | money }} / {{ row.unidad }}
+                        {{ item.costoUnitario | money }} / {{ row.unidad }}
                       </span>
                     </span>
                     <app-icon name="chevron" class="text-base-content/40" />
@@ -154,10 +155,6 @@ import { CONSUMPTION_DAYS, MaterialDetailStore } from './material-detail.store';
               }
             </ul>
           }
-          <!-- Pendiente backend: exponer el proveedor de cada compra -->
-          <p class="text-xs text-base-content/55">
-            Proveedor: próximamente.
-          </p>
         </section>
       </div>
     }
@@ -166,6 +163,10 @@ import { CONSUMPTION_DAYS, MaterialDetailStore } from './material-detail.store';
 export class MaterialSummary {
   protected readonly store = inject(MaterialDetailStore);
   protected readonly days = CONSUMPTION_DAYS;
+
+  protected label(item: ItemPurchase): string {
+    return documentLabel(item.tipoDocumento, item.numeroDocumento);
+  }
 
   protected supplyHint(): string {
     const supply = this.store.supplyDays();

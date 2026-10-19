@@ -1,4 +1,4 @@
-import { CatalogProduct, Especialidad } from '../../core/models/catalog.model';
+import { CatalogProduct, Especialidad, ProductType, isResale } from '../../core/models/catalog.model';
 import { ChipTone } from '../../shared/ui/status-chip/status-chip';
 import { ProductMovement } from './models/product-detail.model';
 
@@ -62,6 +62,8 @@ export interface ProductFilters {
   readonly segment: StockSegment;
   /** Vacío = todas. */
   readonly especialidad: Especialidad | '';
+  /** Vacío o ausente = todos los tipos. */
+  readonly tipo?: ProductType | '';
 }
 
 function normalize(text: string): string {
@@ -76,7 +78,7 @@ export function matchesSegment(product: StockFields, segment: StockSegment): boo
   return segment === 'todos' || stockState(product) === SEGMENT_STATE[segment];
 }
 
-/** Búsqueda por nombre o código, segmento de existencia y especialidad. Ordena por nombre. */
+/** Búsqueda por nombre o código, segmento de existencia, especialidad y tipo. Ordena por nombre. */
 export function filterProducts(
   products: readonly CatalogProduct[],
   filters: ProductFilters,
@@ -87,6 +89,7 @@ export function filterProducts(
       (product) =>
         matchesSegment(product, filters.segment) &&
         (!filters.especialidad || product.especialidad === filters.especialidad) &&
+        (!filters.tipo || (isResale(product) ? 'REVENTA' : 'ELABORADO') === filters.tipo) &&
         (!query || normalize(`${product.nombre} ${product.codigo}`).includes(query)),
     )
     .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));

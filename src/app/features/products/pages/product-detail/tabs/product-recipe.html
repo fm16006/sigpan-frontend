@@ -1,4 +1,11 @@
-@if (formula(); as f) {
+@if (ctx.resale()) {
+  <app-empty-state
+    title="Este producto es de reventa"
+    description="Los productos de reventa se compran ya hechos: no llevan receta ni órdenes de producción. Su costo es el promedio ponderado de sus compras."
+  >
+    <a [routerLink]="['/backoffice/products', ctx.id(), 'compras']" class="btn btn-sm btn-primary">Ver compras</a>
+  </app-empty-state>
+} @else if (formula(); as f) {
   <div class="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-5">
     <app-stat-card label="Receta" [value]="f.nombre" />
     <app-stat-card label="Rinde por lote" [value]="(f.cantidadProduccion | number: '1.0-3') + ' u'" />

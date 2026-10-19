@@ -28,6 +28,15 @@ export const API_ENDPOINTS = {
   roles: {
     root: '/roles',
   },
+  sucursales: {
+    root: '/sucursales',
+    byId: (id: Id) => `/sucursales/${id}`,
+    /** Sucursal del usuario de la sesión, con sus cajas activas. */
+    mine: '/sucursales/mi-sucursal',
+    usuarios: (id: Id) => `/sucursales/${id}/usuarios`,
+    cajas: (id: Id) => `/sucursales/${id}/cajas`,
+    cajaById: (id: Id, cajaId: Id) => `/sucursales/${id}/cajas/${cajaId}`,
+  },
   materiasPrimas: {
     root: '/materias-primas',
     stockBajo: '/materias-primas/stock-bajo',
@@ -100,6 +109,22 @@ export const API_ENDPOINTS = {
     root: '/escalas-precio',
     byId: (id: Id) => `/escalas-precio/${id}`,
     byProducto: (id: Id) => `/escalas-precio/producto/${id}`,
+  },
+  empresa: {
+    /** GET público; PUT solo administración. */
+    root: '/empresa',
+    logo: '/empresa/logo',
+  },
+  proveedores: {
+    root: '/proveedores',
+    byId: (id: Id) => `/proveedores/${id}`,
+    activo: (id: Id) => `/proveedores/${id}/activo`,
+  },
+  compras: {
+    root: '/compras',
+    byId: (id: Id) => `/compras/${id}`,
+    /** Últimas compras de un insumo (?materiaPrimaId) o de un producto de reventa (?productoId). */
+    ultimas: '/compras/ultimas',
   },
   orders: {
     place: '/ventas/pedido',

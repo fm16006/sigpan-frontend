@@ -119,6 +119,8 @@ export function saleToReceipt(sale: Sale): Receipt {
     numero: sale.id,
     fecha: new Date(sale.fecha),
     cajero: sale.usuario ?? '—',
+    sucursal: sale.sucursal ?? '',
+    caja: sale.caja ?? '',
     documento: 'TICKET',
     metodo: 'EFECTIVO',
     lineas,

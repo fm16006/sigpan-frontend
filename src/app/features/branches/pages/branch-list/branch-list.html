@@ -1,0 +1,87 @@
+<app-page-header
+  title="Sucursales"
+  subtitle="Locales de la panadería con sus cajas y el personal asignado. Hacé clic en una sucursal para abrir su ficha."
+  [crumbs]="crumbs"
+>
+  <button type="button" class="btn btn-primary" (click)="creating.set(true)">
+    <app-icon name="plus" />
+    Nueva sucursal
+  </button>
+</app-page-header>
+
+<div class="mb-4 flex flex-wrap items-center gap-3">
+  <label class="input input-bordered flex h-10 min-w-0 flex-1 basis-64 items-center gap-2 sm:max-w-md">
+    <app-icon name="search" [size]="16" class="text-base-content/55" />
+    <input
+      type="search"
+      class="grow"
+      placeholder="Buscar por nombre, código o dirección"
+      aria-label="Buscar sucursal"
+      [value]="query()"
+      (input)="query.set($any($event.target).value)"
+    />
+  </label>
+</div>
+
+<app-resource-state
+  [loading]="branches.isLoading() && all().length === 0"
+  [failed]="!!branches.error()"
+  [empty]="rows().length === 0"
+  [emptyTitle]="all().length === 0 ? 'Sin sucursales' : 'Sin resultados'"
+  [emptyDescription]="
+    all().length === 0 ? 'Creá la primera con “Nueva sucursal”.' : 'Probá con otra búsqueda.'
+  "
+  (retry)="branches.reload()"
+>
+  <section class="overflow-hidden rounded-box border border-base-300 bg-base-100" aria-label="Lista de sucursales">
+    <div
+      class="list-row max-md:hidden border-t-0! py-3.5! grid-cols-[minmax(12rem,2fr)_minmax(0,2fr)_5rem_6rem_7rem_1rem]"
+      aria-hidden="true"
+    >
+      <span class="list-th">Sucursal</span>
+      <span class="list-th">Dirección</span>
+      <span class="list-th text-end">Cajas</span>
+      <span class="list-th text-end">Usuarios</span>
+      <span class="list-th">Estado</span>
+      <span></span>
+    </div>
+    @for (branch of rows(); track branch.id) {
+      <a
+        class="list-row grid-cols-[minmax(12rem,2fr)_minmax(0,2fr)_5rem_6rem_7rem_1rem] max-md:grid-cols-[minmax(0,1fr)_auto] max-md:gap-y-2"
+        [routerLink]="['/backoffice/branches', branch.id]"
+        [attr.aria-label]="'Abrir ficha de ' + branch.nombre"
+      >
+        <span class="flex min-w-0 items-center gap-3">
+          <span
+            class="grid size-10 shrink-0 place-items-center rounded-lg bg-base-200 text-base-content/70"
+            aria-hidden="true"
+          >
+            <app-icon name="store" [size]="20" />
+          </span>
+          <span class="flex min-w-0 flex-col">
+            <span class="truncate font-semibold">{{ branch.nombre }}</span>
+            <span class="font-mono text-xs text-base-content/60">{{ branch.codigo }}</span>
+          </span>
+        </span>
+        <span class="truncate text-sm text-base-content/75 max-md:order-last max-md:col-span-2">
+          {{ branch.direccion || 'Sin dirección' }}
+        </span>
+        <span class="text-end tabular-nums max-md:hidden">{{ activeRegisters(branch) }}</span>
+        <span class="text-end tabular-nums max-md:hidden">{{ branch.cantidadUsuarios }}</span>
+        <span class="max-md:col-start-2 max-md:row-start-1 max-md:justify-self-end md:justify-self-start">
+          <app-status-chip [label]="branch.activo ? 'Activa' : 'Inactiva'" [tone]="branch.activo ? 'ok' : 'neutral'" />
+        </span>
+        <app-icon name="chevron" class="text-base-content/40 max-md:hidden" />
+      </a>
+    }
+    <div class="border-t border-base-300 px-5 py-3 text-sm text-base-content/60">
+      {{ rows().length }} de {{ all().length }} sucursales
+    </div>
+  </section>
+</app-resource-state>
+
+<app-branch-form-drawer
+  [open]="creating()"
+  (closed)="creating.set(false)"
+  (saved)="onCreated($event)"
+/>

@@ -1,0 +1,140 @@
+<app-resource-state
+  [loading]="store.status() === 'loading' && !store.company()"
+  [failed]="store.status() === 'failed' && !store.company()"
+  [empty]="false"
+  (retry)="store.load(true)"
+>
+  @if (store.company(); as c) {
+    <app-detail-header [crumbs]="crumbs" [title]="c.nombreComercial" [code]="'NIT ' + c.nit">
+      <div media>
+        @if (c.logoUrl) {
+          <img
+            [src]="c.logoUrl"
+            [alt]="'Logo de ' + c.nombreComercial"
+            class="size-[72px] shrink-0 rounded-2xl border border-base-300 bg-base-100 object-contain p-1"
+          />
+        } @else {
+          <div
+            role="img"
+            aria-label="Sin logo"
+            class="grid size-[72px] shrink-0 place-items-center rounded-2xl border border-base-300 bg-primary/10 font-serif text-3xl font-semibold text-primary"
+          >
+            {{ c.nombreComercial.charAt(0).toUpperCase() }}
+          </div>
+        }
+      </div>
+
+      <div actions class="contents">
+        <button type="button" class="btn btn-primary" (click)="editing.set(true)">
+          <app-icon name="edit" />
+          Editar
+        </button>
+        <div class="relative" data-more-menu>
+          <button
+            type="button"
+            class="btn btn-square"
+            aria-label="Más acciones"
+            aria-haspopup="menu"
+            [attr.aria-expanded]="menuOpen()"
+            [disabled]="busy()"
+            (click)="menuOpen.set(!menuOpen())"
+          >
+            @if (busy()) {
+              <span class="loading loading-spinner loading-sm"></span>
+            } @else {
+              <app-icon name="more" />
+            }
+          </button>
+          @if (menuOpen()) {
+            <ul
+              role="menu"
+              class="absolute right-0 top-full z-30 mt-1 flex w-52 flex-col rounded-box border border-base-300 bg-base-100 p-1 shadow-lg"
+            >
+              <li role="none">
+                <button
+                  type="button"
+                  role="menuitem"
+                  class="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-base-200"
+                  (click)="logoInput.click(); menuOpen.set(false)"
+                >
+                  {{ c.logoUrl ? 'Cambiar logo' : 'Subir logo' }}
+                </button>
+              </li>
+              @if (c.logoUrl) {
+                <li role="none">
+                  <button
+                    type="button"
+                    role="menuitem"
+                    class="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-base-200"
+                    (click)="removeLogo()"
+                  >
+                    Quitar logo
+                  </button>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+        <input
+          #logoInput
+          type="file"
+          class="hidden"
+          tabindex="-1"
+          aria-label="Elegir logo de la empresa"
+          [accept]="acceptedTypes"
+          (change)="uploadLogo($event)"
+        />
+      </div>
+    </app-detail-header>
+
+    <div class="grid items-start gap-4 lg:grid-cols-2">
+      <section class="panel" aria-labelledby="h-legal">
+        <h2 id="h-legal" class="font-serif text-lg font-semibold">Datos legales</h2>
+        <dl class="grid grid-cols-[8.5rem_minmax(0,1fr)] gap-x-4 gap-y-2.5 text-sm max-sm:grid-cols-1 max-sm:gap-y-0.5">
+          <dt class="text-base-content/60">Razón social</dt>
+          <dd class="max-sm:mb-2">{{ c.razonSocial }}</dd>
+          <dt class="text-base-content/60">Nombre comercial</dt>
+          <dd class="max-sm:mb-2">{{ c.nombreComercial }}</dd>
+          <dt class="text-base-content/60">NIT</dt>
+          <dd class="font-mono text-[0.8rem] max-sm:mb-2">{{ c.nit }}</dd>
+          <dt class="text-base-content/60">NRC</dt>
+          <dd class="font-mono text-[0.8rem] max-sm:mb-2">{{ c.nrc }}</dd>
+          <dt class="text-base-content/60">Giro</dt>
+          <dd class="max-sm:mb-2">{{ c.giro }}</dd>
+        </dl>
+      </section>
+
+      <section class="panel" aria-labelledby="h-contacto">
+        <h2 id="h-contacto" class="font-serif text-lg font-semibold">Contacto</h2>
+        <dl class="grid grid-cols-[8.5rem_minmax(0,1fr)] gap-x-4 gap-y-2.5 text-sm max-sm:grid-cols-1 max-sm:gap-y-0.5">
+          <dt class="text-base-content/60">Dirección</dt>
+          <dd class="max-sm:mb-2">{{ c.direccion }}</dd>
+          <dt class="text-base-content/60">Teléfono</dt>
+          <dd class="max-sm:mb-2">{{ c.telefono }}</dd>
+          <dt class="text-base-content/60">Correo</dt>
+          <dd class="max-sm:mb-2">
+            @if (c.correo) {
+              <a [href]="'mailto:' + c.correo" class="text-primary hover:underline">{{ c.correo }}</a>
+            } @else {
+              <span class="text-base-content/50">Sin correo registrado</span>
+            }
+          </dd>
+        </dl>
+      </section>
+    </div>
+
+    <p class="mt-4 text-xs text-base-content/55">
+      Estos datos se imprimen en el ticket del punto de venta y se muestran en la tienda en línea.
+      @if (c.actualizadoEn) {
+        Última actualización: {{ c.actualizadoEn | date: "d 'de' MMM y, h:mm a" }}.
+      }
+    </p>
+
+    <app-company-drawer
+      [open]="editing()"
+      [company]="c"
+      (closed)="editing.set(false)"
+      (saved)="editing.set(false)"
+    />
+  }
+</app-resource-state>

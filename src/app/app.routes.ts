@@ -71,6 +71,18 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'purchases',
+        canActivate: [roleGuard(['ADMINISTRADOR', 'JEFE_PRODUCCION', 'BODEGUERO'])],
+        loadChildren: () =>
+          import('./features/purchases/purchases.routes').then((m) => m.PURCHASES_ROUTES),
+      },
+      {
+        path: 'suppliers',
+        canActivate: [roleGuard(['ADMINISTRADOR', 'JEFE_PRODUCCION', 'BODEGUERO'])],
+        loadChildren: () =>
+          import('./features/suppliers/suppliers.routes').then((m) => m.SUPPLIERS_ROUTES),
+      },
+      {
         path: 'movements',
         canActivate: [roleGuard(['ADMINISTRADOR', 'JEFE_PRODUCCION', 'BODEGUERO'])],
         loadChildren: () =>
@@ -112,9 +124,20 @@ export const routes: Routes = [
         loadChildren: () => import('./features/audit/audit.routes').then((m) => m.AUDIT_ROUTES),
       },
       {
+        path: 'company',
+        canActivate: [roleGuard(['ADMINISTRADOR'])],
+        loadChildren: () => import('./features/company/company.routes').then((m) => m.COMPANY_ROUTES),
+      },
+      {
         path: 'users',
         canActivate: [roleGuard(['ADMINISTRADOR'])],
         loadChildren: () => import('./features/users/users.routes').then((m) => m.USERS_ROUTES),
+      },
+      {
+        path: 'branches',
+        canActivate: [roleGuard(['ADMINISTRADOR'])],
+        loadChildren: () =>
+          import('./features/branches/branches.routes').then((m) => m.BRANCHES_ROUTES),
       },
     ],
   },

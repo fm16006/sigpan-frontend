@@ -3,7 +3,7 @@ import { Observable } from 'rxjs';
 import { API_ENDPOINTS } from '../../../core/constants/api-endpoints';
 import { ApiClient } from '../../../core/http/api-client';
 import { Id } from '../../../core/models/api.model';
-import { OrderStatus, Sale, SaleRequest } from '../../../core/models/order.model';
+import { OrderStatus, Sale, SaleFilter, SaleRequest } from '../../../core/models/order.model';
 
 @Injectable({ providedIn: 'root' })
 export class OrderService {
@@ -25,8 +25,12 @@ export class OrderService {
     return this.api.url(API_ENDPOINTS.orders.queue);
   }
 
-  cashCutUrl(fecha: string): string {
-    return this.api.url(API_ENDPOINTS.orders.cashCut, { fecha });
+  cashCutUrl(fecha: string, filter: SaleFilter = {}): string {
+    return this.api.url(API_ENDPOINTS.orders.cashCut, {
+      fecha,
+      sucursalId: filter.sucursalId,
+      cajaId: filter.cajaId,
+    });
   }
 
   changeStatus(id: Id, estado: OrderStatus): Observable<Sale> {

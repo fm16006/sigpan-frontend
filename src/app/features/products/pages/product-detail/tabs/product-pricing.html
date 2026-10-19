@@ -39,7 +39,13 @@
           </div>
         </div>
         @if (ctx.costoUnitario() === null) {
-          <p class="text-xs text-base-content/60">El costo sale de la receta del producto; sin receta no hay margen.</p>
+          <p class="text-xs text-base-content/60">
+            @if (ctx.resale()) {
+              El costo es el promedio de sus compras; sin compras no hay margen.
+            } @else {
+              El costo sale de la receta del producto; sin receta no hay margen.
+            }
+          </p>
         }
       </section>
 

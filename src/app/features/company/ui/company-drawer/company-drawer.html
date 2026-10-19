@@ -1,0 +1,172 @@
+<app-form-drawer
+  [open]="open()"
+  title="Editar datos de la empresa"
+  subtitle="Salen en el ticket del punto de venta y en el pie de la tienda."
+  (closed)="cancel()"
+>
+  @if (formError(); as message) {
+    <div role="alert" class="alert alert-error mb-4 py-2 text-sm">{{ message }}</div>
+  }
+  <form id="company-form" class="flex flex-col gap-6" [formGroup]="form" (ngSubmit)="save()" novalidate>
+    <fieldset class="flex flex-col gap-3">
+      <legend class="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.09em] text-base-content/55">
+        Identificación
+      </legend>
+      <div>
+        <label class="mb-1.5 block text-sm font-semibold" for="razonSocial">Razón social</label>
+        <input
+          id="razonSocial"
+          type="text"
+          autocomplete="organization"
+          [attr.maxlength]="limits.razonSocial"
+          formControlName="razonSocial"
+          class="input input-bordered w-full"
+          [class.input-error]="!!errorFor('razonSocial')"
+        />
+        @if (errorFor('razonSocial'); as message) {
+          <p class="mt-1 text-xs text-error">{{ message }}</p>
+        } @else {
+          <p class="mt-1 text-xs text-base-content/55">El nombre legal, p. ej. «SigPan, S.A. de C.V.».</p>
+        }
+      </div>
+      <div>
+        <label class="mb-1.5 block text-sm font-semibold" for="nombreComercial">Nombre comercial</label>
+        <input
+          id="nombreComercial"
+          type="text"
+          [attr.maxlength]="limits.nombreComercial"
+          formControlName="nombreComercial"
+          class="input input-bordered w-full"
+          [class.input-error]="!!errorFor('nombreComercial')"
+        />
+        @if (errorFor('nombreComercial'); as message) {
+          <p class="mt-1 text-xs text-error">{{ message }}</p>
+        } @else {
+          <p class="mt-1 text-xs text-base-content/55">Es el que ven los clientes en la tienda y en el ticket.</p>
+        }
+      </div>
+    </fieldset>
+
+    <fieldset class="flex flex-col gap-3">
+      <legend class="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.09em] text-base-content/55">
+        Datos fiscales
+      </legend>
+      <div class="grid gap-3 sm:grid-cols-2">
+        <div>
+          <label class="mb-1.5 block text-sm font-semibold" for="nit">NIT</label>
+          <input
+            id="nit"
+            type="text"
+            inputmode="numeric"
+            placeholder="0000-000000-000-0"
+            maxlength="17"
+            formControlName="nit"
+            class="input input-bordered w-full font-mono text-sm"
+            [class.input-error]="!!errorFor('nit')"
+          />
+          @if (errorFor('nit'); as message) {
+            <p class="mt-1 text-xs text-error">{{ message }}</p>
+          } @else {
+            <p class="mt-1 text-xs text-base-content/55">14 dígitos con guiones. Persona natural: 00000000-0.</p>
+          }
+        </div>
+        <div>
+          <label class="mb-1.5 block text-sm font-semibold" for="nrc">NRC</label>
+          <input
+            id="nrc"
+            type="text"
+            inputmode="numeric"
+            placeholder="000000-0"
+            maxlength="9"
+            formControlName="nrc"
+            class="input input-bordered w-full font-mono text-sm"
+            [class.input-error]="!!errorFor('nrc')"
+          />
+          @if (errorFor('nrc'); as message) {
+            <p class="mt-1 text-xs text-error">{{ message }}</p>
+          } @else {
+            <p class="mt-1 text-xs text-base-content/55">Hasta 7 dígitos, guion y verificador.</p>
+          }
+        </div>
+      </div>
+      <div>
+        <label class="mb-1.5 block text-sm font-semibold" for="giro">Giro o actividad económica</label>
+        <input
+          id="giro"
+          type="text"
+          [attr.maxlength]="limits.giro"
+          formControlName="giro"
+          class="input input-bordered w-full"
+          [class.input-error]="!!errorFor('giro')"
+        />
+        @if (errorFor('giro'); as message) {
+          <p class="mt-1 text-xs text-error">{{ message }}</p>
+        }
+      </div>
+    </fieldset>
+
+    <fieldset class="flex flex-col gap-3">
+      <legend class="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.09em] text-base-content/55">
+        Contacto
+      </legend>
+      <div>
+        <label class="mb-1.5 block text-sm font-semibold" for="direccion">Dirección</label>
+        <input
+          id="direccion"
+          type="text"
+          autocomplete="street-address"
+          [attr.maxlength]="limits.direccion"
+          formControlName="direccion"
+          class="input input-bordered w-full"
+          [class.input-error]="!!errorFor('direccion')"
+        />
+        @if (errorFor('direccion'); as message) {
+          <p class="mt-1 text-xs text-error">{{ message }}</p>
+        }
+      </div>
+      <div class="grid gap-3 sm:grid-cols-2">
+        <div>
+          <label class="mb-1.5 block text-sm font-semibold" for="telefono">Teléfono</label>
+          <input
+            id="telefono"
+            type="tel"
+            placeholder="2222-3333"
+            maxlength="20"
+            formControlName="telefono"
+            class="input input-bordered w-full"
+            [class.input-error]="!!errorFor('telefono')"
+          />
+          @if (errorFor('telefono'); as message) {
+            <p class="mt-1 text-xs text-error">{{ message }}</p>
+          }
+        </div>
+        <div>
+          <label class="mb-1.5 block text-sm font-semibold" for="correo">Correo (opcional)</label>
+          <input
+            id="correo"
+            type="email"
+            autocomplete="email"
+            [attr.maxlength]="limits.correo"
+            formControlName="correo"
+            class="input input-bordered w-full"
+            [class.input-error]="!!errorFor('correo')"
+          />
+          @if (errorFor('correo'); as message) {
+            <p class="mt-1 text-xs text-error">{{ message }}</p>
+          }
+        </div>
+      </div>
+      <p class="text-xs text-base-content/55">El logo se cambia desde el menú «Más» de la ficha.</p>
+    </fieldset>
+  </form>
+
+  <div footer class="contents">
+    <button type="button" class="btn btn-ghost" (click)="cancel()">Cancelar</button>
+    <button type="submit" form="company-form" class="btn btn-primary" [disabled]="saving()">
+      @if (saving()) {
+        <span class="loading loading-spinner loading-sm"></span>
+      }
+      Guardar
+    </button>
+  </div>
+</app-form-drawer>

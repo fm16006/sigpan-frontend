@@ -6,6 +6,10 @@ import {
   ESPECIALIDAD_LABELS,
   ESPECIALIDADES,
   Especialidad,
+  PRODUCT_TYPES,
+  PRODUCT_TYPE_LABELS,
+  ProductType,
+  isResale,
 } from '../../../../core/models/catalog.model';
 import { Auth } from '../../../../core/services/auth';
 import { MoneyPipe } from '../../../../shared/pipes/money.pipe';
@@ -56,6 +60,11 @@ export class ProductList {
     label: ESPECIALIDAD_LABELS[value],
   }));
   protected readonly especialidadLabels = ESPECIALIDAD_LABELS;
+  protected readonly productTypes = PRODUCT_TYPES.map((value) => ({
+    value,
+    label: PRODUCT_TYPE_LABELS[value],
+  }));
+  protected readonly isResale = isResale;
 
   protected readonly products = httpResource<CatalogProduct[]>(() => this.service.productsUrl(), {
     defaultValue: [],
@@ -65,6 +74,7 @@ export class ProductList {
   protected readonly query = signal('');
   protected readonly segment = signal<StockSegment>('todos');
   protected readonly especialidad = signal<Especialidad | ''>('');
+  protected readonly tipo = signal<ProductType | ''>('');
   protected readonly drawerOpen = signal(false);
 
   protected readonly kpis = computed(() => productKpis(this.all()));
@@ -74,6 +84,7 @@ export class ProductList {
       query: this.query(),
       segment: this.segment(),
       especialidad: this.especialidad(),
+      tipo: this.tipo(),
     }).map((product) => {
       const state = stockState(product);
       return { product, state, percent: stockPercent(product) };
@@ -82,6 +93,10 @@ export class ProductList {
 
   protected setEspecialidad(value: string): void {
     this.especialidad.set(value as Especialidad | '');
+  }
+
+  protected setTipo(value: string): void {
+    this.tipo.set(value as ProductType | '');
   }
 
   protected onSaved(): void {

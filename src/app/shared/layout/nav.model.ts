@@ -44,6 +44,8 @@ export const BACKOFFICE_NAV_GROUPS: readonly NavGroup[] = [
       { label: 'Productos', path: '/backoffice/products', icon: 'bread', roles: ADMIN_JEFE },
       { label: 'Materia prima', path: '/backoffice/raw-materials', icon: 'sack', roles: INVENTARIO },
       { label: 'Combos', path: '/backoffice/combos', icon: 'combo', roles: ['ADMINISTRADOR'] },
+      { label: 'Compras', path: '/backoffice/purchases', icon: 'receipt', roles: INVENTARIO },
+      { label: 'Proveedores', path: '/backoffice/suppliers', icon: 'truck', roles: INVENTARIO },
       { label: 'Movimientos', path: '/backoffice/movements', icon: 'movements', roles: INVENTARIO },
     ],
   },
@@ -65,6 +67,8 @@ export const BACKOFFICE_NAV_GROUPS: readonly NavGroup[] = [
     label: 'Administración',
     items: [
       { label: 'Usuarios', path: '/backoffice/users', icon: 'users', roles: ['ADMINISTRADOR'] },
+      { label: 'Empresa', path: '/backoffice/company', icon: 'info', roles: ['ADMINISTRADOR'] },
+      { label: 'Sucursales', path: '/backoffice/branches', icon: 'store', roles: ['ADMINISTRADOR'] },
       { label: 'Bitácora', path: '/backoffice/audit', icon: 'clock', roles: ['ADMINISTRADOR'] },
     ],
   },

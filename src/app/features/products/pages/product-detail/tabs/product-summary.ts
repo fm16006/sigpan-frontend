@@ -1,7 +1,9 @@
 import { Component, computed, inject } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { ESPECIALIDAD_LABELS } from '../../../../../core/models/catalog.model';
+import { ESPECIALIDAD_LABELS, PRODUCT_TYPE_LABELS } from '../../../../../core/models/catalog.model';
+import { ItemPurchase } from '../../../../../core/models/purchase.model';
+import { documentLabel, shortDate } from '../../../../purchases/purchase-calc';
 import { todayIso } from '../../../../../core/utils/dates';
 import { MoneyPipe } from '../../../../../shared/pipes/money.pipe';
 import { Icon } from '../../../../../shared/ui/icon/icon';
@@ -16,6 +18,8 @@ import { ProductContext } from '../product-context';
 export class ProductSummary {
   protected readonly ctx = inject(ProductContext);
   protected readonly especialidadLabels = ESPECIALIDAD_LABELS;
+  protected readonly typeLabels = PRODUCT_TYPE_LABELS;
+  protected readonly shortDate = shortDate;
   protected readonly promotionChips = PROMOTION_CHIPS;
   private readonly today = todayIso();
 
@@ -57,6 +61,10 @@ export class ProductSummary {
   protected readonly combosActivos = computed(() =>
     this.ctx.combos().filter(({ combo }) => combo === null || combo.activo),
   );
+
+  protected docLabel(item: ItemPurchase): string {
+    return documentLabel(item.tipoDocumento, item.numeroDocumento);
+  }
 
   protected stateOf(promotion: Parameters<typeof promotionState>[0]) {
     return promotionState(promotion, this.today);

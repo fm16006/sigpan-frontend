@@ -140,6 +140,29 @@ describe('filterProducts', () => {
   });
 });
 
+describe('filterProducts por tipo', () => {
+  const list = [
+    product({ id: 1, nombre: 'Concha', tipo: 'ELABORADO' }),
+    product({ id: 2, nombre: 'Gaseosa', codigo: 'BE-001', tipo: 'REVENTA' }),
+    // Una respuesta sin tipo se trata como elaborado.
+    product({ id: 3, nombre: 'Semita' }),
+  ];
+  const ids = (tipo: 'ELABORADO' | 'REVENTA' | '') =>
+    filterProducts(list, { query: '', segment: 'todos', especialidad: '', tipo }).map((p) => p.id);
+
+  it('sin tipo devuelve todos', () => {
+    expect(ids('')).toEqual([1, 2, 3]);
+  });
+
+  it('filtra los de reventa', () => {
+    expect(ids('REVENTA')).toEqual([2]);
+  });
+
+  it('los elaborados incluyen los que no informan tipo', () => {
+    expect(ids('ELABORADO')).toEqual([1, 3]);
+  });
+});
+
 describe('marginPercent', () => {
   it('calcula el margen sobre el precio', () => {
     expect(marginPercent(0.45, 0.26)).toBe(42);

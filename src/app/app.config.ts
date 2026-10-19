@@ -24,6 +24,7 @@ import { authInterceptor } from './core/interceptors/auth-interceptor';
 import { errorInterceptor } from './core/interceptors/error-interceptor';
 import { timeoutInterceptor } from './core/interceptors/timeout-interceptor';
 import { Auth } from './core/services/auth';
+import { CompanyStore } from './core/services/company-store';
 
 // Fechas en español de El Salvador (oct, octubre); números con punto decimal como hasta ahora.
 registerLocaleData(localeEsSv);
@@ -58,6 +59,14 @@ export const appConfig: ApplicationConfig = {
         return;
       }
       return inject(Auth).restoreSession();
+    }),
+
+    // Datos de la empresa (ticket, pie, marca). No bloquea el arranque: mientras llegan,
+    // o si falla, la app usa BUSINESS_INFO.
+    provideAppInitializer(() => {
+      if (isPlatformBrowser(inject(PLATFORM_ID))) {
+        inject(CompanyStore).load();
+      }
     }),
   ],
 };

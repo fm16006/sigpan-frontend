@@ -6,6 +6,7 @@ import { map } from 'rxjs';
 import { Id } from '../../../../core/models/api.model';
 import { RawMaterialStock, StockMovement } from '../../../../core/models/inventory.model';
 import { Formula, RawMaterial } from '../../../../core/models/production.model';
+import { ItemPurchase } from '../../../../core/models/purchase.model';
 import { Auth } from '../../../../core/services/auth';
 import {
   buildMaterialRow,
@@ -16,6 +17,7 @@ import {
 } from '../../raw-material-calc';
 import { FormulaUsage } from '../../raw-material.model';
 import { valueOr } from '../../../../core/http/resource-value';
+import { PurchaseService } from '../../../purchases/services/purchase.service';
 import { InventoryService } from '../../services/inventory.service';
 
 /** Ventana, en días, del consumo que muestra el resumen. */
@@ -38,6 +40,7 @@ export interface RecipeUsageRow {
 @Injectable()
 export class MaterialDetailStore {
   private readonly service = inject(InventoryService);
+  private readonly purchaseService = inject(PurchaseService);
   private readonly route = inject(ActivatedRoute);
   private readonly auth = inject(Auth);
 
@@ -59,6 +62,12 @@ export class MaterialDetailStore {
     () => this.service.movementsUrl('materia-prima', this.id()),
     { defaultValue: [] },
   );
+  /** Últimas compras a proveedores de este insumo (con proveedor y documento). */
+  readonly purchases = httpResource<ItemPurchase[]>(
+    () => this.purchaseService.latestUrl('materia-prima', this.id(), 5),
+    { defaultValue: [] },
+  );
+  readonly purchaseList = computed(() => valueOr(this.purchases, []));
   readonly usage = httpResource<FormulaUsage[]>(
     () => (this.canSeeRecipes ? this.service.formulaLinesUrl(this.id()) : undefined),
     { defaultValue: [] },
@@ -93,12 +102,6 @@ export class MaterialDetailStore {
     );
   });
 
-  readonly purchases = computed(() =>
-    this.kardex()
-      .filter((line) => line.movement.tipo === 'ENTRADA')
-      .slice(0, 5),
-  );
-
   readonly consumed = computed(() => consumption(this.movementList(), CONSUMPTION_DAYS));
   readonly supplyDays = computed(() => {
     const row = this.row();
@@ -131,6 +134,7 @@ export class MaterialDetailStore {
     this.material.reload();
     this.stocks.reload();
     this.movements.reload();
+    this.purchases.reload();
     this.usage.reload();
   }
 }

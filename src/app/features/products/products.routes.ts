@@ -24,6 +24,12 @@ export const PRODUCTS_ROUTES: Routes = [
         title: 'Producto · Receta y costo',
       },
       {
+        path: 'compras',
+        loadComponent: () =>
+          import('./pages/product-detail/tabs/product-purchases').then((m) => m.ProductPurchases),
+        title: 'Producto · Compras',
+      },
+      {
         path: 'existencias',
         loadComponent: () =>
           import('./pages/product-detail/tabs/product-stock').then((m) => m.ProductStock),

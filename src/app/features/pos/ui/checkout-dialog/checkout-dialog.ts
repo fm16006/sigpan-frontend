@@ -23,11 +23,12 @@ import {
   switchMap,
   timer,
 } from 'rxjs';
-import { BUSINESS_INFO } from '../../../../core/config/business.config';
+import { CompanyStore } from '../../../../core/services/company-store';
 import { AppError } from '../../../../core/http/app-error';
 import { Sale } from '../../../../core/models/order.model';
 import { MoneyPipe } from '../../../../shared/pipes/money.pipe';
 import { OrderService } from '../../../storefront/services/order.service';
+import { CashRegisterStore } from '../../services/cash-register.store';
 import {
   CardPayment,
   CASH_SHORTCUTS,
@@ -91,6 +92,9 @@ function after<T>(ms: number, value: T): Observable<T> {
 export class CheckoutDialog {
   private readonly orders = inject(OrderService);
   private readonly printer = inject(TicketPrinter);
+  /** Encabezado del ticket: datos de la empresa (o los de respaldo mientras cargan). */
+  private readonly company = inject(CompanyStore);
+  private readonly register = inject(CashRegisterStore);
   protected readonly terminal = inject(CardTerminal);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -117,7 +121,7 @@ export class CheckoutDialog {
   /** El ticket completo, para la impresión del navegador (solo se ve al imprimir). */
   protected readonly receiptText = computed(() => {
     const receipt = this.receipt();
-    return receipt ? formatReceipt(receipt, BUSINESS_INFO).join('\n') : '';
+    return receipt ? formatReceipt(receipt, this.company.info()).join('\n') : '';
   });
   private readonly page = inject(DOCUMENT);
   protected readonly cardScreen = signal<TerminalScreen>({ kind: 'conectando' });
@@ -322,6 +326,8 @@ export class CheckoutDialog {
           productoId: line.product.id,
           cantidad: line.quantity,
         })),
+        // Sin caja registrada (turno anterior a HU-60) el backend usa la primera de la sucursal.
+        ...(this.register.lugar()?.cajaId != null ? { cajaId: this.register.lugar()!.cajaId! } : {}),
       })
       .pipe(
         switchMap((sale) => after(MIN_PROCESSING_MS - (Date.now() - startedAt), sale)),
@@ -362,7 +368,7 @@ export class CheckoutDialog {
     this.phase.set('imprimiendo');
 
     this.printer
-      .print(formatReceipt(receipt, BUSINESS_INFO))
+      .print(formatReceipt(receipt, this.company.info()))
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (line) => this.printed.update((lines) => [...lines, line]),
@@ -390,6 +396,8 @@ export class CheckoutDialog {
       numero: sale.id,
       fecha: sale.fecha ? new Date(sale.fecha) : new Date(),
       cajero: this.cashier(),
+      sucursal: sale.sucursal ?? this.register.lugar()?.sucursal ?? '',
+      caja: sale.caja ?? this.register.lugar()?.caja ?? '',
       documento: this.document(),
       metodo: this.method(),
       lineas,
