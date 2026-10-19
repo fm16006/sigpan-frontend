@@ -8,6 +8,10 @@
       <div class="contents" chips>
         <app-status-chip [tone]="c.activo ? 'ok' : 'neutral'" [label]="c.activo ? 'Activo' : 'Inactivo'" />
         <app-status-chip [tone]="tone(available())" [label]="label(available())" />
+        <app-status-chip
+          [tone]="c.categoria ? 'info' : 'neutral'"
+          [label]="c.categoria ? 'Categoría: ' + c.categoria : 'Sin categoría · va a «Combos»'"
+        />
       </div>
       <div class="contents" actions>
         <button type="button" class="btn btn-sm" (click)="editOpen.set(true)">
@@ -74,20 +78,25 @@
             @for (row of rows(); track row.line.id) {
               <div class="relative">
                 <a
-                  class="list-row grid-cols-2 gap-y-1 max-md:pe-14 md:grid-cols-[minmax(0,1.6fr)_70px_80px_80px_minmax(0,1.1fr)_16px_36px]"
+                  class="list-row max-md:grid-cols-[minmax(0,1fr)_auto] gap-y-1 max-md:pe-14 md:grid-cols-[minmax(0,1.6fr)_70px_80px_80px_minmax(0,1.1fr)_16px_36px]"
                   [routerLink]="productLink(row.line.productoId)"
                   [attr.aria-label]="'Abrir la ficha de ' + row.line.producto"
                 >
-                  <span class="min-w-0">
-                    <span class="block truncate font-semibold">{{ row.line.producto }}</span>
+                  <!-- Teléfono: nombre completo arriba (puede ocupar varias líneas); debajo, cantidad × precio y subtotal, y «alcanza para». -->
+                  <span class="min-w-0 max-md:col-span-2">
+                    <span class="block font-semibold max-md:break-words md:truncate">{{ row.line.producto }}</span>
                     <span class="block text-xs text-base-content/55">
                       {{ row.product?.disponible ?? 0 | number: '1.0-3' }} en existencia
                     </span>
                   </span>
-                  <span class="tabular-nums md:text-end">× {{ row.line.cantidad }}</span>
-                  <span class="tabular-nums md:text-end">{{ row.unitPrice | money }}</span>
-                  <span class="tabular-nums md:text-end">{{ row.subtotal | money }}</span>
-                  <span class="flex flex-wrap items-center gap-2 text-sm">
+                  <span class="text-sm tabular-nums text-base-content/75 md:hidden">
+                    {{ row.line.cantidad }} × {{ row.unitPrice | money }}
+                  </span>
+                  <span class="tabular-nums max-md:hidden md:text-end">× {{ row.line.cantidad }}</span>
+                  <span class="tabular-nums max-md:hidden md:text-end">{{ row.unitPrice | money }}</span>
+                  <span class="tabular-nums max-md:text-end max-md:font-semibold md:text-end">{{ row.subtotal | money }}</span>
+                  <span class="flex flex-wrap items-center gap-2 text-sm max-md:col-span-2">
+                    <span class="text-base-content/60 md:hidden">Alcanza para</span>
                     {{ row.reaches }} {{ row.reaches === 1 ? 'combo' : 'combos' }}
                     @if (row.limiting) {
                       <app-status-chip tone="warn" label="Limita" />

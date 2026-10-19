@@ -1,6 +1,8 @@
 import { CatalogProduct } from '../../core/models/catalog.model';
+import { PosCombo } from '../../core/models/combo.model';
 import { PriceScale } from '../../core/models/price-scale.model';
 import { MoneyPipe } from '../../shared/pipes/money.pipe';
+import { PosLine } from './models/checkout.model';
 
 /**
  * Busca un producto por lo que llega del lector o del teclado: primero el `codigo`
@@ -38,6 +40,133 @@ export function filterProducts(
         String(product.id) === text,
     )
     .sort((a, b) => a.categoria.localeCompare(b.categoria) || a.nombre.localeCompare(b.nombre));
+}
+
+/** Categoría donde se muestran los combos que no tienen una propia. */
+export const COMBOS_CATEGORY = 'Combos';
+
+/** Categoría con la que un combo aparece en la cuadrícula del punto de venta. */
+export function comboCategory(combo: Pick<PosCombo, 'categoria'>): string {
+  return combo.categoria?.trim() || COMBOS_CATEGORY;
+}
+
+/** Lo que muestra la cuadrícula del punto de venta: un producto o un combo, con su categoría. */
+export type PosTile =
+  | { readonly kind: 'product'; readonly category: string; readonly product: CatalogProduct }
+  | { readonly kind: 'combo'; readonly category: string; readonly combo: PosCombo };
+
+/**
+ * Categorías de la cuadrícula: las de los productos y las de los combos. Una categoría que solo
+ * tiene combos también aparece, y los combos sin categoría suman «Combos».
+ */
+export function posCategories(
+  products: readonly CatalogProduct[],
+  combos: readonly PosCombo[],
+): string[] {
+  return [
+    ...new Set([
+      ...products.map((product) => product.categoria),
+      ...combos.map((combo) => comboCategory(combo)),
+    ]),
+  ].sort((a, b) => a.localeCompare(b));
+}
+
+/**
+ * Productos y combos que coinciden con el texto y la categoría elegida, agrupados por categoría.
+ * Los combos se buscan por nombre; dentro de una categoría van antes que los productos.
+ */
+export function posTiles(
+  products: readonly CatalogProduct[],
+  combos: readonly PosCombo[],
+  term: string,
+  category: string,
+): PosTile[] {
+  const text = term.trim().toLowerCase();
+  const comboTiles: PosTile[] = combos
+    .filter((combo) => !category || comboCategory(combo) === category)
+    .filter((combo) => !text || combo.nombre.toLowerCase().includes(text))
+    .map((combo) => ({ kind: 'combo', category: comboCategory(combo), combo }));
+  const productTiles: PosTile[] = filterProducts(products, term, category).map((product) => ({
+    kind: 'product',
+    category: product.categoria,
+    product,
+  }));
+  const name = (tile: PosTile) => (tile.kind === 'combo' ? tile.combo.nombre : tile.product.nombre);
+
+  return [...comboTiles, ...productTiles].sort(
+    (a, b) =>
+      a.category.localeCompare(b.category) ||
+      (a.kind === b.kind ? 0 : a.kind === 'combo' ? -1 : 1) ||
+      name(a).localeCompare(name(b)),
+  );
+}
+
+/** Contenido del combo para la tarjeta: «2 × Pan francés · 1 × Café». */
+export function comboContents(combo: PosCombo): string {
+  return combo.lineas.map((line) => `${line.cantidad} × ${line.producto}`).join(' · ');
+}
+
+/** El combo no alcanza ni una vez con la existencia de la sucursal. */
+export function comboSoldOut(combo: Pick<PosCombo, 'disponible'>): boolean {
+  return combo.disponible <= 0;
+}
+
+/** Productos que se agregan al pedido al tocar un combo, o el motivo por el que no se puede. */
+export interface ComboAddition {
+  readonly lines: readonly PosLine[];
+  readonly error: string | null;
+}
+
+/**
+ * Expande un combo en todos sus productos con sus cantidades. El motor de promociones del backend
+ * reconoce la canasta completa y aplica el precio del combo al cotizar; aquí solo se arma el pedido.
+ * Falla sin agregar nada si algún producto no está en el catálogo del punto de venta o no alcanza
+ * la existencia sumando lo que el pedido ya tiene.
+ */
+export function planComboAdd(
+  combo: PosCombo,
+  products: readonly CatalogProduct[],
+  ticket: readonly PosLine[],
+): ComboAddition {
+  if (comboSoldOut(combo)) {
+    return { lines: [], error: `${combo.nombre} está agotado.` };
+  }
+
+  const byId = new Map(products.map((product) => [product.id, product] as const));
+  const lines: PosLine[] = [];
+  for (const line of combo.lineas) {
+    const product = byId.get(line.productoId);
+    if (!product) {
+      return { lines: [], error: `${line.producto} no está habilitado en el punto de venta.` };
+    }
+    const inTicket = ticket.find((item) => item.product.id === product.id)?.quantity ?? 0;
+    const stock = product.disponible;
+    if (product.agotado || (stock != null && stock <= 0)) {
+      return { lines: [], error: `${product.nombre} está agotado.` };
+    }
+    if (stock != null && inTicket + line.cantidad > stock) {
+      return {
+        lines: [],
+        error: `No alcanza ${product.nombre} para otro ${combo.nombre}: solo quedan ${stock} en existencia.`,
+      };
+    }
+    lines.push({ product, quantity: line.cantidad });
+  }
+  return { lines, error: null };
+}
+
+/** Suma las líneas nuevas al pedido: si el producto ya estaba, se suma la cantidad; si no, se agrega. */
+export function mergeLines(ticket: readonly PosLine[], additions: readonly PosLine[]): PosLine[] {
+  const merged = [...ticket];
+  for (const addition of additions) {
+    const index = merged.findIndex((line) => line.product.id === addition.product.id);
+    if (index >= 0) {
+      merged[index] = { ...merged[index], quantity: merged[index].quantity + addition.quantity };
+    } else {
+      merged.push(addition);
+    }
+  }
+  return merged;
 }
 
 export type PosShortcut =

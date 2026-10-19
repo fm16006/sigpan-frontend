@@ -29,6 +29,19 @@ export class ComboService extends CrudClient<Combo, ComboDraft> {
     return this.api.url(API_ENDPOINTS.combosDetalles.byCombo(comboId));
   }
 
+  /** Lista de categorías, para el selector del formulario del combo. */
+  categoriesUrl(): string {
+    return this.api.url(API_ENDPOINTS.categorias.root);
+  }
+
+  /**
+   * Combos vendibles en el punto de venta con cuántos alcanzan en la sucursal (solo personal del POS).
+   * Sin sucursal el backend usa la del usuario.
+   */
+  posUrl(sucursalId?: Id | null): string {
+    return this.api.url(API_ENDPOINTS.combos.pos, { sucursalId });
+  }
+
   productsUrl(): string {
     return this.api.url(API_ENDPOINTS.productos.root);
   }

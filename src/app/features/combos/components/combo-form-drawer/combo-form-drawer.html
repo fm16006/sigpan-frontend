@@ -37,6 +37,28 @@
           class="textarea textarea-bordered w-full"
         ></textarea>
       </div>
+
+      <div>
+        <label class="label" for="comboCategoria"><span class="label-text">Categoría en el punto de venta</span></label>
+        <select
+          id="comboCategoria"
+          formControlName="categoriaId"
+          class="select select-bordered w-full"
+        >
+          <option [ngValue]="null">Sin categoría (aparece en «Combos»)</option>
+          @for (category of categoryOptions(); track category.id) {
+            <option [ngValue]="category.id">
+              {{ category.nombre }}{{ category.activo === false ? ' (inactiva)' : '' }}
+            </option>
+          }
+        </select>
+        <p class="mt-1 text-xs text-base-content/60">
+          El combo se muestra dentro de esta categoría en el punto de venta.
+          <a routerLink="/backoffice/categories" target="_blank" class="link link-primary">
+            Administrar categorías
+          </a>
+        </p>
+      </div>
     </fieldset>
 
     <fieldset class="flex flex-col gap-3">

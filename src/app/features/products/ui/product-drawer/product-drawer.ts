@@ -1,6 +1,7 @@
 import { Component, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { httpResource } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { AppError } from '../../../../core/http/app-error';
 import {
   applyFieldErrors,
@@ -23,6 +24,7 @@ import { Notifications } from '../../../../core/services/notifications';
 import { ConfirmDialog } from '../../../../shared/ui/confirm-dialog/confirm-dialog';
 import { describeExemptChange } from '../../../../core/models/tax.model';
 import { FormDrawer } from '../../../../shared/ui/form-drawer/form-drawer';
+import { selectableCategories } from '../../../categories/category-view';
 import { ProductAdminService } from '../../services/product-admin.service';
 import { isChannelOn } from '../../product-channels';
 import { createProductForm } from './product-form';
@@ -33,7 +35,7 @@ import { createProductForm } from './product-form';
  */
 @Component({
   selector: 'app-product-drawer',
-  imports: [ReactiveFormsModule, FormDrawer, ConfirmDialog],
+  imports: [ReactiveFormsModule, RouterLink, FormDrawer, ConfirmDialog],
   templateUrl: './product-drawer.html',
 })
 export class ProductDrawer {
@@ -68,8 +70,12 @@ export class ProductDrawer {
     { defaultValue: [] },
   );
 
+  /** Solo categorías activas (y la que el producto ya tiene, aunque se haya desactivado). */
   protected readonly categoryList = computed(() =>
-    this.categories.hasValue() ? this.categories.value() : [],
+    selectableCategories(
+      this.categories.hasValue() ? this.categories.value() : [],
+      this.product()?.categoriaId,
+    ),
   );
 
   protected readonly form = createProductForm(this.fb);

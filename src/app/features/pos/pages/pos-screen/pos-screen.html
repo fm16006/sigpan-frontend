@@ -161,14 +161,55 @@
           <app-resource-state
             [loading]="catalog.isLoading()"
             [failed]="!!catalog.error()"
-            [empty]="visible().length === 0"
+            [empty]="tiles().length === 0"
             emptyTitle="Sin productos"
-            emptyDescription="No hay productos que coincidan con la búsqueda."
+            emptyDescription="No hay productos ni combos que coincidan con la búsqueda."
             [skeletonCount]="6"
             (retry)="catalog.reload()"
           >
             <ul class="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-              @for (product of visible(); track product.id) {
+              @for (tile of tiles(); track tileKey(tile)) {
+                @if (tile.kind === 'combo') {
+                  <li>
+                    <button
+                      type="button"
+                      class="flex h-24 w-full flex-col justify-between rounded-box border-s-4 p-2.5 text-start transition active:scale-95"
+                      [class]="toneFor(tile.category)"
+                      [class.opacity-50]="comboSoldOut(tile.combo)"
+                      [disabled]="comboSoldOut(tile.combo)"
+                      [attr.aria-label]="'Agregar el combo ' + tile.combo.nombre + ': ' + comboContents(tile.combo)"
+                      [attr.title]="comboContents(tile.combo)"
+                      (click)="addCombo(tile.combo)"
+                    >
+                      <span class="flex items-start justify-between gap-1">
+                        <span class="line-clamp-2 text-sm font-semibold leading-tight">
+                          {{ tile.combo.nombre }}
+                        </span>
+                        @if (comboSoldOut(tile.combo)) {
+                          <span class="badge badge-error badge-xs shrink-0">Agotado</span>
+                        } @else {
+                          <span class="badge badge-accent badge-xs shrink-0 font-bold">Combo</span>
+                        }
+                      </span>
+                      <span class="flex items-end justify-between gap-1 text-xs">
+                        <span class="grid min-w-0">
+                          <span class="truncate text-base-content/60">{{ comboContents(tile.combo) }}</span>
+                          <span class="text-base-content/60">
+                            @if (comboSoldOut(tile.combo)) {
+                              Agotado
+                            } @else {
+                              {{ tile.combo.disponible }} {{ tile.combo.disponible === 1 ? 'disponible' : 'disponibles' }}
+                            }
+                          </span>
+                        </span>
+                        <span class="font-serif text-base font-semibold tabular-nums">{{
+                          tile.combo.precio | money
+                        }}</span>
+                      </span>
+                    </button>
+                  </li>
+                } @else {
+                  @let product = tile.product;
                 <li>
                   <button
                     type="button"
@@ -212,6 +253,7 @@
                     </span>
                   </button>
                 </li>
+                }
               }
             </ul>
           </app-resource-state>
