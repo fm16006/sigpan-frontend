@@ -249,7 +249,12 @@ export class PosScreen {
     return matches ? quote.total : null;
   });
 
-  protected readonly catalog = httpResource<CatalogProduct[]>(() => this.products.activeUrl(), {
+  /** El catálogo del mostrador muestra la existencia de la sucursal de la caja abierta. */
+  private readonly branchId = computed(
+    () => this.register.lugar()?.sucursalId ?? this.auth.user()?.sucursalId ?? null,
+  );
+
+  protected readonly catalog = httpResource<CatalogProduct[]>(() => this.products.activeUrl(this.branchId()), {
     defaultValue: [],
   });
 

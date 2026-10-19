@@ -3,8 +3,9 @@
   subtitle="Insumos con su unidad base, existencia y costo promedio. Hacé clic en uno para abrir su ficha."
   [crumbs]="crumbs"
 >
+  <app-branch-scope-picker />
   @if (canWrite) {
-    <button type="button" class="btn" (click)="drawer.set('purchase')">Registrar compra</button>
+    <button type="button" class="btn" [disabled]="!scope.canWrite()" (click)="drawer.set('purchase')">Registrar compra</button>
     <button type="button" class="btn btn-primary" (click)="drawer.set('create')">
       <app-icon name="plus" /> Nueva materia prima
     </button>
@@ -99,7 +100,7 @@
         </span>
         <span class="text-sm max-md:hidden">{{ row.unidad }}</span>
         <span class="text-end font-semibold tabular-nums max-md:col-start-1 max-md:text-start">
-          @if (row.inventarioId === null) {
+          @if (!hasInventory(row)) {
             —
           } @else {
             {{ row.cantidad | number: '1.0-3' }}<span class="md:hidden"> {{ row.unidad }}</span>
@@ -118,7 +119,8 @@
       </a>
     }
     <div class="border-t border-base-300 px-5 py-3 text-sm text-base-content/60">
-      {{ rows().length }} de {{ total() }} insumos · {{ lowCount() }} por debajo del mínimo
+      {{ rows().length }} de {{ total() }} insumos · {{ lowCount() }} por debajo del mínimo ·
+      {{ scope.isAll() ? 'suma de todas las sucursales' : 'existencia en ' + scope.label() }}
     </div>
   </section>
 </app-resource-state>

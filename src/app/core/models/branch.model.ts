@@ -38,3 +38,11 @@ export interface BranchDraft {
   readonly horario: string | null;
   readonly activo?: boolean;
 }
+
+/** Sucursal en su forma mínima, la que pueden leer los roles de inventario. */
+export interface BranchOption {
+  readonly id: Id;
+  readonly nombre: string;
+  readonly codigo: string;
+  readonly activo: boolean;
+}

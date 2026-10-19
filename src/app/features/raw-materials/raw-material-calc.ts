@@ -3,6 +3,7 @@ import {
   RawMaterialStock,
   StockMovement,
   StockRow,
+  hasInventory,
   isLowStock,
 } from '../../core/models/inventory.model';
 import { RawMaterial } from '../../core/models/production.model';
@@ -43,7 +44,7 @@ export function levelOf(cantidad: number, minimo: number): 'agotada' | 'bajo' | 
 
 export function statusOf(row: StockRow, activo: boolean): MaterialStatus {
   if (!activo) return 'inactiva';
-  if (row.inventarioId === null) return 'sin-inventario';
+  if (!hasInventory(row)) return 'sin-inventario';
   return levelOf(row.cantidad, row.minimo);
 }
 
@@ -91,6 +92,8 @@ export function buildMaterialRow(
     cantidad: Number(stock?.cantidad ?? 0),
     minimo: Number(material.stockMinimo ?? 0),
     fechaActualizacion: stock?.fechaActualizacion ?? null,
+    // Una fila sin id es la suma de todas las sucursales: tiene existencia pero no inventario propio.
+    consolidado: stock !== undefined && (stock.id ?? null) === null,
   };
   const activo = material.activo !== false;
   const precio =

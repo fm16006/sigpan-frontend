@@ -4,10 +4,15 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { map } from 'rxjs';
 import { Id } from '../../../../core/models/api.model';
-import { RawMaterialStock, StockMovement } from '../../../../core/models/inventory.model';
+import {
+  RawMaterialStock,
+  StockMovement,
+  hasInventory,
+} from '../../../../core/models/inventory.model';
 import { Formula, RawMaterial } from '../../../../core/models/production.model';
 import { ItemPurchase } from '../../../../core/models/purchase.model';
 import { Auth } from '../../../../core/services/auth';
+import { BranchScope } from '../../../../core/services/branch-scope';
 import {
   buildMaterialRow,
   consumption,
@@ -43,6 +48,7 @@ export class MaterialDetailStore {
   private readonly purchaseService = inject(PurchaseService);
   private readonly route = inject(ActivatedRoute);
   private readonly auth = inject(Auth);
+  readonly scope = inject(BranchScope);
 
   readonly id = toSignal(this.route.paramMap.pipe(map((params) => Number(params.get('id')))), {
     initialValue: Number(this.route.snapshot.paramMap.get('id')),
@@ -55,11 +61,11 @@ export class MaterialDetailStore {
 
   readonly material = httpResource<RawMaterial>(() => this.service.materialUrl(this.id()));
   private readonly stocks = httpResource<RawMaterialStock[]>(
-    () => this.service.stockUrl('materia-prima'),
+    () => this.service.stockUrl('materia-prima', this.scope.params()),
     { defaultValue: [] },
   );
   readonly movements = httpResource<StockMovement[]>(
-    () => this.service.movementsUrl('materia-prima', this.id()),
+    () => this.service.movementsUrl('materia-prima', this.id(), this.scope.params()),
     { defaultValue: [] },
   );
   /** Últimas compras a proveedores de este insumo (con proveedor y documento). */
@@ -98,7 +104,7 @@ export class MaterialDetailStore {
     const row = this.row();
     return withRunningBalance(
       this.movementList(),
-      row && row.inventarioId !== null ? row.cantidad : null,
+      row && hasInventory(row) ? row.cantidad : null,
     );
   });
 

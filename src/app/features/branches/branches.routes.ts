@@ -19,6 +19,12 @@ export const BRANCHES_ROUTES: Routes = [
         title: 'Sucursal · Cajas',
       },
       {
+        path: 'inventario',
+        loadComponent: () =>
+          import('./pages/branch-detail/branch-inventory').then((m) => m.BranchInventory),
+        title: 'Sucursal · Inventario',
+      },
+      {
         path: 'usuarios',
         loadComponent: () =>
           import('./pages/branch-detail/branch-users').then((m) => m.BranchUsers),

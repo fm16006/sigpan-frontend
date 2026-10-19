@@ -7,8 +7,12 @@ import { Id } from '../../../core/models/api.model';
 export class ProductService {
   private readonly api = inject(ApiClient);
 
-  activeUrl(): string {
-    return this.api.url(API_ENDPOINTS.productos.activos);
+  /**
+   * Productos activos con su existencia. Sin sucursal es la de la tienda en línea (catálogo público);
+   * el punto de venta pide la de la sucursal de su caja.
+   */
+  activeUrl(sucursalId?: Id | null): string {
+    return this.api.url(API_ENDPOINTS.productos.activos, { sucursalId });
   }
 
   byIdUrl(id: Id): string {

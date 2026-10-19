@@ -20,6 +20,7 @@ import {
   Supplier,
 } from '../../../core/models/purchase.model';
 import { RawMaterial } from '../../../core/models/production.model';
+import { BranchScope } from '../../../core/services/branch-scope';
 import { Notifications } from '../../../core/services/notifications';
 import { todayIso } from '../../../core/utils/dates';
 import { MoneyPipe } from '../../../shared/pipes/money.pipe';
@@ -88,6 +89,16 @@ interface ItemOption {
                 No hay proveedores activos. Registralos primero en Inventario › Proveedores.
               </p>
             }
+          </div>
+
+          <div>
+            <label class="mb-1.5 block text-sm font-semibold" for="np-sucursal">Sucursal que recibe</label>
+            <select id="np-sucursal" formControlName="sucursalId" class="select select-bordered w-full">
+              @for (branch of scope.activeBranches(); track branch.id) {
+                <option [ngValue]="branch.id">{{ branch.nombre }}</option>
+              }
+            </select>
+            <p class="mt-1 text-xs text-base-content/55">La mercadería entra al inventario de esta sucursal.</p>
           </div>
 
           <div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
@@ -261,6 +272,7 @@ export class PurchaseFormDrawer {
   private readonly purchases = inject(PurchaseService);
   private readonly suppliers = inject(SupplierService);
   private readonly inventory = inject(InventoryService);
+  protected readonly scope = inject(BranchScope);
   private readonly notifications = inject(Notifications);
   private readonly fb = inject(FormBuilder).nonNullable;
 
@@ -282,6 +294,7 @@ export class PurchaseFormDrawer {
 
   protected readonly form = this.fb.group({
     proveedorId: [0, [Validators.min(1)]],
+    sucursalId: [0],
     tipoDocumento: ['FACTURA' as DocumentType, [Validators.required]],
     numeroDocumento: ['', [Validators.required, Validators.maxLength(PURCHASE_DOCUMENT_MAX_LENGTH)]],
     fecha: [todayIso(), [Validators.required]],
@@ -419,6 +432,7 @@ export class PurchaseFormDrawer {
 
     const draft: PurchaseDraft = {
       proveedorId: raw.proveedorId,
+      ...(Number(raw.sucursalId) > 0 ? { sucursalId: Number(raw.sucursalId) } : {}),
       tipoDocumento: raw.tipoDocumento,
       numeroDocumento: raw.numeroDocumento.trim(),
       fecha: raw.fecha,
@@ -478,6 +492,7 @@ export class PurchaseFormDrawer {
 
     this.form.reset({
       proveedorId: supplierId ?? 0,
+      sucursalId: this.scope.branchId() ?? this.scope.ownBranchId() ?? 0,
       tipoDocumento: 'FACTURA',
       numeroDocumento: '',
       fecha: todayIso(),

@@ -3,7 +3,9 @@ import { RouterLink, RouterOutlet } from '@angular/router';
 import { Crumb } from '../../../../shared/ui/breadcrumbs/breadcrumbs';
 import { ConfirmDialog } from '../../../../shared/ui/confirm-dialog/confirm-dialog';
 import { DetailHeader, DetailTab } from '../../../../shared/ui/detail-header/detail-header';
+import { BranchScopePicker } from '../../../../shared/ui/branch-scope-picker/branch-scope-picker';
 import { Icon } from '../../../../shared/ui/icon/icon';
+import { hasInventory } from '../../../../core/models/inventory.model';
 import { StatusChip } from '../../../../shared/ui/status-chip/status-chip';
 import { Notifications } from '../../../../core/services/notifications';
 import { MATERIAL_STATUS_CHIP } from '../../raw-material-calc';
@@ -24,6 +26,7 @@ type Drawer = 'edit' | 'purchase' | 'adjustment' | null;
     DetailHeader,
     StatusChip,
     Icon,
+    BranchScopePicker,
     ConfirmDialog,
     MaterialFormDrawer,
     PurchaseDrawer,
@@ -47,14 +50,27 @@ type Drawer = 'edit' | 'purchase' | 'adjustment' | null;
           <app-status-chip [label]="chip().label" [tone]="chip().tone" />
         </div>
         <div actions class="contents">
+          <app-branch-scope-picker />
           @if (store.canWrite) {
             <button type="button" class="btn" (click)="drawer.set('edit')">
               <app-icon name="edit" /> Editar
             </button>
-            <button type="button" class="btn" (click)="drawer.set('adjustment')">
+            <button
+              type="button"
+              class="btn"
+              [disabled]="!store.scope.canWrite()"
+              [attr.title]="store.scope.canWrite() ? null : 'Elegí una sucursal para registrar movimientos'"
+              (click)="drawer.set('adjustment')"
+            >
               Registrar salida o ajuste
             </button>
-            <button type="button" class="btn btn-primary" (click)="drawer.set('purchase')">
+            <button
+              type="button"
+              class="btn btn-primary"
+              [disabled]="!store.scope.canWrite()"
+              [attr.title]="store.scope.canWrite() ? null : 'Elegí una sucursal para registrar movimientos'"
+              (click)="drawer.set('purchase')"
+            >
               <app-icon name="plus" /> Registrar compra
             </button>
             @if (row.activo) {
@@ -66,9 +82,9 @@ type Drawer = 'edit' | 'purchase' | 'adjustment' | null;
         </div>
       </app-detail-header>
 
-      @if (row.inventarioId === null && store.canWrite) {
+      @if (!hasInventory(row) && store.canWrite && store.scope.canWrite()) {
         <div role="alert" class="alert alert-warning mb-5 text-sm">
-          <span>Este insumo todavía no tiene inventario habilitado, así que no puede recibir movimientos.</span>
+          <span>Este insumo todavía no tiene inventario habilitado en {{ store.scope.label() }}, así que no puede recibir movimientos.</span>
           <button type="button" class="btn btn-sm" [disabled]="opening()" (click)="openStock()">
             @if (opening()) {
               <span class="loading loading-spinner loading-xs"></span>
@@ -135,6 +151,7 @@ export class RawMaterialDetail {
   protected readonly confirmingDeactivate = signal(false);
   protected readonly deactivating = signal(false);
   protected readonly opening = signal(false);
+  protected readonly hasInventory = hasInventory;
 
   protected readonly crumbs = computed<Crumb[]>(() => [
     { label: 'Inventario' },
@@ -158,7 +175,7 @@ export class RawMaterialDetail {
     const row = this.store.row();
     if (!row) return;
     this.opening.set(true);
-    this.service.openStock('materia-prima', row.itemId).subscribe({
+    this.service.openStock('materia-prima', row.itemId, this.store.scope.branchId()).subscribe({
       next: () => {
         this.opening.set(false);
         this.notifications.success(`Inventario de "${row.nombre}" habilitado.`);

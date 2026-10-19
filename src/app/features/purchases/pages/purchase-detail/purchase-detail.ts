@@ -38,7 +38,11 @@ import { PurchaseService } from '../../services/purchase.service';
 
         <div class="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
           <app-stat-card label="Proveedor" [value]="p.proveedor" />
-          <app-stat-card label="Fecha del documento" [value]="date(p.fecha)" />
+          <app-stat-card
+            label="Fecha del documento"
+            [value]="date(p.fecha)"
+            [hint]="p.sucursal ? 'Recibió ' + p.sucursal : undefined"
+          />
           <app-stat-card
             label="Líneas"
             [value]="p.totalLineas"

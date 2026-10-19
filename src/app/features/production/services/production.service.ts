@@ -48,8 +48,8 @@ export class ProductionService {
   }
 
   /** Explosión de materiales de la receta del producto para `cantidad` unidades. */
-  explosionUrl(productoId: Id, cantidad: number): string {
-    return this.api.url(API_ENDPOINTS.formulas.explosion(productoId), { cantidad });
+  explosionUrl(productoId: Id, cantidad: number, sucursalId?: Id | null): string {
+    return this.api.url(API_ENDPOINTS.formulas.explosion(productoId), { cantidad, sucursalId });
   }
 
   create(draft: ProductionDraft): Observable<Production> {

@@ -139,7 +139,7 @@ export class ProductionDetail {
   protected readonly preview = httpResource<MaterialExplosion>(() => {
     const order = this.current();
     const units = this.units();
-    return order && this.isOpen() && units ? this.service.explosionUrl(order.productoId, units) : undefined;
+    return order && this.isOpen() && units ? this.service.explosionUrl(order.productoId, units, order.sucursalId) : undefined;
   });
   protected readonly previewValue = computed(() =>
     this.preview.hasValue() ? this.preview.value() : null,
