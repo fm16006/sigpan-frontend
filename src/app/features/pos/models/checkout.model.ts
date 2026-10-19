@@ -38,8 +38,27 @@ export const CASH_SHORTCUTS = [1, 5, 10, 20] as const;
 export interface ReceiptLine {
   readonly cantidad: number;
   readonly descripcion: string;
+  /** Precio publicado (con IVA si la venta lo llevaba incluido). */
   readonly precio: number;
+  /** Precio por cantidad, antes de descuentos. */
   readonly importe: number;
+  /** Línea exenta de IVA cuando se vendió. */
+  readonly exento?: boolean;
+  /** Precio unitario sin IVA (4 decimales), para el comprobante de crédito fiscal. */
+  readonly precioSinIva?: number;
+  /** Importe de la línea sin IVA, para el comprobante de crédito fiscal. */
+  readonly importeSinIva?: number;
+}
+
+/** Desglose del IVA guardado con la venta. El ticket nunca lo recalcula con la configuración vigente. */
+export interface ReceiptTax {
+  readonly aplicaIva: boolean;
+  readonly ivaIncluido: boolean;
+  /** Porcentaje con el que se calculó la venta (13 = 13 %). */
+  readonly tasa: number;
+  readonly ventasGravadas: number;
+  readonly ventasExentas: number;
+  readonly iva: number;
 }
 
 export interface CardRead {
@@ -66,6 +85,11 @@ export interface Receipt {
   readonly documento: DocumentKind;
   readonly metodo: PaymentMethod;
   readonly lineas: readonly ReceiptLine[];
+  /** Suma de los importes de las líneas, antes de descuentos. */
+  readonly subtotal: number;
+  readonly descuento: number;
+  readonly impuestos: ReceiptTax;
+  /** Total a pagar: ya incluye el IVA. */
   readonly total: number;
   readonly recibido: number;
   readonly cambio: number;

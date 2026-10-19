@@ -18,6 +18,10 @@ export interface SaleLine {
   readonly precio: number;
   readonly descuento: number;
   readonly subtotal: number;
+  /** Exenta de IVA cuando se vendió. */
+  readonly exento?: boolean;
+  /** Precio unitario sin IVA según la configuración guardada en la venta (comprobante de crédito fiscal). */
+  readonly precioUnitarioSinIva?: number;
 }
 
 export interface Sale {
@@ -34,7 +38,15 @@ export interface Sale {
   readonly fecha: string;
   readonly subtotal: number;
   readonly descuento: number;
+  /** Total a pagar: ya incluye el IVA. */
   readonly total: number;
+  /** Desglose y configuración del IVA guardados con la venta; no cambian si la empresa cambia su configuración. */
+  readonly aplicaIva?: boolean;
+  readonly ivaIncluido?: boolean;
+  readonly tasaIvaAplicada?: number;
+  readonly ventasGravadas?: number;
+  readonly ventasExentas?: number;
+  readonly iva?: number;
   readonly detalles: readonly SaleLine[] | null;
 }
 
@@ -42,6 +54,8 @@ export interface SaleRequest {
   readonly lineas: readonly { readonly productoId: Id; readonly cantidad: number }[];
   /** Solo en la venta de mostrador: caja donde se cobra (de la sucursal del cajero). */
   readonly cajaId?: Id;
+  /** Total que el cliente vio al cotizar; si ya no coincide al confirmar, el servidor responde 409 TOTAL_CAMBIO. */
+  readonly totalEsperado?: number;
 }
 
 /** Filtro del corte y de los listados de ventas. */

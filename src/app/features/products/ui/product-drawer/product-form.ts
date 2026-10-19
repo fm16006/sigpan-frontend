@@ -23,5 +23,7 @@ export function createProductForm(
     // Interruptores manuales por canal: un producto nuevo sale habilitado en los dos.
     disponiblePos: [true],
     disponibleTienda: [true],
+    // Exento de IVA (HU-36): por defecto un producto nuevo lleva IVA.
+    exentoIva: [false],
   });
 }

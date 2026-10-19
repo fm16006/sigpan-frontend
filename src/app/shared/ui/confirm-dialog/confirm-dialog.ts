@@ -25,6 +25,13 @@ import { Component, input, output } from '@angular/core';
         >
           <h2 class="text-xl font-semibold">{{ title() }}</h2>
           <p class="text-sm leading-relaxed text-base-content/70">{{ message() }}</p>
+          @if (details().length > 0) {
+            <ul class="list-disc space-y-1.5 ps-5 text-sm leading-relaxed text-base-content/70">
+              @for (detail of details(); track $index) {
+                <li>{{ detail }}</li>
+              }
+            </ul>
+          }
           <div class="mt-2 flex justify-end gap-2">
             <button type="button" class="btn btn-ghost" (click)="cancelled.emit()">Cancelar</button>
             <button
@@ -50,6 +57,8 @@ export class ConfirmDialog {
   readonly open = input(false);
   readonly title = input.required<string>();
   readonly message = input.required<string>();
+  /** Puntos que explican el efecto con más detalle (una lista bajo el mensaje). */
+  readonly details = input<readonly string[]>([]);
   readonly confirmLabel = input('Eliminar');
   readonly tone = input<'danger' | 'primary'>('danger');
   readonly busy = input(false);

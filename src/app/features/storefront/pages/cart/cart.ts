@@ -2,6 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { HttpResourceRequest, httpResource } from '@angular/common/http';
 import { Router, RouterLink } from '@angular/router';
 import { Id } from '../../../../core/models/api.model';
+import { AppError } from '../../../../core/http/app-error';
 import { Quote, QuoteLine, ruleLabel } from '../../../../core/models/quote.model';
 import { QuoteService } from '../../../../core/services/quote.service';
 import { debouncedSignal } from '../../../../core/utils/debounced-signal';
@@ -9,6 +10,7 @@ import { Auth } from '../../../../core/services/auth';
 import { CartStore } from '../../../../core/services/cart-store';
 import { Notifications } from '../../../../core/services/notifications';
 import { MoneyPipe } from '../../../../shared/pipes/money.pipe';
+import { IvaLine } from '../../../../shared/ui/iva-line/iva-line';
 import { EmptyState } from '../../../../shared/ui/empty-state/empty-state';
 import { PageHeader } from '../../../../shared/ui/page-header/page-header';
 import { OrderService } from '../../services/order.service';
@@ -16,7 +18,7 @@ import { valueOr } from '../../../../core/http/resource-value';
 
 @Component({
   selector: 'app-cart',
-  imports: [RouterLink, PageHeader, EmptyState, MoneyPipe],
+  imports: [RouterLink, PageHeader, EmptyState, MoneyPipe, IvaLine],
   templateUrl: './cart.html',
 })
 export class Cart {
@@ -47,6 +49,11 @@ export class Cart {
     () => new Map((this.quoteValue()?.lineas ?? []).map((line) => [line.productoId, line] as const)),
   );
   protected readonly ruleLabel = ruleLabel;
+  /** El IVA no va incluido en los precios: se suma al total. */
+  protected readonly addsIva = computed(() => {
+    const quote = this.quoteValue();
+    return !!quote?.aplicaIva && !quote.ivaIncluido;
+  });
 
   protected lineQuote(productId: Id): QuoteLine | undefined {
     return this.quoteByProduct().get(productId);
@@ -65,14 +72,23 @@ export class Cart {
     }
 
     this.submitting.set(true);
-    // Solo producto y cantidad: el backend fija precios y promociones.
-    this.orders.placeOrder(this.cart.toOrderRequest()).subscribe({
+    // Solo producto y cantidad: el backend fija precios, promociones e IVA. El total que se vio viaja
+    // para que el servidor avise si cambió algo antes de confirmar.
+    const seen = this.quoteValue()?.total;
+    const request = this.cart.toOrderRequest();
+    this.orders.placeOrder(seen == null ? request : { ...request, totalEsperado: seen }).subscribe({
       next: (order) => {
         this.cart.clear();
         this.notifications.success(`Pedido #${order.id} confirmado.`);
         void this.router.navigate(['/storefront/orders']);
       },
-      error: () => this.submitting.set(false),
+      error: (error: AppError) => {
+        this.submitting.set(false);
+        // El total cambió (precios, promociones o IVA): se vuelve a cotizar para que lo vea antes de confirmar.
+        if (error.code === 'TOTAL_CAMBIO') {
+          this.quote.reload();
+        }
+      },
     });
   }
 }

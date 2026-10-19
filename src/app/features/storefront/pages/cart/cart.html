@@ -79,6 +79,17 @@
                 </dd>
               </div>
             }
+            <div class="flex items-baseline justify-between text-sm text-base-content/70">
+              <dt>Subtotal</dt>
+              <dd class="tabular-nums">{{ q.subtotal | money }}</dd>
+            </div>
+            @if (q.descuento > 0) {
+              <div class="flex items-baseline justify-between text-sm text-success">
+                <dt>Descuentos</dt>
+                <dd class="tabular-nums">−{{ q.descuento | money }}</dd>
+              </div>
+            }
+            <app-iva-line [tax]="q" />
             <div class="flex items-baseline justify-between">
               <dt class="text-sm text-base-content/60">Total</dt>
               <dd class="font-serif text-2xl font-semibold">{{ q.total | money }}</dd>
@@ -93,7 +104,7 @@
           }
         </dl>
         <p class="mt-2 text-xs text-base-content/50">
-          El total incluye las promociones vigentes y se confirma al procesar el pedido.
+          El total incluye las promociones vigentes{{ addsIva() ? ' y el IVA' : '' }}. Se confirma al procesar el pedido.
         </p>
         <button
           type="button"

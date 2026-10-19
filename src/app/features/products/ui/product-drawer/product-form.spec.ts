@@ -13,6 +13,7 @@ const valid = () => ({
   alergenos: '',
   disponiblePos: true,
   disponibleTienda: true,
+  exentoIva: false,
 });
 
 describe('createProductForm', () => {
@@ -50,6 +51,14 @@ describe('createProductForm', () => {
     const form = createProductForm();
     expect(form.controls.disponiblePos.value).toBe(true);
     expect(form.controls.disponibleTienda.value).toBe(true);
+  });
+
+  it('un producto nuevo lleva IVA y se puede marcar como exento', () => {
+    const form = createProductForm();
+    expect(form.controls.exentoIva.value).toBe(false);
+    form.setValue({ ...valid(), exentoIva: true });
+    expect(form.valid).toBe(true);
+    expect(form.getRawValue().exentoIva).toBe(true);
   });
 
   it('cada canal se puede apagar sin afectar al otro ni la validez del formulario', () => {

@@ -184,6 +184,9 @@
               "
             />
           }
+          @if (row.product.exentoIva) {
+            <app-status-chip label="Exento" tone="info" title="Exento de IVA" />
+          }
         </span>
         <app-icon name="chevron" class="text-base-content/40 max-md:hidden" />
       </a>

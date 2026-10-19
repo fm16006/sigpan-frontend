@@ -26,6 +26,7 @@ import { Auth } from '../../../../core/services/auth';
 import { Notifications } from '../../../../core/services/notifications';
 import { BackofficeMenu } from '../../../../shared/layout/backoffice-menu';
 import { MoneyPipe } from '../../../../shared/pipes/money.pipe';
+import { IvaLine } from '../../../../shared/ui/iva-line/iva-line';
 import { BrandMark } from '../../../../shared/ui/brand-mark/brand-mark';
 import { ConfirmDialog } from '../../../../shared/ui/confirm-dialog/confirm-dialog';
 import { Icon } from '../../../../shared/ui/icon/icon';
@@ -97,6 +98,7 @@ const ROLE_NAMES: Readonly<Record<string, string>> = {
     ThemeToggle,
     Icon,
     ConfirmDialog,
+    IvaLine,
     CheckoutDialog,
     PosCaja,
     PosPedidos,
@@ -219,6 +221,8 @@ export class PosScreen {
   /** Total que cobra el backend (promociones, combos y mayoreo ya aplicados). */
   protected readonly total = computed(() => this.quoteValue()?.total ?? 0);
   protected readonly ahorro = computed(() => this.quoteValue()?.ahorro ?? 0);
+  /** Desglose del IVA de la cotización vigente, tal como lo calculó el servidor. */
+  protected readonly tax = computed(() => this.quoteValue() ?? null);
   protected readonly ruleLabel = ruleLabel;
   protected readonly itemCount = computed(() =>
     this.ticket().reduce((sum, line) => sum + line.quantity, 0),

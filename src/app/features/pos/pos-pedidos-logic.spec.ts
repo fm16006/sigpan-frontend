@@ -134,10 +134,19 @@ describe('pedidos: ventas anteriores', () => {
     expect(receipt.numero).toBe(1);
     expect(receipt.cajero).toBe('Ana Pérez');
     expect(receipt.total).toBe(2.5);
-    expect(receipt.lineas).toEqual([
+    expect(receipt.lineas).toMatchObject([
       { cantidad: 4, descripcion: 'Pan francés', precio: 0.25, importe: 1 },
       { cantidad: 1, descripcion: 'Café con leche', precio: 1.5, importe: 1.5 },
     ]);
+    // Venta sin desglose guardado (anterior a HU-36): se trata como se calculó entonces, 13 % incluido.
+    expect(receipt.impuestos).toEqual({
+      aplicaIva: true,
+      ivaIncluido: true,
+      tasa: 13,
+      ventasGravadas: 2.21,
+      ventasExentas: 0,
+      iva: 0.29,
+    });
     expect(receipt.sinDetallePago).toBe(true);
     expect(receipt.anulada).toBe(false);
 

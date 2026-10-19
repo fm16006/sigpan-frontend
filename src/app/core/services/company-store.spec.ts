@@ -21,6 +21,9 @@ const EMPRESA: Company = {
   direccion: 'Santa Tecla',
   telefono: '2222-3333',
   correo: 'hola@pannuevo.sv',
+  aplicaIva: true,
+  ivaIncluido: false,
+  tasaIva: 16.5,
   logoUrl: 'https://blob/empresa/logo.png',
   actualizadoEn: '2026-10-19T10:00:00',
 };
@@ -84,6 +87,26 @@ describe('CompanyStore', () => {
     expect(store.status()).toBe('loaded');
   });
 
+  it('expone la configuración del IVA: la de siempre mientras carga y la de la empresa después', () => {
+    expect(store.tax()).toEqual({ aplicaIva: true, ivaIncluido: true, tasaIva: 13 });
+
+    store.load();
+    httpMock.expectOne('https://api.sigpan.test/api/v1/empresa').flush(EMPRESA);
+
+    expect(store.tax()).toEqual({ aplicaIva: true, ivaIncluido: false, tasaIva: 16.5 });
+  });
+
+  it('si el API aún no trae la configuración del IVA se asume 13 % incluido', () => {
+    store.load();
+    const { aplicaIva, ivaIncluido, tasaIva, ...sinIva } = EMPRESA;
+    void aplicaIva;
+    void ivaIncluido;
+    void tasaIva;
+    httpMock.expectOne('https://api.sigpan.test/api/v1/empresa').flush(sinIva);
+
+    expect(store.tax()).toEqual({ aplicaIva: true, ivaIncluido: true, tasaIva: 13 });
+  });
+
   it('no vuelve a pedir los datos si ya cargaron', () => {
     store.load();
     httpMock.expectOne('https://api.sigpan.test/api/v1/empresa').flush(EMPRESA);
@@ -103,6 +126,9 @@ describe('CompanyStore', () => {
         direccion: EMPRESA.direccion,
         telefono: EMPRESA.telefono,
         correo: null,
+        aplicaIva: true,
+        ivaIncluido: true,
+        tasaIva: 13,
       })
       .subscribe();
 
