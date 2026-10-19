@@ -10,7 +10,6 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { DOCUMENT } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   Observable,
@@ -51,6 +50,7 @@ import { receiptLines, receiptTax } from '../../receipt/receipt-sale';
 import { CardTerminal } from '../../services/card-terminal';
 import { TicketPrinter } from '../../services/ticket-printer';
 import { PaymentTerminal, TerminalScreen } from '../payment-terminal/payment-terminal';
+import { ReceiptPrint } from '../../services/receipt-print';
 
 type CheckoutPhase = 'pago' | 'tarjeta' | 'procesando' | 'imprimiendo' | 'listo';
 
@@ -130,7 +130,7 @@ export class CheckoutDialog {
     const receipt = this.receipt();
     return receipt ? formatReceipt(receipt, this.company.info()).join('\n') : '';
   });
-  private readonly page = inject(DOCUMENT);
+  private readonly receiptPrint = inject(ReceiptPrint);
   protected readonly cardScreen = signal<TerminalScreen>({ kind: 'conectando' });
   private cardCharge: Subscription | null = null;
 
@@ -364,9 +364,9 @@ export class CheckoutDialog {
       });
   }
 
-  /** Abre la impresión del navegador; la hoja de estilos de impresión deja solo el ticket. */
+  /** Abre la impresión del navegador solo con el ticket (ver ReceiptPrint). */
   protected printReceipt(): void {
-    this.page.defaultView?.print();
+    this.receiptPrint.print(this.receiptText());
   }
 
   protected finish(): void {

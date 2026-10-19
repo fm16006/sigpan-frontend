@@ -26,19 +26,20 @@ export function formatReceipt(
   width = RECEIPT_WIDTH,
 ): string[] {
   const rule = '-'.repeat(width);
-  const center = (text: string) => centerText(text, width);
+  // Las líneas largas (giro, dirección, nombres de producto) siguen en la línea de abajo: no se recortan.
+  const center = (text: string) => wrapWords(text, width).map((line) => centerText(line, width));
   const row = (left: string, right: string) => spread(left, right, width);
   const tax = receipt.impuestos;
   const creditNote = receipt.documento === 'CCF' && tax.aplicaIva;
 
   return [
-    center(business.nombreComercial.toUpperCase()),
-    center(business.razonSocial),
-    center(business.giro),
-    center(business.direccion),
-    ...(receipt.sucursal ? [center(`Sucursal: ${receipt.sucursal}`)] : []),
-    center(`NIT: ${business.nit}`),
-    center(`NRC: ${business.nrc}  Tel. ${business.telefono}`),
+    ...center(business.nombreComercial.toUpperCase()),
+    ...center(business.razonSocial),
+    ...center(business.giro),
+    ...center(business.direccion),
+    ...(receipt.sucursal ? center(`Sucursal: ${receipt.sucursal}`) : []),
+    ...center(`NIT: ${business.nit}`),
+    ...center(`NRC: ${business.nrc}  Tel. ${business.telefono}`),
     rule,
     row(
       `${DOCUMENT_TITLES[receipt.documento]} No. ${pad(receipt.numero)}`,
@@ -48,11 +49,11 @@ export function formatReceipt(
       `Fecha: ${DATE_FORMAT.format(receipt.fecha)}`,
       `Hora: ${TIME_FORMAT.format(receipt.fecha)}`,
     ),
-    fit(`Cajero: ${receipt.cajero}`, width),
+    ...wrapWords(`Cajero: ${receipt.cajero}`, width),
     rule,
-    ...(creditNote ? [center('Precios unitarios sin IVA')] : []),
-    itemRow('CANT', 'DESCRIPCION', 'P.UNIT', 'TOTAL', width),
-    ...receipt.lineas.map((line) =>
+    ...(creditNote ? center('Precios unitarios sin IVA') : []),
+    ...itemRow('CANT', 'DESCRIPCION', 'P.UNIT', 'TOTAL', width),
+    ...receipt.lineas.flatMap((line) =>
       creditNote
         ? itemRow(
             String(line.cantidad),
@@ -73,9 +74,9 @@ export function formatReceipt(
     ...(creditNote ? creditNoteTotals(receipt, row) : consumerTotals(receipt, row)),
     rule,
     ...withRule(paymentRows(receipt, row), rule),
-    ...(receipt.anulada ? [center('*** VENTA ANULADA ***'), rule] : []),
-    center('GRACIAS POR SU COMPRA'),
-    center('Conserve su ticket para reclamos'),
+    ...(receipt.anulada ? [...center('*** VENTA ANULADA ***'), rule] : []),
+    ...center('GRACIAS POR SU COMPRA'),
+    ...center('Conserve su ticket para reclamos'),
   ];
 }
 
@@ -98,17 +99,40 @@ function paymentRows(receipt: Receipt, row: (left: string, right: string) => str
   return [row(receipt.metodo, money(receipt.recibido)), row('CAMBIO', money(receipt.cambio))];
 }
 
-function itemRow(qty: string, description: string, price: string, total: string, width: number) {
+/** Fila de producto; si la descripción no cabe, sigue debajo, alineada con su columna. */
+function itemRow(qty: string, description: string, price: string, total: string, width: number): string[] {
   const qtyWidth = 4;
   const priceWidth = 7;
   const totalWidth = 8;
   const descriptionWidth = width - qtyWidth - priceWidth - totalWidth - 3;
+  const [first, ...rest] = wrapWords(description, descriptionWidth);
   return [
-    qty.padStart(qtyWidth),
-    fit(description, descriptionWidth).padEnd(descriptionWidth),
-    price.padStart(priceWidth),
-    total.padStart(totalWidth),
-  ].join(' ');
+    [
+      qty.padStart(qtyWidth),
+      (first ?? '').padEnd(descriptionWidth),
+      price.padStart(priceWidth),
+      total.padStart(totalWidth),
+    ].join(' '),
+    ...rest.map((line) => ' '.repeat(qtyWidth + 1) + line),
+  ];
+}
+
+/** Parte el texto en líneas de hasta `width` caracteres, entre palabras; una palabra más larga se corta. */
+export function wrapWords(text: string, width: number): string[] {
+  const lines: string[] = [];
+  let current = '';
+  for (const word of text.trim().split(/\s+/)) {
+    for (let piece = word; piece; piece = piece.slice(width)) {
+      const chunk = piece.slice(0, width);
+      if (!current) current = chunk;
+      else if (current.length + 1 + chunk.length <= width) current += ' ' + chunk;
+      else {
+        lines.push(current);
+        current = chunk;
+      }
+    }
+  }
+  return current ? [...lines, current] : lines.length ? lines : [''];
 }
 
 function centerText(text: string, width: number): string {

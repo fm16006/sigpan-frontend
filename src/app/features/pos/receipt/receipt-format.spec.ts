@@ -1,6 +1,6 @@
 import { BUSINESS_INFO } from '../../../core/config/business.config';
 import { Receipt } from '../models/checkout.model';
-import { RECEIPT_WIDTH, formatReceipt } from './receipt-format';
+import { RECEIPT_WIDTH, formatReceipt, wrapWords } from './receipt-format';
 
 const receipt: Receipt = {
   numero: 123,
@@ -40,6 +40,33 @@ describe('formatReceipt', () => {
 
   it('ninguna línea supera el ancho del papel', () => {
     expect(lines.every((line) => line.length <= RECEIPT_WIDTH)).toBe(true);
+  });
+
+  it('no recorta los textos largos: siguen en la línea de abajo', () => {
+    const empresa = {
+      ...BUSINESS_INFO,
+      giro: 'Elaboración y venta de productos de panadería y pastelería',
+      direccion: 'Calle Arce y 19 Av. Norte #1120, San Salvador, El Salvador',
+    };
+    const ticket = formatReceipt(receipt, empresa);
+    const texto = ticket.map((line) => line.trim()).join(' ');
+
+    expect(ticket.every((line) => line.length <= RECEIPT_WIDTH)).toBe(true);
+    expect(texto).toContain('Elaboración y venta de productos de panadería y pastelería');
+    expect(texto).toContain('Calle Arce y 19 Av. Norte #1120, San Salvador, El Salvador');
+    // la descripción del producto sigue debajo, alineada con su columna, y el precio queda en la primera línea
+    const fila = ticket.findIndex((line) => line.includes('Pastel de tres'));
+    expect(ticket[fila].trimEnd().endsWith('12.50')).toBe(true);
+    expect(ticket[fila + 1]).toMatch(/^ {5}\S/);
+    // columna de descripción: después de la cantidad (5) y con 18 caracteres de ancho
+    const descripcion = ticket.slice(fila, fila + 3).map((line) => line.slice(5, 23).trim());
+    expect(descripcion.join(' ')).toBe('Pastel de tres leches con fresas grande');
+  });
+
+  it('wrapWords parte entre palabras y corta solo las palabras más largas que la línea', () => {
+    expect(wrapWords('uno dos tres', 7)).toEqual(['uno dos', 'tres']);
+    expect(wrapWords('supercalifragilístico', 8)).toEqual(['supercal', 'ifragilí', 'stico']);
+    expect(wrapWords('', 8)).toEqual(['']);
   });
 
   it('muestra la sucursal y la caja donde se cobró', () => {

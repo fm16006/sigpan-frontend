@@ -173,7 +173,16 @@ describe('Cobro con IVA no incluido (HU-36)', () => {
     vi.advanceTimersByTime(3_000);
     fixture.detectChanges();
 
-    const ticket = html().querySelector('pre.receipt-print')!.textContent!;
+    // "Imprimir" manda a la impresión del navegador el mismo ticket, fuera del diálogo
+    const print = vi.spyOn(window, 'print').mockImplementation(() => {});
+    const imprimir = [...html().querySelectorAll('button')].find((b) => b.textContent?.includes('Imprimir'));
+    imprimir!.click();
+    const root = document.getElementById('receipt-print-root')!;
+    const ticket = root.textContent!;
+    expect(print).toHaveBeenCalledTimes(1);
+    expect(root.parentElement).toBe(document.body);
+    root.remove();
+    print.mockRestore();
     expect(ticket).toContain('IVA (13%)');
     expect(ticket).toMatch(/TOTAL A PAGAR\s+\$2\.55/);
     expect(ticket).toMatch(/VENTAS GRAVADAS\s+2\.26/);
