@@ -66,17 +66,30 @@ export function formatReceipt(
     row('TOTAL A PAGAR', `$${money(receipt.total)}`),
     row('IVA INCLUIDO (13%)', money(iva)),
     rule,
-    ...(receipt.tarjeta
-      ? [
-          row(`TARJETA ${receipt.tarjeta.marca}`, money(receipt.total)),
-          row(`**** **** **** ${receipt.tarjeta.ultimos}`, 'SIN CONTACTO'),
-          row(`AUT. ${receipt.tarjeta.autorizacion}`, 'APROBADA'),
-        ]
-      : [row(receipt.metodo, money(receipt.recibido)), row('CAMBIO', money(receipt.cambio))]),
-    rule,
+    ...withRule(paymentRows(receipt, row), rule),
+    ...(receipt.anulada ? [center('*** VENTA ANULADA ***'), rule] : []),
     center('GRACIAS POR SU COMPRA'),
     center('Conserve su ticket para reclamos'),
   ];
+}
+
+/** Un bloque de filas y su línea de cierre; si no hay filas, ninguna de las dos. */
+function withRule(rows: string[], rule: string): string[] {
+  return rows.length > 0 ? [...rows, rule] : rows;
+}
+
+function paymentRows(receipt: Receipt, row: (left: string, right: string) => string): string[] {
+  if (receipt.tarjeta) {
+    return [
+      row(`TARJETA ${receipt.tarjeta.marca}`, money(receipt.total)),
+      row(`**** **** **** ${receipt.tarjeta.ultimos}`, 'SIN CONTACTO'),
+      row(`AUT. ${receipt.tarjeta.autorizacion}`, 'APROBADA'),
+    ];
+  }
+  if (receipt.sinDetallePago) {
+    return [];
+  }
+  return [row(receipt.metodo, money(receipt.recibido)), row('CAMBIO', money(receipt.cambio))];
 }
 
 function itemRow(qty: string, description: string, price: string, total: string, width: number) {

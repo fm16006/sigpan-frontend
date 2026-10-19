@@ -73,4 +73,21 @@ describe('formatReceipt', () => {
     expect(card.some((text) => text.startsWith('CAMBIO'))).toBe(false);
     expect(card.every((text) => text.length <= RECEIPT_WIDTH)).toBe(true);
   });
+
+  it('sin detalle de pago omite recibido y cambio, sin dejar líneas dobles', () => {
+    const past = formatReceipt({ ...receipt, sinDetallePago: true }, BUSINESS_INFO);
+
+    expect(past.some((text) => text.startsWith('EFECTIVO'))).toBe(false);
+    expect(past.some((text) => text.startsWith('CAMBIO'))).toBe(false);
+    const rule = '-'.repeat(RECEIPT_WIDTH);
+    expect(past.some((text, index) => text === rule && past[index + 1] === rule)).toBe(false);
+    expect(past.some((text) => text.includes('TOTAL A PAGAR'))).toBe(true);
+  });
+
+  it('una venta anulada lo dice en el ticket', () => {
+    const voided = formatReceipt({ ...receipt, anulada: true }, BUSINESS_INFO);
+
+    expect(voided.some((text) => text.includes('VENTA ANULADA'))).toBe(true);
+    expect(lines.some((text) => text.includes('VENTA ANULADA'))).toBe(false);
+  });
 });
