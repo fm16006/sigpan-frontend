@@ -9,6 +9,9 @@ const valid = () => ({
   direccion: 'San Salvador, El Salvador',
   telefono: '2222-3333',
   correo: '',
+  aplicaIva: true,
+  ivaIncluido: true,
+  tasaIva: 13,
 });
 
 describe('createCompanyForm', () => {
@@ -53,6 +56,54 @@ describe('createCompanyForm', () => {
     form.setValue({ ...valid(), telefono: 'abc', correo: 'sin-arroba' });
     expect(form.controls.telefono.hasError('phone')).toBe(true);
     expect(form.controls.correo.hasError('email')).toBe(true);
+  });
+});
+
+describe('impuestos del formulario de la empresa', () => {
+  it('por defecto aplica IVA, incluido y al 13 %', () => {
+    const form = createCompanyForm();
+    expect(form.getRawValue()).toMatchObject({ aplicaIva: true, ivaIncluido: true, tasaIva: 13 });
+  });
+
+  it('acepta tasas de 0 a 100 con hasta dos decimales', () => {
+    const form = createCompanyForm();
+    for (const tasaIva of [0, 13, 16.5, 12.25, 100]) {
+      form.setValue({ ...valid(), tasaIva });
+      expect(form.controls.tasaIva.valid).toBe(true);
+    }
+  });
+
+  it('rechaza tasas negativas, mayores que 100, con tres decimales o vacías', () => {
+    const form = createCompanyForm();
+    form.setValue({ ...valid(), tasaIva: -1 });
+    expect(form.controls.tasaIva.hasError('min')).toBe(true);
+    form.setValue({ ...valid(), tasaIva: 100.5 });
+    expect(form.controls.tasaIva.hasError('max')).toBe(true);
+    form.setValue({ ...valid(), tasaIva: 13.005 });
+    expect(form.controls.tasaIva.hasError('pattern')).toBe(true);
+    form.controls.tasaIva.setValue(null as unknown as number);
+    expect(form.controls.tasaIva.hasError('required')).toBe(true);
+  });
+
+  it('al no aplicar IVA se deshabilitan el modo y la tasa, y se conserva su valor', () => {
+    const form = createCompanyForm();
+    form.setValue({ ...valid(), ivaIncluido: false, tasaIva: 16 });
+    form.controls.aplicaIva.setValue(false);
+
+    expect(form.controls.ivaIncluido.disabled).toBe(true);
+    expect(form.controls.tasaIva.disabled).toBe(true);
+    expect(form.valid).toBe(true);
+    expect(form.getRawValue()).toMatchObject({ aplicaIva: false, ivaIncluido: false, tasaIva: 16 });
+
+    form.controls.aplicaIva.setValue(true);
+    expect(form.controls.ivaIncluido.enabled).toBe(true);
+    expect(form.controls.tasaIva.enabled).toBe(true);
+  });
+
+  it('un mensaje claro por cada error de la tasa', () => {
+    expect(companyErrorMessage({ min: {} })).toContain('negativa');
+    expect(companyErrorMessage({ max: {} })).toContain('100');
+    expect(companyErrorMessage({ pattern: {} })).toContain('dos decimales');
   });
 });
 

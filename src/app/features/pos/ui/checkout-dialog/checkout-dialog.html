@@ -30,6 +30,21 @@
             <p class="font-serif text-4xl font-semibold leading-none tabular-nums md:text-5xl [@media(max-height:760px)]:md:text-4xl">
               {{ total() | money }}
             </p>
+            @if (quote(); as q) {
+              <dl class="mt-2 grid gap-0.5 text-sm text-base-content/70" aria-label="Desglose del cobro">
+                <div class="flex justify-between">
+                  <dt>Subtotal</dt>
+                  <dd class="tabular-nums">{{ q.subtotal | money }}</dd>
+                </div>
+                @if (q.descuento > 0) {
+                  <div class="flex justify-between text-success">
+                    <dt>Descuentos</dt>
+                    <dd class="tabular-nums">−{{ q.descuento | money }}</dd>
+                  </div>
+                }
+                <app-iva-line [tax]="q" />
+              </dl>
+            }
           </div>
 
           <fieldset>

@@ -10,6 +10,8 @@ export interface QuoteLine {
   readonly total: number;
   /** Regla que originó el descuento de la linea, formato TIPO:ID. */
   readonly regla: string | null;
+  /** El producto es exento de IVA. */
+  readonly exento?: boolean;
 }
 
 /** Regla que se evaluó pero no ganó, con el motivo. */
@@ -23,7 +25,15 @@ export interface Quote {
   readonly lineas: readonly QuoteLine[];
   readonly subtotal: number;
   readonly descuento: number;
+  /** Total a pagar: ya incluye el IVA, vaya o no incluido en los precios. */
   readonly total: number;
+  /** Configuración del IVA con la que el servidor calculó esta cotización. */
+  readonly aplicaIva: boolean;
+  readonly ivaIncluido: boolean;
+  readonly tasaIva: number;
+  readonly ventasGravadas: number;
+  readonly ventasExentas: number;
+  readonly iva: number;
   readonly ahorro: number;
   readonly reglaAplicada: string | null;
   readonly descartadas: readonly RejectedRule[];

@@ -1,6 +1,7 @@
 import { Sale } from '../../core/models/order.model';
 import { todayIso } from '../../core/utils/dates';
 import { Receipt } from './models/checkout.model';
+import { receiptLines, receiptTax } from './receipt/receipt-sale';
 import { PosOrder } from './pos-orders';
 
 /** Estado con el que el backend marca una venta anulada. */
@@ -109,12 +110,9 @@ export function summarizeSales(sales: readonly Sale[]): DaySummary {
  * ticket no trae "recibido" ni "cambio" (`sinDetallePago`).
  */
 export function saleToReceipt(sale: Sale): Receipt {
-  const lineas = (sale.detalles ?? []).map((line) => ({
-    cantidad: line.cantidad,
-    descripcion: line.producto,
-    precio: Number(line.precio),
-    importe: Number(line.subtotal),
-  }));
+  // Desglose del IVA siempre el guardado con la venta, nunca la configuración vigente de la empresa.
+  const impuestos = receiptTax(sale);
+  const lineas = receiptLines(sale, impuestos);
   return {
     numero: sale.id,
     fecha: new Date(sale.fecha),
@@ -124,6 +122,9 @@ export function saleToReceipt(sale: Sale): Receipt {
     documento: 'TICKET',
     metodo: 'EFECTIVO',
     lineas,
+    subtotal: Number(sale.subtotal),
+    descuento: Number(sale.descuento),
+    impuestos,
     total: Number(sale.total),
     recibido: 0,
     cambio: 0,

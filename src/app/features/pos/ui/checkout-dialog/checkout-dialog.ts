@@ -26,7 +26,9 @@ import {
 import { CompanyStore } from '../../../../core/services/company-store';
 import { AppError } from '../../../../core/http/app-error';
 import { Sale } from '../../../../core/models/order.model';
+import { Quote } from '../../../../core/models/quote.model';
 import { MoneyPipe } from '../../../../shared/pipes/money.pipe';
+import { IvaLine } from '../../../../shared/ui/iva-line/iva-line';
 import { OrderService } from '../../../storefront/services/order.service';
 import { CashRegisterStore } from '../../services/cash-register.store';
 import {
@@ -45,6 +47,7 @@ import { addCash, cashChange, parseCash, roundMoney } from '../../payment/cash';
 import { beep } from '../../payment/terminal-beep';
 import { terminalErrorMessage } from '../../payment/terminal-protocol';
 import { formatReceipt } from '../../receipt/receipt-format';
+import { receiptLines, receiptTax } from '../../receipt/receipt-sale';
 import { CardTerminal } from '../../services/card-terminal';
 import { TicketPrinter } from '../../services/ticket-printer';
 import { PaymentTerminal, TerminalScreen } from '../payment-terminal/payment-terminal';
@@ -82,7 +85,7 @@ function after<T>(ms: number, value: T): Observable<T> {
 
 @Component({
   selector: 'app-checkout-dialog',
-  imports: [MoneyPipe, PaymentTerminal],
+  imports: [MoneyPipe, PaymentTerminal, IvaLine],
   templateUrl: './checkout-dialog.html',
   host: {
     '(document:keydown.escape)': 'cancel()',
@@ -103,9 +106,13 @@ export class CheckoutDialog {
   readonly cashier = input.required<string>();
   /** Ahorro de la cotización, solo para mostrarlo en el cobro. */
   readonly savings = input(0);
+  /** Desglose de la cotización vigente (IVA); el total a cobrar es siempre `total`, el que dio el servidor. */
+  readonly quote = input<Quote | null>(null);
 
   readonly completed = output<void>();
   readonly cancelled = output<void>();
+  /** El servidor recalculó otro total al confirmar: hay que volver a cotizar antes de cobrar. */
+  readonly staleTotal = output<void>();
 
   protected readonly documentOptions = DOCUMENT_OPTIONS;
   protected readonly paymentOptions = PAYMENT_OPTIONS;
@@ -326,6 +333,7 @@ export class CheckoutDialog {
           productoId: line.product.id,
           cantidad: line.quantity,
         })),
+        totalEsperado: this.total(),
         // Sin caja registrada (turno anterior a HU-60) el backend usa la primera de la sucursal.
         ...(this.register.lugar()?.cajaId != null ? { cajaId: this.register.lugar()!.cajaId! } : {}),
       })
@@ -337,6 +345,9 @@ export class CheckoutDialog {
         next: (sale) => this.print(this.toReceipt(sale, recibido, tarjeta)),
         error: (error: AppError) => {
           const message = error.message ?? 'No se pudo registrar la venta.';
+          if (error.code === 'TOTAL_CAMBIO') {
+            this.staleTotal.emit();
+          }
           if (tarjeta) {
             // La venta no existe: se revierte el cobro ya autorizado.
             beep('rechazada');
@@ -377,13 +388,11 @@ export class CheckoutDialog {
   }
 
   private toReceipt(sale: Sale, recibido: number, tarjeta: CardPayment | null): Receipt {
-    const lineas = sale.detalles?.length
-      ? sale.detalles.map((detail) => ({
-          cantidad: detail.cantidad,
-          descripcion: detail.producto,
-          precio: Number(detail.precio),
-          importe: Number(detail.subtotal),
-        }))
+    // El desglose del IVA es el que el servidor guardó con la venta, no la configuración vigente.
+    const impuestos = receiptTax(sale);
+    const registered = receiptLines(sale, impuestos);
+    const lineas = registered.length > 0
+      ? registered
       : this.lines().map((line) => ({
           cantidad: line.quantity,
           descripcion: line.product.nombre,
@@ -401,6 +410,9 @@ export class CheckoutDialog {
       documento: this.document(),
       metodo: this.method(),
       lineas,
+      subtotal: Number(sale.subtotal),
+      descuento: Number(sale.descuento),
+      impuestos,
       total,
       recibido,
       cambio: Math.max(0, recibido - total),

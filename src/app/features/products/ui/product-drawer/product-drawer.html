@@ -209,6 +209,19 @@
 
     <fieldset class="flex flex-col gap-3">
       <legend class="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.09em] text-base-content/55">
+        Impuestos
+      </legend>
+      <label class="label cursor-pointer justify-start gap-3">
+        <input type="checkbox" class="checkbox checkbox-sm" formControlName="exentoIva" />
+        <span class="text-sm">Exento de IVA</span>
+      </label>
+      <p class="text-xs text-base-content/55">
+        Un producto exento se vende sin IVA aunque la empresa lo aplique al resto. Aplica desde la próxima venta.
+      </p>
+    </fieldset>
+
+    <fieldset class="flex flex-col gap-3">
+      <legend class="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.09em] text-base-content/55">
         Ficha para el cliente
       </legend>
       <div>
@@ -251,3 +264,14 @@
     </button>
   </div>
 </app-form-drawer>
+
+<app-confirm-dialog
+  [open]="exemptNotes() !== null"
+  title="¿Cambiar la exención de IVA?"
+  message="Vas a cambiar cómo se cobra este producto."
+  [details]="exemptNotes() ?? []"
+  confirmLabel="Aplicar cambio"
+  tone="primary"
+  (confirmed)="confirmExempt()"
+  (cancelled)="dismissExempt()"
+/>

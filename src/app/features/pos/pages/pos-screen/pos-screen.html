@@ -428,6 +428,7 @@
     <span>Descuentos</span>
     <span class="tabular-nums">−{{ descuento() | money }}</span>
   </div>
+  <app-iva-line [tax]="tax()" />
   <div class="flex items-baseline justify-between pt-1" [class.opacity-50]="quotePending()">
     <span class="font-semibold">Total</span>
     <span class="font-serif text-4xl font-semibold tabular-nums">{{ total() | money }}</span>
@@ -625,8 +626,10 @@
     [lines]="lines()"
     [total]="total()"
     [savings]="ahorro()"
+    [quote]="tax()"
     [cashier]="auth.user()?.name ?? ''"
     (cancelled)="checkoutOpen.set(false)"
+    (staleTotal)="quote.reload()"
     (completed)="finishSale()"
   />
 }

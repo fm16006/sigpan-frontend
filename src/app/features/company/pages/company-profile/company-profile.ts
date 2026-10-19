@@ -1,8 +1,10 @@
 import { DatePipe } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { IMAGE_TYPES, MAX_IMAGE_MB } from '../../../../core/models/catalog.model';
 import { CompanyStore } from '../../../../core/services/company-store';
 import { Notifications } from '../../../../core/services/notifications';
+import { taxExample, taxRateLabel } from '../../../../core/models/tax.model';
+import { StatusChip } from '../../../../shared/ui/status-chip/status-chip';
 import { Crumb } from '../../../../shared/ui/breadcrumbs/breadcrumbs';
 import { DetailHeader } from '../../../../shared/ui/detail-header/detail-header';
 import { Icon } from '../../../../shared/ui/icon/icon';
@@ -15,7 +17,7 @@ import { CompanyDrawer } from '../../ui/company-drawer/company-drawer';
  */
 @Component({
   selector: 'app-company-profile',
-  imports: [DatePipe, DetailHeader, Icon, ResourceState, CompanyDrawer],
+  imports: [DatePipe, DetailHeader, Icon, ResourceState, StatusChip, CompanyDrawer],
   host: {
     '(document:click)': 'onDocumentClick($event)',
     '(document:keydown.escape)': 'menuOpen.set(false)',
@@ -31,6 +33,20 @@ export class CompanyProfile {
     { label: 'Empresa' },
   ];
   protected readonly acceptedTypes = IMAGE_TYPES.join(',');
+
+  protected readonly tax = this.store.tax;
+  protected readonly rateLabel = computed(() => taxRateLabel(this.tax().tasaIva));
+  /** Ejemplo breve del efecto de la configuración vigente. */
+  protected readonly taxSummary = computed(() => {
+    const tax = this.tax();
+    if (!tax.aplicaIva) {
+      return 'Los productos se cobran por su precio y el ticket no muestra IVA.';
+    }
+    const example = taxExample(tax.tasaIva);
+    return tax.ivaIncluido
+      ? `Un producto de ${example} se cobra ${example}; el IVA va dentro del precio.`
+      : `Un producto de $1.00 se cobra ${example}; el IVA se suma al precio.`;
+  });
 
   protected readonly editing = signal(false);
   protected readonly menuOpen = signal(false);
