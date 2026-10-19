@@ -1,21 +1,21 @@
 @if (product(); as p) {
-  <div class="grid items-start gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-    <div class="flex min-w-0 flex-col gap-4">
+  <div class="grid items-start gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+    <div class="flex min-w-0 flex-col gap-3 sm:gap-4">
       <section class="panel" aria-labelledby="h-base">
         <div class="flex flex-wrap items-center justify-between gap-3">
-          <h2 id="h-base" class="font-serif text-lg font-semibold">Precio base</h2>
+          <h2 id="h-base" class="font-serif text-base font-semibold sm:text-lg">Precio base</h2>
           @if (isAdmin) {
             <button type="button" class="btn btn-sm" (click)="ctx.openEditor()">Cambiar precio</button>
           }
         </div>
-        <div class="grid grid-cols-3 gap-3">
+        <div class="grid grid-cols-3 gap-2 max-sm:items-end sm:gap-3">
           <div class="flex flex-col gap-0.5">
             <span class="text-xs text-base-content/60">Precio por {{ p.unidadVenta }}</span>
-            <span class="font-serif text-3xl font-semibold">{{ p.precio | money }}</span>
+            <span class="font-serif text-3xl font-semibold max-sm:text-2xl">{{ p.precio | money }}</span>
           </div>
           <div class="flex flex-col gap-0.5">
             <span class="text-xs text-base-content/60">Costo unitario</span>
-            <span class="font-serif text-3xl font-semibold">
+            <span class="font-serif text-3xl font-semibold max-sm:text-2xl">
               @if (ctx.costoUnitario() !== null) {
                 {{ ctx.costoUnitario() | money }}
               } @else {
@@ -26,7 +26,7 @@
           <div class="flex flex-col gap-0.5">
             <span class="text-xs text-base-content/60">Margen</span>
             <span
-              class="font-serif text-3xl font-semibold"
+              class="font-serif text-3xl font-semibold max-sm:text-2xl"
               [class.text-success]="(ctx.margen() ?? 0) > 0"
               [class.text-error]="(ctx.margen() ?? 0) < 0"
             >
@@ -50,9 +50,9 @@
       </section>
 
       <section class="overflow-hidden rounded-box border border-base-300 bg-base-100" aria-labelledby="h-may">
-        <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+        <div class="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-5 py-4">
           <div class="flex flex-col gap-0.5">
-            <h2 id="h-may" class="font-serif text-lg font-semibold">Mayoreo</h2>
+            <h2 id="h-may" class="font-serif text-base font-semibold sm:text-lg">Mayoreo</h2>
             <span class="text-xs text-base-content/60">
               El tramo se elige por la cantidad total del producto en la canasta
             </span>
@@ -61,13 +61,13 @@
             <a routerLink="/backoffice/wholesale" class="btn btn-sm">Administrar tramos</a>
           }
         </div>
-        <div class="grid items-center gap-x-4 border-t border-base-300 px-5 py-3 max-md:hidden md:grid-cols-[minmax(0,1fr)_7rem_6rem]">
+        <div class="grid items-center gap-x-4 border-t border-base-300 px-4 sm:px-5 py-3 max-md:hidden md:grid-cols-[minmax(0,1fr)_7rem_6rem]">
           <span class="list-th">Desde</span>
           <span class="list-th text-right">Precio c/u</span>
           <span class="list-th">Estado</span>
         </div>
-        <div class="list-row grid-cols-2 md:grid-cols-[minmax(0,1fr)_7rem_6rem]">
-          <span>
+        <div class="list-row max-sm:px-4 grid-cols-[minmax(0,1fr)_auto] gap-y-1 md:grid-cols-[minmax(0,1fr)_7rem_6rem]">
+          <span class="max-md:col-start-1 max-md:flex max-md:flex-wrap max-md:items-baseline max-md:gap-x-1.5">
             @if (firstTierFrom(); as first) {
               1 a {{ first - 1 }} {{ first - 1 === 1 ? 'unidad' : 'unidades' }}
             } @else {
@@ -75,43 +75,44 @@
             }
             <span class="text-xs text-base-content/60">· precio base</span>
           </span>
-          <span class="tabular-nums md:text-right">{{ p.precio | money }}</span>
-          <app-status-chip label="Base" tone="neutral" />
+          <span class="tabular-nums max-md:col-start-2 max-md:row-span-2 max-md:row-start-1 md:text-right">{{ p.precio | money }}</span>
+          <app-status-chip label="Base" tone="neutral" class="max-md:col-start-1 max-md:justify-self-start" />
         </div>
         @for (scale of ctx.scales(); track scale.id) {
-          <div class="list-row grid-cols-2 md:grid-cols-[minmax(0,1fr)_7rem_6rem]">
-            <span class="font-semibold">{{ scale.cantidadMinima | number: '1.0-3' }} unidades o más</span>
-            <span class="font-semibold tabular-nums md:text-right">{{ scale.precioUnitario | money }}</span>
+          <div class="list-row max-sm:px-4 grid-cols-[minmax(0,1fr)_auto] gap-y-1 md:grid-cols-[minmax(0,1fr)_7rem_6rem]">
+            <span class="font-semibold max-md:col-start-1">{{ scale.cantidadMinima | number: '1.0-3' }} unidades o más</span>
+            <span class="font-semibold tabular-nums max-md:col-start-2 max-md:row-span-2 max-md:row-start-1 md:text-right">{{ scale.precioUnitario | money }}</span>
             <app-status-chip
+              class="max-md:col-start-1 max-md:justify-self-start"
               [label]="scale.activo ? 'Activo' : 'Inactivo'"
               [tone]="scale.activo ? 'ok' : 'neutral'"
             />
           </div>
         } @empty {
-          <div class="border-t border-base-300 px-5 py-4 text-sm text-base-content/60">
+          <div class="border-t border-base-300 px-4 sm:px-5 py-4 text-sm text-base-content/60">
             Este producto no tiene precios por mayoreo.
           </div>
         }
       </section>
 
       <section class="overflow-hidden rounded-box border border-base-300 bg-base-100" aria-labelledby="h-pro">
-        <div class="flex flex-col gap-0.5 px-5 py-4">
-          <h2 id="h-pro" class="font-serif text-lg font-semibold">Promociones y combos que lo incluyen</h2>
+        <div class="flex flex-col gap-0.5 px-4 sm:px-5 py-4">
+          <h2 id="h-pro" class="font-serif text-base font-semibold sm:text-lg">Promociones y combos que lo incluyen</h2>
           <span class="text-xs text-base-content/60">Hacé clic en una fila para abrir el registro</span>
         </div>
-        <div class="grid items-center gap-x-4 border-t border-base-300 px-5 py-3 max-md:hidden md:grid-cols-[minmax(0,1fr)_7rem_11rem_7rem_1rem]">
+        <div class="grid items-center gap-x-4 border-t border-base-300 px-4 sm:px-5 py-3 max-md:hidden md:grid-cols-[minmax(0,1fr)_7rem_11rem_7rem_1rem]">
           <span class="list-th">Nombre</span>
           <span class="list-th">Regla</span>
           <span class="list-th">Vigencia</span>
           <span class="list-th">Estado</span>
-          <span></span>
+          <span class="max-md:hidden"></span>
         </div>
         @for (item of ctx.promotions(); track item.link.id) {
           <a
-            class="list-row grid-cols-2 gap-y-1.5 md:grid-cols-[minmax(0,1fr)_7rem_11rem_7rem_1rem]"
+            class="list-row max-sm:px-4 grid-cols-[minmax(0,1fr)_auto] gap-y-1.5 md:grid-cols-[minmax(0,1fr)_7rem_11rem_7rem_1rem]"
             routerLink="/backoffice/promotions"
           >
-            <span class="flex min-w-0 flex-col max-md:col-span-2">
+            <span class="flex min-w-0 flex-col max-md:col-start-1 max-md:row-start-1">
               <span class="truncate font-semibold">{{ item.link.promocion }}</span>
               <span class="text-xs text-base-content/60">
                 Promoción
@@ -120,7 +121,7 @@
                 }
               </span>
             </span>
-            <span class="tabular-nums">
+            <span class="tabular-nums max-md:col-start-1 max-md:row-start-2">
               @if (item.promotion; as promotion) {
                 @if (promotion.tipoDescuento === 'PORCENTAJE') {
                   {{ promotion.valorDescuento | number: '1.0-2' }} %
@@ -131,7 +132,7 @@
                 —
               }
             </span>
-            <span class="text-sm">
+            <span class="text-sm max-md:col-start-2 max-md:row-start-2 max-md:text-right max-md:text-xs max-md:text-base-content/60">
               @if (item.promotion; as promotion) {
                 @if (promotion.fechaInicio || promotion.fechaFin) {
                   {{ promotion.fechaInicio ? (promotion.fechaInicio | date: 'd MMM') : 'Desde siempre' }} –
@@ -145,42 +146,43 @@
             </span>
             @if (item.promotion; as promotion) {
               <app-status-chip
+                class="max-md:col-start-2 max-md:row-start-1 max-md:justify-self-end"
                 [label]="promotionChips[stateOf(promotion)].label"
                 [tone]="promotionChips[stateOf(promotion)].tone"
               />
             } @else {
-              <span></span>
+              <span class="max-md:hidden"></span>
             }
             <app-icon name="chevron" class="text-base-content/40 max-md:hidden" />
           </a>
         }
         @for (item of ctx.combos(); track item.line.id) {
           <a
-            class="list-row grid-cols-2 gap-y-1.5 md:grid-cols-[minmax(0,1fr)_7rem_11rem_7rem_1rem]"
+            class="list-row max-sm:px-4 grid-cols-[minmax(0,1fr)_auto] gap-y-1.5 md:grid-cols-[minmax(0,1fr)_7rem_11rem_7rem_1rem]"
             [routerLink]="['/backoffice/combos', item.line.comboId]"
           >
-            <span class="flex min-w-0 flex-col max-md:col-span-2">
+            <span class="flex min-w-0 flex-col max-md:col-start-1 max-md:row-start-1">
               <span class="truncate font-semibold">{{ item.line.combo }}</span>
               <span class="text-xs text-base-content/60">Combo · {{ item.line.cantidad }} u por combo</span>
             </span>
-            <span class="tabular-nums">
+            <span class="tabular-nums max-md:col-start-1 max-md:row-start-2">
               @if (item.combo; as combo) {
                 {{ combo.precio | money }}
               } @else {
                 —
               }
             </span>
-            <span class="text-sm">Sin vencimiento</span>
+            <span class="text-sm max-md:col-start-2 max-md:row-start-2 max-md:text-right max-md:text-xs max-md:text-base-content/60">Sin vencimiento</span>
             @if (item.combo; as combo) {
-              <app-status-chip [label]="combo.activo ? 'Activo' : 'Inactivo'" [tone]="combo.activo ? 'ok' : 'neutral'" />
+              <app-status-chip class="max-md:col-start-2 max-md:row-start-1 max-md:justify-self-end" [label]="combo.activo ? 'Activo' : 'Inactivo'" [tone]="combo.activo ? 'ok' : 'neutral'" />
             } @else {
-              <span></span>
+              <span class="max-md:hidden"></span>
             }
             <app-icon name="chevron" class="text-base-content/40 max-md:hidden" />
           </a>
         }
         @if (ctx.promotions().length === 0 && ctx.combos().length === 0) {
-          <div class="border-t border-base-300 px-5 py-6 text-sm text-base-content/60">
+          <div class="border-t border-base-300 px-4 sm:px-5 py-6 text-sm text-base-content/60">
             Este producto no está en ninguna promoción ni combo.
           </div>
         }
@@ -189,7 +191,7 @@
 
     <section class="panel" aria-labelledby="h-sim">
       <div class="flex flex-col gap-0.5">
-        <h2 id="h-sim" class="font-serif text-lg font-semibold">¿Cuánto se cobra?</h2>
+        <h2 id="h-sim" class="font-serif text-base font-semibold sm:text-lg">¿Cuánto se cobra?</h2>
         <span class="text-xs text-base-content/60">
           Las reglas no se acumulan: gana la que deja el total más bajo
         </span>
@@ -200,22 +202,22 @@
           El simulador de cobro lo usa administración. Consultá con ella el precio final de una cantidad.
         </p>
       } @else {
-        <div class="flex flex-wrap items-center gap-3">
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
           <span class="font-semibold">Cantidad</span>
           <div class="inline-flex items-center overflow-hidden rounded-[10px] border border-base-300">
             <button
               type="button"
-              class="size-11 bg-base-200/60 text-lg hover:bg-base-200 disabled:opacity-40"
+              class="size-11 bg-base-200/60 text-lg hover:bg-base-200 disabled:opacity-40 max-sm:size-9"
               aria-label="Una unidad menos"
               [disabled]="qty() <= 1"
               (click)="setQty(qty() - 1)"
             >
               −
             </button>
-            <span class="w-14 text-center font-serif text-xl font-semibold" aria-live="polite">{{ qty() }}</span>
+            <span class="w-14 text-center font-serif text-xl font-semibold max-sm:w-12" aria-live="polite">{{ qty() }}</span>
             <button
               type="button"
-              class="size-11 bg-base-200/60 text-lg hover:bg-base-200"
+              class="size-11 bg-base-200/60 text-lg hover:bg-base-200 max-sm:size-9"
               aria-label="Una unidad más"
               (click)="setQty(qty() + 1)"
             >
@@ -236,7 +238,7 @@
         }
 
         @if (quote(); as q) {
-          <div class="flex flex-col gap-2" [class.opacity-60]="quoting()" aria-live="polite">
+          <div class="flex flex-col gap-2 max-sm:gap-1.5" [class.opacity-60]="quoting()" aria-live="polite">
             @if (q.reglaAplicada) {
               <div class="flex items-center justify-between gap-3 rounded-[10px] border border-success/50 bg-success/10 px-3.5 py-2.5">
                 <span class="flex min-w-0 flex-col">
@@ -246,7 +248,7 @@
                 <app-status-chip label="Aplicada" tone="ok" />
               </div>
             } @else {
-              <div class="rounded-[10px] border border-base-300 px-3.5 py-2.5 text-sm text-base-content/70">
+              <div class="rounded-[10px] border border-base-300 px-3.5 py-2.5 text-sm text-base-content/70 max-sm:py-2">
                 Ninguna regla aplica: se cobra el precio base.
               </div>
             }
@@ -266,7 +268,7 @@
           <div class="flex items-baseline justify-between border-t border-base-300 pt-3">
             <span>Total a cobrar por {{ qty() }} u</span>
             <span class="flex flex-col items-end">
-              <span class="font-serif text-3xl font-semibold tabular-nums">{{ q.total | money }}</span>
+              <span class="font-serif text-3xl font-semibold tabular-nums max-sm:text-2xl">{{ q.total | money }}</span>
               @if (q.ahorro > 0) {
                 <span class="text-xs text-success">Ahorra {{ q.ahorro | money }}</span>
               }

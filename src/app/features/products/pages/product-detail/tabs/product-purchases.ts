@@ -32,7 +32,7 @@ import { ProductContext } from '../product-context';
 
       <section class="overflow-hidden rounded-box border border-base-300 bg-base-100" aria-labelledby="h-compras">
         <div class="px-5 py-4">
-          <h2 id="h-compras" class="font-serif text-lg font-semibold">Compras a proveedores</h2>
+          <h2 id="h-compras" class="font-serif text-base font-semibold sm:text-lg">Compras a proveedores</h2>
           <p class="text-xs text-base-content/60">
             Las últimas diez. La existencia sube con cada compra; una venta la baja.
           </p>

@@ -20,7 +20,7 @@ import { BranchDetailStore } from './branch-detail.store';
     <section class="panel" aria-labelledby="suc-mp">
       <div class="flex flex-wrap items-start justify-between gap-3">
         <div class="flex flex-col gap-0.5">
-          <h2 id="suc-mp" class="font-serif text-lg font-semibold">Materia prima</h2>
+          <h2 id="suc-mp" class="font-serif text-base font-semibold sm:text-lg">Materia prima</h2>
           <p class="text-xs text-base-content/60">
             Existencia en esta sucursal frente al mínimo de cada insumo. El total del negocio es la suma de
             todas las sucursales.
@@ -75,7 +75,7 @@ import { BranchDetailStore } from './branch-detail.store';
 
     <section class="panel mt-5" aria-labelledby="suc-prod">
       <div class="flex flex-col gap-0.5">
-        <h2 id="suc-prod" class="font-serif text-lg font-semibold">Productos</h2>
+        <h2 id="suc-prod" class="font-serif text-base font-semibold sm:text-lg">Productos</h2>
         <p class="text-xs text-base-content/60">Unidades disponibles en esta sucursal.</p>
       </div>
 
