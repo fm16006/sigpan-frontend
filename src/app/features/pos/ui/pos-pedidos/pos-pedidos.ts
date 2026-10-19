@@ -1,11 +1,12 @@
 import { Component, computed, inject, output, signal } from '@angular/core';
 import { DatePipe, NgTemplateOutlet } from '@angular/common';
-import { BUSINESS_INFO } from '../../../../core/config/business.config';
 import { MoneyPipe } from '../../../../shared/pipes/money.pipe';
 import { StatusChip } from '../../../../shared/ui/status-chip/status-chip';
 import { Icon } from '../../../../shared/ui/icon/icon';
 import { MAX_ORDERS, PosOrder, itemCount, orderTotal } from '../../pos-orders';
 import { orderPreview } from '../../pos-pedidos-logic';
+import { placeLabel } from '../../../branches/branch-utils';
+import { CashRegisterStore } from '../../services/cash-register.store';
 import { PosOrdersStore } from '../../services/pos-orders.store';
 import { PosHistorial } from '../pos-historial/pos-historial';
 
@@ -31,7 +32,12 @@ export class PosPedidos {
   readonly discard = output<PosOrder>();
   readonly create = output<void>();
 
-  protected readonly caja = BUSINESS_INFO.caja;
+  private readonly register = inject(CashRegisterStore);
+  /** "Sucursal · Caja" del turno abierto; "Caja" si el turno es anterior a las sucursales. */
+  protected readonly lugar = computed(() => {
+    const lugar = this.register.lugar();
+    return placeLabel(lugar?.sucursal, lugar?.caja) || 'Caja';
+  });
   protected readonly maxOrders = MAX_ORDERS;
   protected readonly tab = signal<PedidosTab>('borradores');
   protected readonly drafts = this.store.pendientes;

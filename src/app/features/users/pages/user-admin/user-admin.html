@@ -51,11 +51,12 @@
 >
   <section aria-label="Lista de usuarios" class="overflow-hidden rounded-box border border-base-300 bg-base-100">
     <div
-      class="list-row grid-cols-[minmax(0,2fr)_9rem_9rem_7rem_1rem] border-t-0 py-3.5 max-md:hidden hover:bg-transparent"
+      class="list-row grid-cols-[minmax(0,2fr)_9rem_9rem_9rem_7rem_1rem] border-t-0 py-3.5 max-md:hidden hover:bg-transparent"
     >
       <span class="list-th">Usuario</span>
       <span class="list-th">Teléfono</span>
       <span class="list-th">Rol</span>
+      <span class="list-th">Sucursal</span>
       <span class="list-th">Estado</span>
       <span></span>
     </div>
@@ -63,7 +64,7 @@
     @for (user of items(); track user.id) {
       <button
         type="button"
-        class="list-row w-full cursor-pointer grid-cols-[minmax(0,2fr)_9rem_9rem_7rem_1rem] text-start max-md:grid-cols-2 max-md:gap-y-2"
+        class="list-row w-full cursor-pointer grid-cols-[minmax(0,2fr)_9rem_9rem_9rem_7rem_1rem] text-start max-md:grid-cols-2 max-md:gap-y-2"
         [attr.aria-label]="'Editar a ' + user.nombre"
         (click)="openEdit(user)"
       >
@@ -80,6 +81,7 @@
         <span>
           <span class="inline-block rounded-md bg-base-200 px-2 py-0.5 text-xs font-medium">{{ roleLabels[user.rol] }}</span>
         </span>
+        <span class="truncate text-sm text-base-content/75 max-md:hidden">{{ user.sucursal || '—' }}</span>
         <app-status-chip [label]="user.activo ? 'Activo' : 'Inactivo'" [tone]="user.activo ? 'ok' : 'neutral'" />
         <app-icon name="chevron" class="text-base-content/40 max-md:hidden" />
       </button>
@@ -162,6 +164,24 @@
           <span class="mt-1 text-xs text-base-content/55">No podés cambiar tu propio rol.</span>
         }
       </label>
+      @if (needsBranch()) {
+        <label class="form-control">
+          <span class="label-text mb-1">Sucursal</span>
+          <select formControlName="sucursalId" class="select select-bordered w-full">
+            <option [ngValue]="0">Elegí una sucursal</option>
+            @for (branch of branchOptions(); track branch.id) {
+              <option [ngValue]="branch.id">{{ branch.nombre }}{{ branch.activo ? '' : ' (inactiva)' }}</option>
+            }
+          </select>
+          @if (fieldError('sucursalId'); as message) {
+            <span class="mt-1 text-sm text-error">{{ message }}</span>
+          } @else {
+            <span class="mt-1 text-xs text-base-content/55">
+              Donde trabaja. Un cajero vende en la sucursal que tenga asignada.
+            </span>
+          }
+        </label>
+      }
       @if (editing(); as user) {
         <div class="flex items-center justify-between gap-3 rounded-field border border-base-300 px-4 py-3">
           <span class="flex flex-col">

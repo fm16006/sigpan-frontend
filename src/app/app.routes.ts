@@ -121,6 +121,12 @@ export const routes: Routes = [
         canActivate: [roleGuard(['ADMINISTRADOR'])],
         loadChildren: () => import('./features/users/users.routes').then((m) => m.USERS_ROUTES),
       },
+      {
+        path: 'branches',
+        canActivate: [roleGuard(['ADMINISTRADOR'])],
+        loadChildren: () =>
+          import('./features/branches/branches.routes').then((m) => m.BRANCHES_ROUTES),
+      },
     ],
   },
   {

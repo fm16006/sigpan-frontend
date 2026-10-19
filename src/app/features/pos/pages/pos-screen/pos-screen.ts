@@ -16,7 +16,6 @@ import { HttpResourceRequest, httpResource } from '@angular/common/http';
 import { NgTemplateOutlet, isPlatformBrowser } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { BUSINESS_INFO } from '../../../../core/config/business.config';
 import { Id } from '../../../../core/models/api.model';
 import { CatalogProduct } from '../../../../core/models/catalog.model';
 import { PriceScale } from '../../../../core/models/price-scale.model';
@@ -50,6 +49,7 @@ import { CheckoutDialog } from '../../ui/checkout-dialog/checkout-dialog';
 import { PosApertura } from '../../ui/pos-apertura/pos-apertura';
 import { PosCaja } from '../../ui/pos-caja/pos-caja';
 import { PosPedidos } from '../../ui/pos-pedidos/pos-pedidos';
+import { placeLabel } from '../../../branches/branch-utils';
 import { valueOr } from '../../../../core/http/resource-value';
 
 /** Qué ve el cajero: con la caja cerrada solo la apertura; abierta, la venta, el cierre o los pedidos. */
@@ -121,7 +121,11 @@ export class PosScreen {
 
   protected readonly auth = inject(Auth);
   protected readonly isAdmin = this.auth.hasAnyRole(['ADMINISTRADOR']);
-  protected readonly caja = BUSINESS_INFO.caja;
+  /** "Sucursal · Caja" del turno abierto, para la barra superior. */
+  protected readonly place = computed(() => {
+    const lugar = this.register.lugar();
+    return placeLabel(lugar?.sucursal ?? this.auth.user()?.sucursal, lugar?.caja ?? 'Caja');
+  });
 
   /** Líneas del pedido activo: todo lo que sigue (cotización, pasos, cobro) opera sobre él. */
   private readonly ticket = this.orders.lineas;

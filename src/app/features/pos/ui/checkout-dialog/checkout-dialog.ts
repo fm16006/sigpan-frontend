@@ -28,6 +28,7 @@ import { AppError } from '../../../../core/http/app-error';
 import { Sale } from '../../../../core/models/order.model';
 import { MoneyPipe } from '../../../../shared/pipes/money.pipe';
 import { OrderService } from '../../../storefront/services/order.service';
+import { CashRegisterStore } from '../../services/cash-register.store';
 import {
   CardPayment,
   CASH_SHORTCUTS,
@@ -93,6 +94,7 @@ export class CheckoutDialog {
   private readonly printer = inject(TicketPrinter);
   /** Encabezado del ticket: datos de la empresa (o los de respaldo mientras cargan). */
   private readonly company = inject(CompanyStore);
+  private readonly register = inject(CashRegisterStore);
   protected readonly terminal = inject(CardTerminal);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -324,6 +326,8 @@ export class CheckoutDialog {
           productoId: line.product.id,
           cantidad: line.quantity,
         })),
+        // Sin caja registrada (turno anterior a HU-60) el backend usa la primera de la sucursal.
+        ...(this.register.lugar()?.cajaId != null ? { cajaId: this.register.lugar()!.cajaId! } : {}),
       })
       .pipe(
         switchMap((sale) => after(MIN_PROCESSING_MS - (Date.now() - startedAt), sale)),
@@ -392,6 +396,8 @@ export class CheckoutDialog {
       numero: sale.id,
       fecha: sale.fecha ? new Date(sale.fecha) : new Date(),
       cajero: this.cashier(),
+      sucursal: sale.sucursal ?? this.register.lugar()?.sucursal ?? '',
+      caja: sale.caja ?? this.register.lugar()?.caja ?? '',
       documento: this.document(),
       metodo: this.method(),
       lineas,

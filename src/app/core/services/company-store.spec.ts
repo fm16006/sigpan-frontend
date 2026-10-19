@@ -30,12 +30,11 @@ describe('toBusinessInfo', () => {
     expect(toBusinessInfo(null)).toBe(BUSINESS_INFO);
   });
 
-  it('con datos del API usa los de la empresa y conserva caja y horario', () => {
+  it('con datos del API usa los de la empresa y conserva el horario', () => {
     const info = toBusinessInfo(EMPRESA);
     expect(info.nombreComercial).toBe('Pan Nuevo');
     expect(info.nit).toBe('0614-010190-101-3');
     expect(info.correo).toBe('hola@pannuevo.sv');
-    expect(info.caja).toBe(BUSINESS_INFO.caja);
     expect(info.horario).toBe(BUSINESS_INFO.horario);
   });
 });

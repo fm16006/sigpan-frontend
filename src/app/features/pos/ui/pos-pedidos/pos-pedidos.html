@@ -9,7 +9,7 @@
     ← Volver a vender
   </button>
   <span class="min-w-0 truncate font-serif text-lg font-semibold">
-    <span class="max-sm:hidden">Caja {{ caja }} · </span>Pedidos
+    <span class="max-sm:hidden">{{ lugar() }} · </span>Pedidos
   </span>
   <div class="ms-auto max-sm:hidden">
     <ng-container *ngTemplateOutlet="selector; context: { dark: true }" />

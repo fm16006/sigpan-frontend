@@ -16,6 +16,9 @@ export interface User {
   readonly name: string;
   readonly email: string;
   readonly role: UserRole;
+  /** Sucursal del personal; null o ausente para los clientes. */
+  readonly sucursalId?: Id | null;
+  readonly sucursal?: string | null;
 }
 
 export interface Credentials {
@@ -36,6 +39,9 @@ export interface ApiUser {
   readonly rolId: Id;
   readonly rol: UserRole;
   readonly activo: boolean;
+  /** Sucursal del personal; null o ausente para los clientes. */
+  readonly sucursalId?: Id | null;
+  readonly sucursal?: string | null;
 }
 
 export interface ApiSession {
@@ -54,6 +60,8 @@ export function toAuthSession(session: ApiSession): AuthSession {
       name: session.usuario.nombre,
       email: session.usuario.email,
       role: session.usuario.rol,
+      sucursalId: session.usuario.sucursalId ?? null,
+      sucursal: session.usuario.sucursal ?? null,
     },
   };
 }
