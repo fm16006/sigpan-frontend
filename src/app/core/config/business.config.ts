@@ -6,11 +6,18 @@ export interface BusinessInfo {
   readonly nit: string;
   readonly nrc: string;
   readonly telefono: string;
+  /** Solo viene del API (Administración › Empresa). */
+  readonly correo?: string | null;
+  readonly logoUrl?: string | null;
   readonly caja: string;
   /** Horario que se muestra en la tienda en línea. */
   readonly horario: readonly { readonly dias: string; readonly horas: string }[];
 }
 
+/**
+ * Valores de respaldo: lo que se muestra mientras cargan los datos reales de la empresa
+ * (`CompanyStore`) o si el API falla. Coinciden con la semilla de la migración V18.
+ */
 export const BUSINESS_INFO: BusinessInfo = {
   nombreComercial: 'Panadería SigPan',
   razonSocial: 'SigPan, S.A. de C.V.',

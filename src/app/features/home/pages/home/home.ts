@@ -2,7 +2,7 @@ import { Component, computed, inject } from '@angular/core';
 import { httpResource } from '@angular/common/http';
 import { NgOptimizedImage } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { BUSINESS_INFO } from '../../../../core/config/business.config';
+import { CompanyStore } from '../../../../core/services/company-store';
 import { CatalogProduct, Category } from '../../../../core/models/catalog.model';
 import {
   CategoryIcon,
@@ -30,7 +30,7 @@ const DRINKS_COUNT = 4;
 export class Home {
   private readonly products = inject(ProductService);
   protected readonly shop = inject(ShopCart);
-  protected readonly business = BUSINESS_INFO;
+  protected readonly business = inject(CompanyStore).info;
 
   private readonly catalog = httpResource<CatalogProduct[]>(() => this.products.activeUrl(), {
     defaultValue: [],
