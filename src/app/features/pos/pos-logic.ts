@@ -40,14 +40,38 @@ export function filterProducts(
     .sort((a, b) => a.categoria.localeCompare(b.categoria) || a.nombre.localeCompare(b.nombre));
 }
 
-export type PosShortcut = 'buscar' | 'cobrar' | 'mas' | 'menos' | 'quitar';
+export type PosShortcut =
+  | 'buscar'
+  | 'cobrar'
+  | 'mas'
+  | 'menos'
+  | 'quitar'
+  | 'nuevo-pedido'
+  | 'pedido-siguiente'
+  | 'pedido-anterior';
+
+/** Teclas modificadoras presionadas junto con la tecla del atajo. */
+export interface ShortcutModifiers {
+  readonly ctrl?: boolean;
+  readonly shift?: boolean;
+}
 
 /**
- * Atajo de teclado de la pantalla de venta. F2 y F12 funcionan siempre; el resto
- * se ignora mientras se escribe en un campo, para no tocar el ticket sin querer.
+ * Atajo de teclado de la pantalla de venta. F2, F3, F12 y los de Ctrl funcionan siempre;
+ * el resto se ignora mientras se escribe en un campo, para no tocar el ticket sin querer.
  */
-export function posShortcut(key: string, typing: boolean): PosShortcut | null {
+export function posShortcut(
+  key: string,
+  typing: boolean,
+  modifiers: ShortcutModifiers = {},
+): PosShortcut | null {
+  if (modifiers.ctrl) {
+    if (key.toLowerCase() === 'n') return 'nuevo-pedido';
+    if (key === 'Tab') return modifiers.shift ? 'pedido-anterior' : 'pedido-siguiente';
+    return null;
+  }
   if (key === 'F2') return 'buscar';
+  if (key === 'F3') return 'nuevo-pedido';
   if (key === 'F12') return 'cobrar';
   if (typing) return null;
   if (key === '+') return 'mas';

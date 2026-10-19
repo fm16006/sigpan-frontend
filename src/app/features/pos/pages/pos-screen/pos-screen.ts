@@ -2,15 +2,19 @@ import {
   Component,
   DestroyRef,
   ElementRef,
+  Injector,
   PLATFORM_ID,
+  afterNextRender,
   computed,
+  effect,
   inject,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { HttpResourceRequest, httpResource } from '@angular/common/http';
 import { NgTemplateOutlet, isPlatformBrowser } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { BUSINESS_INFO } from '../../../../core/config/business.config';
 import { Id } from '../../../../core/models/api.model';
@@ -39,7 +43,9 @@ import {
   ruleBadge,
   tierHintText,
 } from '../../pos-logic';
+import { MAX_ORDERS, PosOrder, hasLines, itemCount, orderTotal } from '../../pos-orders';
 import { CashRegisterStore } from '../../services/cash-register.store';
+import { PosOrdersStore } from '../../services/pos-orders.store';
 import { CheckoutDialog } from '../../ui/checkout-dialog/checkout-dialog';
 import { PosApertura } from '../../ui/pos-apertura/pos-apertura';
 import { PosCaja } from '../../ui/pos-caja/pos-caja';
@@ -49,6 +55,8 @@ import { valueOr } from '../../../../core/http/resource-value';
 type PosMode = 'apertura' | 'venta' | 'cierre';
 
 const POS_PATH = '/backoffice/pos';
+const PANEL_PATH = '/backoffice';
+const ONLINE_ORDERS_PATH = '/backoffice/orders';
 /** Existencias al día sin recargar la página, igual que la cola de despacho. */
 const CATALOG_REFRESH_MS = 30_000;
 const TIME_FORMAT = new Intl.DateTimeFormat('es-SV', { hour: 'numeric', minute: '2-digit' });
@@ -105,12 +113,20 @@ export class PosScreen {
   private readonly priceScales = inject(PriceScaleService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly register = inject(CashRegisterStore);
+  private readonly orders = inject(PosOrdersStore);
+  private readonly router = inject(Router);
+  private readonly injector = inject(Injector);
 
   protected readonly auth = inject(Auth);
   protected readonly isAdmin = this.auth.hasAnyRole(['ADMINISTRADOR']);
   protected readonly caja = BUSINESS_INFO.caja;
 
-  private readonly ticket = signal<readonly PosLine[]>([]);
+  /** Líneas del pedido activo: todo lo que sigue (cotización, pasos, cobro) opera sobre él. */
+  private readonly ticket = this.orders.lineas;
+  protected readonly orderList = this.orders.pedidos;
+  protected readonly activeName = computed(() => this.orders.activo().nombre);
+  protected readonly activeOrderId = this.orders.activoId;
+  protected readonly maxOrders = MAX_ORDERS;
   private readonly now = signal(new Date());
   /** Tramos de mayoreo por producto, consultados una sola vez por sesión (HU-33). */
   protected readonly scales = signal<ReadonlyMap<Id, readonly PriceScale[]>>(new Map());
@@ -136,8 +152,14 @@ export class PosScreen {
   protected readonly clearOpen = signal(false);
   protected readonly logoutOpen = signal(false);
   protected readonly closeRegisterOpen = signal(false);
+  protected readonly menuOpen = signal(false);
+  protected readonly panelOpen = signal(false);
+  /** Pedido que el cajero quiere descartar y está pendiente de confirmar. */
+  protected readonly discardTarget = signal<PosOrder | null>(null);
 
   private readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
+  private readonly menuClose = viewChild<ElementRef<HTMLButtonElement>>('menuClose');
+  private readonly menuTrigger = viewChild<ElementRef<HTMLButtonElement>>('menuTrigger');
 
   protected readonly clock = computed(() => TIME_FORMAT.format(this.now()));
   protected readonly day = computed(() => DAY_FORMAT.format(this.now()));
@@ -150,8 +172,20 @@ export class PosScreen {
     this.menu.items().filter((item) => item.path !== POS_PATH),
   );
   protected readonly showStore = this.menu.showStore;
+  /** Enlaces del menú del cajero: solo los que su rol puede ver. */
+  protected readonly panelLink = computed(() =>
+    this.adminLinks().find((item) => item.path === PANEL_PATH),
+  );
+  protected readonly onlineOrdersLink = computed(() =>
+    this.adminLinks().find((item) => item.path === ONLINE_ORDERS_PATH),
+  );
+  /** Pedidos con algo cargado: los que se pierden si no se cobran. */
+  protected readonly pending = this.orders.pendientes;
+  protected readonly pendingItems = computed(() =>
+    this.pending().reduce((sum, order) => sum + itemCount(order), 0),
+  );
 
-  protected readonly lines = this.ticket.asReadonly();
+  protected readonly lines = this.ticket;
   private readonly quotes = inject(QuoteService);
 
   /** Canasta que se cotiza: solo producto y cantidad. El backend fija precios y descuentos. */
@@ -179,6 +213,30 @@ export class PosScreen {
   protected readonly itemCount = computed(() =>
     this.ticket().reduce((sum, line) => sum + line.quantity, 0),
   );
+
+  /**
+   * Total cotizado del pedido activo, solo si la cotización vigente es de estas líneas.
+   * Mientras se recotiza (o tras un cambio de pedido) es null, para no mostrar el total de otro.
+   */
+  private readonly settledTotal = computed<number | null>(() => {
+    const quote = this.quoteValue();
+    const lines = this.ticket();
+    if (
+      !quote ||
+      lines.length === 0 ||
+      this.quotePending() ||
+      this.quote.isLoading() ||
+      quote.lineas.length !== lines.length
+    ) {
+      return null;
+    }
+    const matches = lines.every((line) =>
+      quote.lineas.some(
+        (item) => item.productoId === line.product.id && item.cantidad === line.quantity,
+      ),
+    );
+    return matches ? quote.total : null;
+  });
 
   protected readonly catalog = httpResource<CatalogProduct[]>(() => this.products.activeUrl(), {
     defaultValue: [],
@@ -221,6 +279,20 @@ export class PosScreen {
       });
     }
     this.watchViewport();
+
+    // Los pedidos en espera no se recotizan: se guarda el último total de cada uno para su pestaña.
+    effect(() => {
+      const total = this.settledTotal();
+      const id = this.orders.activoId();
+      if (total !== null) {
+        untracked(() => this.orders.guardarTotal(id, total));
+      }
+    });
+    // Un pedido recuperado del navegador (o al cambiar de pedido) también necesita sus tramos.
+    effect(() => {
+      const lines = this.ticket();
+      untracked(() => lines.forEach((line) => this.loadScales(line.product.id)));
+    });
   }
 
   private watchViewport(): void {
@@ -258,7 +330,7 @@ export class PosScreen {
     if (!this.fitsStock(product, current + quantity)) {
       return;
     }
-    this.ticket.update((lines) =>
+    this.orders.cambiarLineas((lines) =>
       lines.some((line) => line.product.id === product.id)
         ? lines.map((line) =>
             line.product.id === product.id ? { ...line, quantity: line.quantity + quantity } : line,
@@ -313,14 +385,15 @@ export class PosScreen {
   }
 
   protected clear(): void {
-    this.ticket.set([]);
+    this.orders.cambiarLineas(() => []);
     this.clearOpen.set(false);
     this.sheetOpen.set(false);
   }
 
-  /** "Cerrar caja" de la barra: si hay un ticket sin cobrar, primero se confirma. */
+  /** "Cerrar caja" del menú: si hay pedidos sin cobrar, primero se confirma. */
   protected requestCloseRegister(): void {
-    if (this.ticket().length > 0) {
+    this.menuOpen.set(false);
+    if (this.pending().length > 0) {
       this.closeRegisterOpen.set(true);
     } else {
       this.closing.set(true);
@@ -333,9 +406,9 @@ export class PosScreen {
     this.closing.set(true);
   }
 
-  /** El turno ya se cerró: el ticket pendiente se descarta y la pantalla vuelve a "Abrir caja". */
+  /** El turno ya se cerró: los pedidos pendientes se descartan y la pantalla vuelve a "Abrir caja". */
   protected onRegisterClosed(): void {
-    this.ticket.set([]);
+    this.orders.reiniciar();
     this.selectedId.set(null);
     this.search.set('');
     this.category.set('');
@@ -344,11 +417,106 @@ export class PosScreen {
   }
 
   protected requestLogout(): void {
-    if (this.ticket().length > 0) {
+    this.menuOpen.set(false);
+    if (this.pending().length > 0) {
       this.logoutOpen.set(true);
     } else {
       this.auth.logout();
     }
+  }
+
+  /** "Panel administrativo": los pedidos quedan guardados, pero se avisa antes de salir. */
+  protected requestPanel(): void {
+    this.menuOpen.set(false);
+    if (this.pending().length > 0) {
+      this.panelOpen.set(true);
+    } else {
+      this.goToPanel();
+    }
+  }
+
+  protected goToPanel(): void {
+    this.panelOpen.set(false);
+    void this.router.navigateByUrl(PANEL_PATH);
+  }
+
+  protected openMenu(): void {
+    this.menuOpen.set(true);
+    afterNextRender(() => this.menuClose()?.nativeElement.focus(), { injector: this.injector });
+  }
+
+  protected closeMenu(): void {
+    if (this.menuOpen()) {
+      this.menuOpen.set(false);
+      this.menuTrigger()?.nativeElement.focus();
+    }
+  }
+
+  protected orderHasLines(order: PosOrder): boolean {
+    return hasLines(order);
+  }
+
+  protected orderItems(order: PosOrder): number {
+    return itemCount(order);
+  }
+
+  /** Total para el rótulo: el cotizado vigente del activo y, para el resto, el último guardado. */
+  protected pillTotal(order: PosOrder): number {
+    const live = order.id === this.activeOrderId() ? this.settledTotal() : null;
+    return live ?? orderTotal(order);
+  }
+
+  /** Un pedido se puede descartar si tiene líneas o si hay más de uno abierto. */
+  protected canDiscard(order: PosOrder): boolean {
+    return hasLines(order) || this.orderList().length > 1;
+  }
+
+  protected newOrder(): void {
+    if (!this.orders.crear()) {
+      this.notifications.info(
+        `Ya hay ${MAX_ORDERS} pedidos abiertos. Cobrá o descartá uno para abrir otro.`,
+      );
+      return;
+    }
+    this.onOrderChanged();
+  }
+
+  protected switchTo(id: number): void {
+    if (id !== this.activeOrderId()) {
+      this.orders.cambiar(id);
+      this.onOrderChanged();
+    }
+    this.menuOpen.set(false);
+  }
+
+  /** Ctrl+Tab y Ctrl+Mayús+Tab. */
+  private cycleOrders(step: number): void {
+    this.orders.ciclar(step);
+    this.onOrderChanged();
+  }
+
+  /** Descartar: sin líneas se quita directo; con líneas, antes se confirma. */
+  protected requestDiscard(order: PosOrder): void {
+    if (hasLines(order)) {
+      this.discardTarget.set(order);
+    } else {
+      this.discard(order);
+    }
+  }
+
+  protected discard(order: PosOrder): void {
+    const wasActive = order.id === this.activeOrderId();
+    this.discardTarget.set(null);
+    this.orders.quitar(order.id);
+    if (wasActive) {
+      this.onOrderChanged();
+    }
+  }
+
+  /** Otro pedido pasó a ser el activo: la línea marcada del anterior ya no aplica. */
+  private onOrderChanged(): void {
+    this.selectedId.set(null);
+    this.focusSearch();
   }
 
   protected lineQuote(line: PosLine): QuoteLine | undefined {
@@ -378,7 +546,8 @@ export class PosScreen {
     this.checkoutOpen.set(false);
     // La venta descontó inventario: se recarga para que el POS vea la existencia nueva.
     this.catalog.reload();
-    this.ticket.set([]);
+    // Pedido cobrado: sale de la lista y el siguiente queda activo (o uno vacío si era el único).
+    this.orders.quitar(this.activeOrderId());
     this.selectedId.set(null);
     this.search.set('');
     this.category.set('');
@@ -391,8 +560,17 @@ export class PosScreen {
       this.checkoutOpen() ||
       this.clearOpen() ||
       this.logoutOpen() ||
-      this.closeRegisterOpen()
+      this.closeRegisterOpen() ||
+      this.panelOpen() ||
+      this.discardTarget()
     ) {
+      return;
+    }
+    if (event.key === 'Escape' && this.menuOpen()) {
+      this.closeMenu();
+      return;
+    }
+    if (this.menuOpen()) {
       return;
     }
     if (event.key === 'Escape' && this.sheetOpen()) {
@@ -401,7 +579,10 @@ export class PosScreen {
     }
     const target = event.target as HTMLElement | null;
     const typing = !!target?.closest('input, textarea, select, [contenteditable="true"]');
-    const action = posShortcut(event.key, typing);
+    const action = posShortcut(event.key, typing, {
+      ctrl: event.ctrlKey || event.metaKey,
+      shift: event.shiftKey,
+    });
     if (!action) {
       return;
     }
@@ -422,6 +603,15 @@ export class PosScreen {
         break;
       case 'quitar':
         this.removeActive();
+        break;
+      case 'nuevo-pedido':
+        this.newOrder();
+        break;
+      case 'pedido-siguiente':
+        this.cycleOrders(1);
+        break;
+      case 'pedido-anterior':
+        this.cycleOrders(-1);
         break;
     }
   }
@@ -459,7 +649,7 @@ export class PosScreen {
     if (line && quantity > line.quantity && !this.fitsStock(line.product, quantity)) {
       return false;
     }
-    this.ticket.update((lines) =>
+    this.orders.cambiarLineas((lines) =>
       lines
         .map((line) => (line.product.id === productId ? { ...line, quantity } : line))
         .filter((line) => line.quantity > 0),

@@ -92,6 +92,23 @@ describe('posShortcut', () => {
     expect(posShortcut('Delete', true)).toBeNull();
     expect(posShortcut('a', false)).toBeNull();
   });
+
+  it('F3 y Ctrl+N abren un pedido nuevo aunque se esté escribiendo', () => {
+    expect(posShortcut('F3', true)).toBe('nuevo-pedido');
+    expect(posShortcut('n', true, { ctrl: true })).toBe('nuevo-pedido');
+    expect(posShortcut('N', false, { ctrl: true })).toBe('nuevo-pedido');
+  });
+
+  it('Ctrl+Tab pasa al pedido siguiente y Ctrl+Mayús+Tab al anterior', () => {
+    expect(posShortcut('Tab', true, { ctrl: true })).toBe('pedido-siguiente');
+    expect(posShortcut('Tab', false, { ctrl: true, shift: true })).toBe('pedido-anterior');
+    expect(posShortcut('Tab', false)).toBeNull();
+  });
+
+  it('con Ctrl no se cuelan las otras teclas', () => {
+    expect(posShortcut('F2', false, { ctrl: true })).toBeNull();
+    expect(posShortcut('+', false, { ctrl: true })).toBeNull();
+  });
 });
 
 describe('nextTier (HU-33)', () => {
