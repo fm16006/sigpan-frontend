@@ -1,4 +1,6 @@
-import { Promotion } from '../../core/models/promotion.model';
+import { Id } from '../../core/models/api.model';
+import { CatalogProduct } from '../../core/models/catalog.model';
+import { Promotion, PromotionScope } from '../../core/models/promotion.model';
 
 /** Vigencia calculada por fecha local: el backend ya filtra por fecha, esto solo lo muestra. */
 export type PromotionStatus = 'VIGENTE' | 'PROGRAMADA' | 'VENCIDA' | 'INACTIVA';
@@ -110,7 +112,59 @@ export function countBySegment(
   return counts;
 }
 
-/** "Individual" con un producto, "Bloque · N productos" con varios. */
-export function scopeLabel(productCount: number): string {
-  return productCount > 1 ? `Bloque · ${productCount} productos` : 'Individual';
+/** Alcance de la promoción; las respuestas anteriores a la HU-64 no lo traen y eran por productos. */
+export function scopeOf(promotion: Pick<Promotion, 'alcance'>): PromotionScope {
+  return promotion.alcance ?? 'PRODUCTOS';
+}
+
+/** Alcance en lenguaje claro: «Todos los productos», «Categorías: Postres, Bebidas» o «3 productos». */
+export function scopeSummary(
+  promotion: Pick<Promotion, 'alcance' | 'categorias' | 'productoIds'>,
+): string {
+  switch (scopeOf(promotion)) {
+    case 'TODOS':
+      return 'Todos los productos';
+    case 'CATEGORIAS': {
+      const names = promotion.categorias ?? [];
+      if (names.length === 0) return 'Sin categorías';
+      return `${names.length === 1 ? 'Categoría' : 'Categorías'}: ${names.join(', ')}`;
+    }
+    default: {
+      const count = promotion.productoIds?.length ?? 0;
+      if (count === 0) return 'Sin productos';
+      return count === 1 ? '1 producto' : `${count} productos`;
+    }
+  }
+}
+
+/** Texto sin mayúsculas ni tildes, para buscar «cafe» y encontrar «Café». */
+export function normalizeText(text: string): string {
+  return text
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
+/** Productos activos que coinciden con el término (nombre, código o categoría). Sin término, todos. */
+export function filterProducts(products: readonly CatalogProduct[], term: string): CatalogProduct[] {
+  const needle = normalizeText(term);
+  return products.filter(
+    (product) =>
+      product.activo &&
+      (!needle ||
+        normalizeText(product.nombre).includes(needle) ||
+        normalizeText(product.codigo ?? '').includes(needle) ||
+        normalizeText(product.categoria ?? '').includes(needle)),
+  );
+}
+
+/** Agrega a la selección los ids dados (los demás se conservan). */
+export function addToSelection(selected: ReadonlySet<Id>, ids: readonly Id[]): ReadonlySet<Id> {
+  return new Set([...selected, ...ids]);
+}
+
+/** Cuántos de los ids seleccionados están entre los visibles (los desactivados no se ofrecen ni se cuentan). */
+export function countVisibleSelected(selected: ReadonlySet<Id>, visible: readonly { readonly id: Id }[]): number {
+  return visible.filter((item) => selected.has(item.id)).length;
 }

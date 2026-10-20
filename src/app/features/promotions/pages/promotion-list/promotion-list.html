@@ -1,6 +1,6 @@
 <app-page-header
   title="Promociones"
-  subtitle="Descuentos individuales, por bloque y de temporada. Hacé clic en una promoción para editarla."
+  subtitle="Descuentos para todos los productos, por categoría o por productos elegidos. Hacé clic en una promoción para editarla."
   [crumbs]="crumbs"
 >
   <button type="button" class="btn btn-primary" (click)="openCreate()">
@@ -71,7 +71,7 @@
       >
         <span class="flex min-w-0 flex-col">
           <span class="truncate font-semibold">{{ promotion.nombre }}</span>
-          <span class="text-xs text-base-content/60">{{ scopeOf(promotion) }}</span>
+          <span class="truncate text-xs text-base-content/60" [attr.title]="scopeOf(promotion)">{{ scopeOf(promotion) }}</span>
         </span>
         <span class="font-semibold tabular-nums md:text-end">
           @if (isPercentage(promotion)) {
