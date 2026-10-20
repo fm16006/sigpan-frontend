@@ -1,3 +1,4 @@
+import { CatalogProduct } from '../../core/models/catalog.model';
 import { Promotion } from '../../core/models/promotion.model';
 import {
   countBySegment,
@@ -6,7 +7,10 @@ import {
   formatShortDate,
   fullMonthOf,
   promotionStatus,
-  scopeLabel,
+  addToSelection,
+  countVisibleSelected,
+  filterProducts,
+  scopeSummary,
   vigenciaLabel,
 } from './promotion-utils';
 
@@ -67,12 +71,6 @@ describe('formato', () => {
       '5 nov 2026 — 20 nov 2026',
     );
   });
-
-  it('distingue individual de bloque', () => {
-    expect(scopeLabel(0)).toBe('Individual');
-    expect(scopeLabel(1)).toBe('Individual');
-    expect(scopeLabel(3)).toBe('Bloque · 3 productos');
-  });
 });
 
 describe('filtros', () => {
@@ -96,5 +94,63 @@ describe('filtros', () => {
       VENCIDA: 0,
       INACTIVA: 1,
     });
+  });
+});
+
+describe('scopeSummary', () => {
+  it('dice el alcance en lenguaje claro', () => {
+    expect(scopeSummary({ alcance: 'TODOS' })).toBe('Todos los productos');
+    expect(scopeSummary({ alcance: 'CATEGORIAS', categorias: ['Postres', 'Bebidas'] })).toBe(
+      'Categorías: Postres, Bebidas',
+    );
+    expect(scopeSummary({ alcance: 'CATEGORIAS', categorias: ['Postres'] })).toBe('Categoría: Postres');
+    expect(scopeSummary({ alcance: 'PRODUCTOS', productoIds: [1, 2, 3] })).toBe('3 productos');
+    expect(scopeSummary({ alcance: 'PRODUCTOS', productoIds: [5] })).toBe('1 producto');
+  });
+
+  it('avisa cuando no hay nada elegido', () => {
+    expect(scopeSummary({ alcance: 'CATEGORIAS', categorias: [] })).toBe('Sin categorías');
+    expect(scopeSummary({ alcance: 'PRODUCTOS', productoIds: [] })).toBe('Sin productos');
+  });
+
+  it('una respuesta sin alcance se trata como por productos', () => {
+    expect(scopeSummary({ productoIds: [1, 2] })).toBe('2 productos');
+    expect(scopeSummary({})).toBe('Sin productos');
+  });
+});
+
+describe('buscador de productos', () => {
+  const product = (id: number, nombre: string, activo = true, categoria = 'Panes') =>
+    ({ id, codigo: `P-${id}`, nombre, categoria, activo }) as unknown as CatalogProduct;
+  const catalog = [
+    product(1, 'Pan francés'),
+    product(2, 'Café con leche'),
+    product(3, 'PRUEBA-MVEW5GZO BOCADILLOS', false),
+    product(4, 'Pastel de tres leches', true, 'Postres'),
+  ];
+
+  it('solo ofrece productos activos, también sin término', () => {
+    expect(filterProducts(catalog, '').map((p) => p.id)).toEqual([1, 2, 4]);
+    expect(filterProducts(catalog, 'prueba')).toEqual([]);
+  });
+
+  it('busca por nombre sin importar mayúsculas ni tildes', () => {
+    expect(filterProducts(catalog, 'CAFE').map((p) => p.id)).toEqual([2]);
+    expect(filterProducts(catalog, 'frances').map((p) => p.id)).toEqual([1]);
+    expect(filterProducts(catalog, '  leche ').map((p) => p.id)).toEqual([2, 4]);
+  });
+
+  it('busca también por código y por categoría', () => {
+    expect(filterProducts(catalog, 'P-4').map((p) => p.id)).toEqual([4]);
+    expect(filterProducts(catalog, 'postres').map((p) => p.id)).toEqual([4]);
+  });
+
+  it('agrega los filtrados sin perder lo ya marcado', () => {
+    const next = addToSelection(new Set([9]), [2, 4]);
+    expect([...next].sort()).toEqual([2, 4, 9]);
+  });
+
+  it('cuenta solo los seleccionados que se ven', () => {
+    expect(countVisibleSelected(new Set([1, 3, 9]), [{ id: 1 }, { id: 2 }])).toBe(1);
   });
 });

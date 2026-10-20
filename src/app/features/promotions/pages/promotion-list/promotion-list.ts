@@ -1,12 +1,10 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { httpResource } from '@angular/common/http';
 import { DecimalPipe } from '@angular/common';
-import { forkJoin, of, switchMap } from 'rxjs';
 import { API_ENDPOINTS } from '../../../../core/constants/api-endpoints';
 import { ApiClient } from '../../../../core/http/api-client';
 import { asAppError } from '../../../../core/http/as-app-error';
-import { Id } from '../../../../core/models/api.model';
-import { Promotion, PromotionProductLink } from '../../../../core/models/promotion.model';
+import { Promotion } from '../../../../core/models/promotion.model';
 import { Notifications } from '../../../../core/services/notifications';
 import { todayIso } from '../../../../core/utils/dates';
 import { MoneyPipe } from '../../../../shared/pipes/money.pipe';
@@ -23,7 +21,7 @@ import {
   countBySegment,
   filterPromotions,
   promotionStatus,
-  scopeLabel,
+  scopeSummary,
   vigenciaLabel,
 } from '../../promotion-utils';
 import { PromotionService } from '../../services/promotion.service';
@@ -53,14 +51,7 @@ export class PromotionList {
   protected readonly list = httpResource<Promotion[]>(() => this.api.url(API_ENDPOINTS.promociones.root), {
     defaultValue: [],
   });
-  /** Vínculos de todas las promociones: de ahí sale "Individual" o "Bloque · N productos". */
-  protected readonly links = httpResource<PromotionProductLink[]>(
-    () => this.api.url(API_ENDPOINTS.promocionesProductos.root),
-    { defaultValue: [] },
-  );
-
   protected readonly listItems = computed(() => valueOr(this.list, []));
-  private readonly linkItems = computed(() => valueOr(this.links, []));
 
   protected readonly segment = signal<PromotionSegment>('TODAS');
   protected readonly term = signal('');
@@ -73,14 +64,6 @@ export class PromotionList {
 
   private readonly today = todayIso();
 
-  protected readonly productCounts = computed(() => {
-    const counts = new Map<Id, number>();
-    for (const link of this.linkItems()) {
-      counts.set(link.promocionId, (counts.get(link.promocionId) ?? 0) + 1);
-    }
-    return counts;
-  });
-
   protected readonly counts = computed(() => countBySegment(this.listItems(), this.today));
 
   protected readonly items = computed(() =>
@@ -90,12 +73,7 @@ export class PromotionList {
   protected readonly deleteMessage = computed(() => {
     const promotion = this.deleting();
     if (!promotion) return '';
-    const n = this.productCounts().get(promotion.id) ?? 0;
-    const effect =
-      n > 0
-        ? `Se quita también de ${n === 1 ? 'su producto' : `sus ${n} productos`}.`
-        : 'No se puede deshacer.';
-    return `Vas a eliminar la promoción «${promotion.nombre}». ${effect}`;
+    return `Vas a eliminar la promoción «${promotion.nombre}» (${scopeSummary(promotion)}). No se puede deshacer.`;
   });
 
   protected isPercentage(promotion: Promotion): boolean {
@@ -115,7 +93,7 @@ export class PromotionList {
   }
 
   protected scopeOf(promotion: Promotion): string {
-    return scopeLabel(this.productCounts().get(promotion.id) ?? 0);
+    return scopeSummary(promotion);
   }
 
   protected vigenciaOf(promotion: Promotion): string {
@@ -144,7 +122,6 @@ export class PromotionList {
 
   protected reload(): void {
     this.list.reload();
-    this.links.reload();
   }
 
   protected askDelete(promotion: Promotion): void {
@@ -155,20 +132,14 @@ export class PromotionList {
     if (!this.deleteBusy()) this.deleting.set(null);
   }
 
-  /** Si la promoción tiene productos vinculados, se quitan los vínculos antes de borrarla. */
+  /** El backend quita también los productos y categorías vinculados. */
   protected confirmDelete(): void {
     const promotion = this.deleting();
     if (!promotion) return;
 
     this.deleteBusy.set(true);
     this.service
-      .productLinks(promotion.id)
-      .pipe(
-        switchMap((links) =>
-          links.length > 0 ? forkJoin(links.map((link) => this.service.removeLink(link.id))) : of([]),
-        ),
-        switchMap(() => this.service.remove(promotion.id)),
-      )
+      .remove(promotion.id)
       .subscribe({
         next: () => {
           this.deleteBusy.set(false);
