@@ -7,7 +7,16 @@ export type ReportCategory = 'GENERAL' | 'ESPECIFICO' | 'DETALLADO' | 'SUMARIZAD
 
 export type ReportParamType = 'FECHA' | 'RANGO_FECHAS' | 'ENTERO' | 'LISTA' | 'BOOLEANO';
 
-export type ReportColumnType = 'TEXTO' | 'ENTERO' | 'DECIMAL' | 'MONEDA' | 'FECHA' | 'PORCENTAJE';
+export type ReportColumnType =
+  | 'TEXTO'
+  | 'ENTERO'
+  | 'DECIMAL'
+  | 'CANTIDAD'
+  | 'MONEDA'
+  | 'COSTO'
+  | 'FECHA'
+  | 'FECHA_HORA'
+  | 'PORCENTAJE';
 
 export interface ReportOption {
   readonly valor: string;
@@ -26,6 +35,8 @@ export interface ReportParam {
   readonly valorPorDefecto: string | null;
   readonly hastaPorDefecto: string | null;
   readonly opciones: readonly ReportOption[];
+  /** Texto de la lista opcional sin elegir ("Todos", "Todas"). */
+  readonly textoSinFiltro?: string;
   readonly minimo: number | null;
   readonly maximo: number | null;
 }

@@ -17,6 +17,7 @@ export interface NavGroup {
 
 const ADMIN_JEFE: readonly UserRole[] = ['ADMINISTRADOR', 'JEFE_PRODUCCION'];
 const INVENTARIO: readonly UserRole[] = ['ADMINISTRADOR', 'JEFE_PRODUCCION', 'BODEGUERO'];
+const REPORTES: readonly UserRole[] = ['ADMINISTRADOR', 'JEFE_PRODUCCION', 'BODEGUERO', 'DESPACHADOR'];
 
 // Los roles de aquí deben coincidir con los roleGuard de app.routes.ts.
 export const BACKOFFICE_NAV_GROUPS: readonly NavGroup[] = [
@@ -67,7 +68,8 @@ export const BACKOFFICE_NAV_GROUPS: readonly NavGroup[] = [
   },
   {
     label: 'Reportes',
-    items: [{ label: 'Reportes', path: '/backoffice/reports', icon: 'scale', roles: ADMIN_JEFE }],
+    // Cada reporte declara sus roles; el catálogo del servidor muestra solo los permitidos.
+    items: [{ label: 'Reportes', path: '/backoffice/reports', icon: 'scale', roles: REPORTES }],
   },
   {
     label: 'Administración',

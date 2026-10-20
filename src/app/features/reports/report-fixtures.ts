@@ -45,6 +45,7 @@ export const RG01: ReportDefinition = {
       ayuda: null,
       tipo: 'LISTA',
       obligatorio: false,
+      textoSinFiltro: 'Todas',
       valorPorDefecto: null,
       hastaPorDefecto: null,
       opciones: [
