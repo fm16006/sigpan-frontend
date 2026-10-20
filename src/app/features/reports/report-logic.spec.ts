@@ -88,6 +88,11 @@ describe('Formato por tipo de columna (solo formato, nunca recálculo)', () => {
     expect(formatCell(col('MONEDA'), -2)).toBe('-$2.00');
     expect(formatCell(col('ENTERO'), 12345)).toBe('12,345');
     expect(formatCell(col('DECIMAL'), 0.5)).toBe('0.50');
+    expect(formatCell(col('CANTIDAD'), 12.5)).toBe('12.500');
+    expect(formatCell(col('CANTIDAD'), 0.367)).toBe('0.367');
+    expect(formatCell(col('CANTIDAD'), 1234)).toBe('1,234.000');
+    expect(formatCell(col('FECHA_HORA', 'CENTRO'), '2026-10-19T14:05:09')).toBe('19/10/2026 14:05:09');
+    expect(formatCell(col('FECHA_HORA', 'CENTRO'), '2026-10-19T14:05')).toBe('19/10/2026 14:05:00');
     expect(formatCell(col('PORCENTAJE'), 12.5)).toBe('12.50 %');
     expect(formatCell(col('FECHA'), '2026-10-01')).toBe('01/10/2026');
     expect(formatCell(col('TEXTO', 'IZQUIERDA'), 'Pan francés')).toBe('Pan francés');

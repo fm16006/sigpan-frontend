@@ -7,7 +7,15 @@ export type ReportCategory = 'GENERAL' | 'ESPECIFICO' | 'DETALLADO' | 'SUMARIZAD
 
 export type ReportParamType = 'FECHA' | 'RANGO_FECHAS' | 'ENTERO' | 'LISTA' | 'BOOLEANO';
 
-export type ReportColumnType = 'TEXTO' | 'ENTERO' | 'DECIMAL' | 'MONEDA' | 'FECHA' | 'PORCENTAJE';
+export type ReportColumnType =
+  | 'TEXTO'
+  | 'ENTERO'
+  | 'DECIMAL'
+  | 'CANTIDAD'
+  | 'MONEDA'
+  | 'FECHA'
+  | 'FECHA_HORA'
+  | 'PORCENTAJE';
 
 export interface ReportOption {
   readonly valor: string;

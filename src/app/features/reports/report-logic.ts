@@ -123,6 +123,8 @@ export function rangePresets(today: Date = new Date()): readonly RangePreset[] {
 
 const NUMBER = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const INTEGER = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
+/** Cantidades físicas: la escala del inventario (3 decimales). */
+const QUANTITY = new Intl.NumberFormat('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
 
 /**
  * Texto de una celda según el tipo de su columna. Solo da formato: el frontend nunca recalcula una
@@ -138,12 +140,20 @@ export function formatCell(column: ReportColumn, value: ReportCell | undefined):
       return INTEGER.format(Number(value));
     case 'DECIMAL':
       return NUMBER.format(Number(value));
+    case 'CANTIDAD':
+      return QUANTITY.format(Number(value));
     case 'MONEDA': {
       const amount = Number(value);
       return `${amount < 0 ? '-' : ''}$${NUMBER.format(Math.abs(amount))}`;
     }
     case 'PORCENTAJE':
       return `${NUMBER.format(Number(value))} %`;
+    case 'FECHA_HORA': {
+      const match = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/.exec(String(value));
+      return match
+        ? `${match[3]}/${match[2]}/${match[1]} ${match[4]}:${match[5]}:${match[6] ?? '00'}`
+        : String(value);
+    }
     case 'FECHA': {
       const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(value));
       return match ? `${match[3]}/${match[2]}/${match[1]}` : String(value);
