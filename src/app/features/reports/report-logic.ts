@@ -154,6 +154,12 @@ export function formatCell(column: ReportColumn, value: ReportCell | undefined):
     }
     case 'PORCENTAJE':
       return `${NUMBER.format(Number(value))} %`;
+    case 'FECHA_HORA': {
+      const match = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/.exec(String(value));
+      return match
+        ? `${match[3]}/${match[2]}/${match[1]} ${match[4]}:${match[5]}:${match[6] ?? '00'}`
+        : String(value);
+    }
     case 'FECHA': {
       const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(value));
       return match ? `${match[3]}/${match[2]}/${match[1]}` : String(value);

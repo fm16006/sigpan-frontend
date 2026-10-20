@@ -15,6 +15,7 @@ export type ReportColumnType =
   | 'MONEDA'
   | 'COSTO'
   | 'FECHA'
+  | 'FECHA_HORA'
   | 'PORCENTAJE';
 
 export interface ReportOption {
