@@ -118,3 +118,18 @@ describe('Nombre del archivo descargado', () => {
     expect(filenameFromDisposition(null, 'RG-01.pdf')).toBe('RG-01.pdf');
   });
 });
+
+describe('formatCell con cantidades y costos', () => {
+  const col = (tipo: ReportColumn['tipo']): ReportColumn =>
+    ({ clave: 'x', titulo: 'X', tipo, alineacion: 'DERECHA', peso: 2 }) as ReportColumn;
+
+  it('las cantidades salen con 3 decimales (0.075 kg no se redondea a 0.08)', () => {
+    expect(formatCell(col('CANTIDAD'), 0.075)).toBe('0.075');
+    expect(formatCell(col('CANTIDAD'), 1250.5)).toBe('1,250.500');
+  });
+
+  it('los costos unitarios salen con 4 decimales y signo de dólar', () => {
+    expect(formatCell(col('COSTO'), 0.0012)).toBe('$0.0012');
+    expect(formatCell(col('COSTO'), -1.5)).toBe('-$1.5000');
+  });
+});

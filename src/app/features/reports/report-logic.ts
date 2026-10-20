@@ -123,6 +123,10 @@ export function rangePresets(today: Date = new Date()): readonly RangePreset[] {
 
 const NUMBER = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const INTEGER = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
+/** Existencias y consumos (kg, l): se guardan con 3 decimales. */
+const QUANTITY = new Intl.NumberFormat('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+/** Costos unitarios de insumos baratos: 4 decimales. */
+const UNIT_COST = new Intl.NumberFormat('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
 
 /**
  * Texto de una celda según el tipo de su columna. Solo da formato: el frontend nunca recalcula una
@@ -138,6 +142,12 @@ export function formatCell(column: ReportColumn, value: ReportCell | undefined):
       return INTEGER.format(Number(value));
     case 'DECIMAL':
       return NUMBER.format(Number(value));
+    case 'CANTIDAD':
+      return QUANTITY.format(Number(value));
+    case 'COSTO': {
+      const cost = Number(value);
+      return `${cost < 0 ? '-' : ''}$${UNIT_COST.format(Math.abs(cost))}`;
+    }
     case 'MONEDA': {
       const amount = Number(value);
       return `${amount < 0 ? '-' : ''}$${NUMBER.format(Math.abs(amount))}`;
