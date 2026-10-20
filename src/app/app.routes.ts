@@ -134,7 +134,7 @@ export const routes: Routes = [
       {
         // Mismos roles que admite el backend para al menos un reporte; cada reporte afina por rol.
         path: 'reports',
-        canActivate: [roleGuard(['ADMINISTRADOR', 'JEFE_PRODUCCION'])],
+        canActivate: [roleGuard(['ADMINISTRADOR', 'JEFE_PRODUCCION', 'BODEGUERO', 'DESPACHADOR'])],
         loadChildren: () => import('./features/reports/reports.routes').then((m) => m.REPORTS_ROUTES),
       },
       {

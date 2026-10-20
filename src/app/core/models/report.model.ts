@@ -26,6 +26,8 @@ export interface ReportParam {
   readonly valorPorDefecto: string | null;
   readonly hastaPorDefecto: string | null;
   readonly opciones: readonly ReportOption[];
+  /** Texto de la lista opcional sin elegir ("Todos", "Todas"). */
+  readonly textoSinFiltro?: string;
   readonly minimo: number | null;
   readonly maximo: number | null;
 }

@@ -113,7 +113,7 @@
                     [formControlName]="param.clave"
                   >
                     @if (!param.obligatorio) {
-                      <option value="">Todas</option>
+                      <option value="">{{ param.textoSinFiltro ?? 'Todos' }}</option>
                     }
                     @for (option of param.opciones; track option.valor) {
                       <option [value]="option.valor">{{ option.etiqueta }}</option>
