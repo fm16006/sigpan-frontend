@@ -89,6 +89,13 @@ export const API_ENDPOINTS = {
   logs: {
     root: '/logs',
   },
+  reportes: {
+    /** Catálogo de reportes del rol, con el contrato de cada uno (parámetros y columnas). */
+    root: '/reportes',
+    byCodigo: (codigo: string) => `/reportes/${codigo}`,
+    pdf: (codigo: string) => `/reportes/${codigo}/pdf`,
+    xlsx: (codigo: string) => `/reportes/${codigo}/xlsx`,
+  },
   eventos: {
     root: '/eventos',
   },
