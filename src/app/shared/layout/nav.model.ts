@@ -66,6 +66,10 @@ export const BACKOFFICE_NAV_GROUPS: readonly NavGroup[] = [
     ],
   },
   {
+    label: 'Reportes',
+    items: [{ label: 'Reportes', path: '/backoffice/reports', icon: 'scale', roles: ADMIN_JEFE }],
+  },
+  {
     label: 'Administración',
     items: [
       { label: 'Usuarios', path: '/backoffice/users', icon: 'users', roles: ['ADMINISTRADOR'] },

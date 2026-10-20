@@ -1,0 +1,268 @@
+<app-resource-state
+  [loading]="catalog.isLoading() && !catalog.hasValue()"
+  [failed]="!!catalog.error()"
+  (retry)="catalog.reload()"
+>
+  @if (definition(); as def) {
+    @if (form(); as reportForm) {
+      <app-page-header [title]="def.codigo + ' · ' + def.nombre" [subtitle]="def.descripcion" [crumbs]="crumbs()">
+        <button type="button" class="btn" [disabled]="!canExport()" (click)="exportAs('pdf')">
+          @if (exporting() === 'pdf') {
+            <span class="loading loading-spinner loading-sm"></span>
+          }
+          Exportar PDF
+        </button>
+        <button type="button" class="btn" [disabled]="!canExport()" (click)="exportAs('xlsx')">
+          @if (exporting() === 'xlsx') {
+            <span class="loading loading-spinner loading-sm"></span>
+          }
+          Exportar Excel
+        </button>
+      </app-page-header>
+
+      <form
+        class="panel mb-6"
+        [formGroup]="reportForm"
+        (ngSubmit)="generate()"
+        aria-label="Parámetros del reporte"
+        novalidate
+      >
+        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          @for (param of def.parametros; track param.clave) {
+            @switch (param.tipo) {
+              @case ('RANGO_FECHAS') {
+                <div class="sm:col-span-2 lg:col-span-2">
+                  <span class="mb-1.5 block text-sm font-semibold">{{ param.etiqueta }}</span>
+                  <div class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label class="mb-1 block text-xs text-base-content/60" [for]="'rp-' + param.clave">Desde</label>
+                      <input
+                        [id]="'rp-' + param.clave"
+                        type="date"
+                        class="input input-bordered w-full"
+                        [class.input-error]="!!errorFor(param.clave)"
+                        [formControlName]="param.clave"
+                      />
+                      @if (errorFor(param.clave); as message) {
+                        <p class="mt-1 text-xs text-error">{{ message }}</p>
+                      }
+                    </div>
+                    <div>
+                      <label class="mb-1 block text-xs text-base-content/60" [for]="'rp-' + param.claveHasta">Hasta</label>
+                      <input
+                        [id]="'rp-' + param.claveHasta"
+                        type="date"
+                        class="input input-bordered w-full"
+                        [class.input-error]="!!errorFor(param.claveHasta ?? '')"
+                        [formControlName]="param.claveHasta ?? ''"
+                      />
+                      @if (errorFor(param.claveHasta ?? ''); as message) {
+                        <p class="mt-1 text-xs text-error">{{ message }}</p>
+                      }
+                    </div>
+                  </div>
+                  <div class="mt-2 flex flex-wrap gap-1.5" role="group" aria-label="Atajos de período">
+                    @for (preset of presets; track preset.label) {
+                      <button type="button" class="btn btn-xs" (click)="applyPreset(param, preset)">
+                        {{ preset.label }}
+                      </button>
+                    }
+                  </div>
+                </div>
+              }
+              @case ('FECHA') {
+                <div>
+                  <label class="mb-1.5 block text-sm font-semibold" [for]="'rp-' + param.clave">{{ param.etiqueta }}</label>
+                  <input
+                    [id]="'rp-' + param.clave"
+                    type="date"
+                    class="input input-bordered w-full"
+                    [class.input-error]="!!errorFor(param.clave)"
+                    [formControlName]="param.clave"
+                  />
+                  @if (errorFor(param.clave); as message) {
+                    <p class="mt-1 text-xs text-error">{{ message }}</p>
+                  }
+                </div>
+              }
+              @case ('ENTERO') {
+                <div>
+                  <label class="mb-1.5 block text-sm font-semibold" [for]="'rp-' + param.clave">{{ param.etiqueta }}</label>
+                  <input
+                    [id]="'rp-' + param.clave"
+                    type="number"
+                    step="1"
+                    class="input input-bordered w-full"
+                    [attr.min]="param.minimo"
+                    [attr.max]="param.maximo"
+                    [class.input-error]="!!errorFor(param.clave)"
+                    [formControlName]="param.clave"
+                  />
+                  @if (errorFor(param.clave); as message) {
+                    <p class="mt-1 text-xs text-error">{{ message }}</p>
+                  }
+                </div>
+              }
+              @case ('LISTA') {
+                <div>
+                  <label class="mb-1.5 block text-sm font-semibold" [for]="'rp-' + param.clave">{{ param.etiqueta }}</label>
+                  <select
+                    [id]="'rp-' + param.clave"
+                    class="select select-bordered w-full"
+                    [class.select-error]="!!errorFor(param.clave)"
+                    [formControlName]="param.clave"
+                  >
+                    @if (!param.obligatorio) {
+                      <option value="">Todas</option>
+                    }
+                    @for (option of param.opciones; track option.valor) {
+                      <option [value]="option.valor">{{ option.etiqueta }}</option>
+                    }
+                  </select>
+                  @if (errorFor(param.clave); as message) {
+                    <p class="mt-1 text-xs text-error">{{ message }}</p>
+                  }
+                </div>
+              }
+              @case ('BOOLEANO') {
+                <div class="flex items-end pb-2">
+                  <label class="flex cursor-pointer items-center gap-2 text-sm font-semibold">
+                    <input type="checkbox" class="checkbox checkbox-sm" [formControlName]="param.clave" />
+                    {{ param.etiqueta }}
+                  </label>
+                </div>
+              }
+            }
+          }
+        </div>
+
+        @if (formError(); as message) {
+          <p role="alert" class="text-sm text-error">{{ message }}</p>
+        }
+
+        <div class="flex flex-wrap items-center gap-3">
+          <button type="submit" class="btn btn-primary" [disabled]="loading()">
+            @if (loading()) {
+              <span class="loading loading-spinner loading-sm"></span>
+            }
+            Generar
+          </button>
+          <a class="btn btn-ghost" routerLink="/backoffice/reports">Ver todos los reportes</a>
+        </div>
+      </form>
+
+      @if (error(); as failure) {
+        <div role="alert" class="alert alert-error">
+          <span>{{ failure.message }}</span>
+          <button type="button" class="btn btn-sm" (click)="retry()">Reintentar</button>
+        </div>
+      } @else if (loading() && !result()) {
+        <div class="grid gap-3" aria-busy="true" aria-live="polite">
+          @for (row of [1, 2, 3, 4]; track row) {
+            <div class="h-12 animate-pulse rounded-box bg-base-200"></div>
+          }
+        </div>
+      } @else if (result(); as page) {
+        <section aria-label="Resultado del reporte" class="grid gap-3" [class.opacity-60]="loading()">
+          <div class="flex flex-wrap items-center gap-2">
+            @for (applied of page.metadatos.parametros; track applied.clave) {
+              <app-status-chip tone="neutral" [label]="applied.etiqueta + ': ' + applied.valor" />
+            }
+          </div>
+          <p class="text-xs text-base-content/60">
+            Generado el {{ page.metadatos.generadoEn | date: 'd MMM y, HH:mm' }} por {{ page.metadatos.generadoPor }}
+          </p>
+
+          @if (page.paginacion.totalFilas === 0) {
+            <app-empty-state
+              title="Sin datos para estos parámetros"
+              description="Probá con otro período u otras opciones."
+            />
+          } @else {
+            <div
+              class="overflow-x-auto rounded-box border border-base-300 bg-base-100"
+              role="region"
+              tabindex="0"
+              aria-label="Tabla de resultados"
+            >
+              <table class="table table-sm w-full min-w-max">
+                <thead>
+                  <tr>
+                    @for (column of page.columnas; track column.clave) {
+                      <th scope="col" class="list-th whitespace-nowrap" [class]="align(column)">{{ column.titulo }}</th>
+                    }
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of page.filas; track $index) {
+                    <tr class="hover:bg-base-200/60">
+                      @for (column of page.columnas; track column.clave) {
+                        <td class="whitespace-nowrap tabular-nums" [class]="align(column)">
+                          {{ format(column, row[column.clave]) }}
+                        </td>
+                      }
+                    </tr>
+                  }
+                </tbody>
+                @if (page.totales; as totals) {
+                  <tfoot>
+                    <tr class="bg-base-200 font-semibold">
+                      @for (column of page.columnas; track column.clave) {
+                        <td class="whitespace-nowrap tabular-nums" [class]="align(column)">
+                          {{ format(column, totals[column.clave]) }}
+                        </td>
+                      }
+                    </tr>
+                  </tfoot>
+                }
+              </table>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <span class="text-xs text-base-content/60">
+                {{ page.paginacion.totalFilas }} fila(s)
+                @if (page.totales) {
+                  · los totales suman todas las filas, no solo esta página
+                }
+              </span>
+              @if (page.paginacion.totalPaginas > 1) {
+                <nav class="flex items-center gap-2" aria-label="Páginas del reporte">
+                  <button
+                    type="button"
+                    class="btn btn-sm"
+                    [disabled]="pageIndex() === 0 || loading()"
+                    (click)="goToPage(pageIndex() - 1)"
+                  >
+                    Anterior
+                  </button>
+                  <span class="text-sm">Página {{ pageIndex() + 1 }} de {{ page.paginacion.totalPaginas }}</span>
+                  <button
+                    type="button"
+                    class="btn btn-sm"
+                    [disabled]="pageIndex() + 1 >= page.paginacion.totalPaginas || loading()"
+                    (click)="goToPage(pageIndex() + 1)"
+                  >
+                    Siguiente
+                  </button>
+                </nav>
+              }
+            </div>
+          }
+        </section>
+      } @else {
+        <app-empty-state
+          title="Todavía no generaste el reporte"
+          description="Elegí los parámetros y tocá “Generar” para verlo en pantalla; después podés exportarlo."
+        />
+      }
+    }
+  } @else {
+    <app-page-header title="Reporte no disponible" [crumbs]="crumbs()" />
+    <app-empty-state
+      title="No encontramos este reporte"
+      description="No existe o tu rol no tiene acceso. Volvé al catálogo para ver los reportes disponibles."
+    >
+      <a class="btn btn-primary btn-sm" routerLink="/backoffice/reports">Ir al catálogo</a>
+    </app-empty-state>
+  }
+</app-resource-state>

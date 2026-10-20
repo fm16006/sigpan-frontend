@@ -107,7 +107,7 @@
           <span class="list-th">Estado</span>
           <span class="max-md:hidden"></span>
         </div>
-        @for (item of ctx.promotions(); track item.link.id) {
+        @for (item of ctx.promotions(); track item.link.promocionId) {
           <a
             class="list-row max-sm:px-4 grid-cols-[minmax(0,1fr)_auto] gap-y-1.5 md:grid-cols-[minmax(0,1fr)_7rem_11rem_7rem_1rem]"
             routerLink="/backoffice/promotions"
