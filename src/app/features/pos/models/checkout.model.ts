@@ -79,8 +79,7 @@ export interface Receipt {
   readonly numero: Id;
   readonly fecha: Date;
   readonly cajero: string;
-  /** Sucursal y caja donde se cobró (vienen de la venta registrada). */
-  readonly sucursal: string;
+  /** Caja donde se cobró (viene de la venta registrada). */
   readonly caja: string;
   readonly documento: DocumentKind;
   readonly metodo: PaymentMethod;

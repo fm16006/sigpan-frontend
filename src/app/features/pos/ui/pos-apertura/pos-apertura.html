@@ -39,30 +39,25 @@
       </p>
     </div>
 
-    @if (branch.isLoading() && !branchValue()) {
+    @if (source.isLoading() && !sourceValue()) {
       <div class="h-14 animate-pulse rounded-box bg-base-200" aria-busy="true"></div>
-    } @else if (noBranch()) {
+    } @else if (notFound()) {
       <div role="alert" class="alert alert-warning text-sm">
-        Tu usuario no tiene una sucursal asignada. Pedile a la administración que te asigne una para poder
+        No encontramos ninguna caja configurada. Pedile a la administración que la revise para poder
         abrir la caja.
       </div>
-    } @else if (branch.error()) {
+    } @else if (source.error()) {
       <div role="alert" class="alert alert-error text-sm">
-        <span>No pudimos cargar tu sucursal.</span>
-        <button type="button" class="btn btn-sm" (click)="branch.reload()">Reintentar</button>
+        <span>No pudimos cargar las cajas.</span>
+        <button type="button" class="btn btn-sm" (click)="source.reload()">Reintentar</button>
       </div>
-    } @else if (branchValue() && registers().length === 0) {
+    } @else if (sourceValue() && registers().length === 0) {
       <div role="alert" class="alert alert-warning text-sm">
-        La sucursal {{ branchValue()!.nombre }} no tiene cajas activas. La administración puede agregarlas
-        desde Sucursales.
+        No hay cajas activas para cobrar. Pedile a la administración que active una.
       </div>
     }
 
-    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-      <div>
-        <p class="text-xs text-base-content/60">Sucursal</p>
-        <p class="font-semibold">{{ branchValue()?.nombre ?? '—' }}</p>
-      </div>
+    <div class="grid grid-cols-3 gap-3">
       <div>
         <p class="text-xs text-base-content/60">Caja</p>
         <p class="font-semibold">{{ selected()?.nombre ?? '—' }}</p>

@@ -19,9 +19,7 @@ export interface KardexEntry {
   readonly cantidad: number;
   readonly fecha: string;
   readonly motivo: string | null;
-  /** Sucursal cuyo inventario movió; los traslados aparecen una vez en cada sucursal. */
-  readonly sucursal: string | null;
-  /** N.º de documento (factura, CCF, traslado TRA-…). */
+  /** N.º de documento (factura, CCF…). */
   readonly documento: string | null;
   /** Costo unitario de la entrada; en una salida, el costo promedio vigente. */
   readonly costo: number | null;
@@ -50,7 +48,6 @@ export function materialMovementEntry(movement: StockMovement): KardexEntry {
     cantidad: Number(movement.cantidad),
     fecha: movement.fecha,
     motivo: movement.motivo,
-    sucursal: movement.sucursal ?? null,
     documento: movement.documento,
     costo: movement.costoInicial === null ? null : Number(movement.costoInicial),
     link: ['/backoffice/raw-materials', itemId],
@@ -67,7 +64,6 @@ export function productMovementEntry(movement: ProductMovement): KardexEntry {
     cantidad: Number(movement.cantidad),
     fecha: movement.fecha,
     motivo: movement.motivo,
-    sucursal: movement.sucursal ?? null,
     documento: movement.documento ?? null,
     costo: movement.costoInicial === null ? null : Number(movement.costoInicial),
     link: ['/backoffice/products', movement.productoId, 'existencias'],

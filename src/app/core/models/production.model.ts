@@ -78,8 +78,6 @@ export interface MaterialExplosionLine {
 
 /** Explosion de materiales calculada por el backend. El frontend solo la muestra. */
 export interface MaterialExplosion {
-  /** Sucursal cuya existencia se comparó. */
-  readonly sucursalId?: Id | null;
   readonly formulaId: Id;
   readonly productoId: Id;
   readonly producto: string;
@@ -116,9 +114,6 @@ export interface Production {
   readonly producto: string;
   readonly formulaId: Id;
   readonly formula: string;
-  /** Sucursal donde se produce: de ahí salen los insumos y ahí entra el producto. */
-  readonly sucursalId?: Id | null;
-  readonly sucursal?: string | null;
   readonly cantidad: number;
   readonly estado: ProductionStatus;
   readonly fecha: string;
@@ -130,8 +125,6 @@ export interface Production {
 export interface ProductionDraft {
   readonly productoId: Id;
   readonly formulaId: Id;
-  /** Si se omite, el backend usa la sucursal del usuario. */
-  readonly sucursalId?: Id;
   readonly cantidad: number;
   /** "YYYY-MM-DD", hoy o futura. */
   readonly fechaPlanificada: string;

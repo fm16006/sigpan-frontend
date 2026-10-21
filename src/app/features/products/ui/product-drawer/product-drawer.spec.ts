@@ -43,7 +43,7 @@ describe('Formulario de producto: exento de IVA (HU-36)', () => {
     TestBed.inject(SessionStore).set({
       accessToken: 't',
       expiresIn: 900,
-      user: { id: 1, name: 'Ana', email: 'ana@sigpan.test', role: 'ADMINISTRADOR', sucursalId: 1, sucursal: 'Principal' },
+      user: { id: 1, name: 'Ana', email: 'ana@sigpan.test', role: 'ADMINISTRADOR' },
     });
     fixture = TestBed.createComponent(ProductDrawer);
     fixture.componentRef.setInput('product', product);

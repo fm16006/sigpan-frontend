@@ -2,13 +2,13 @@ import { Component, computed, inject, input, linkedSignal, output, signal } from
 import { httpResource } from '@angular/common/http';
 import { valueOr } from '../../../../core/http/resource-value';
 import { Id } from '../../../../core/models/api.model';
-import { Branch, Register } from '../../../../core/models/branch.model';
+import { Register, RegisterBranch } from '../../../../core/models/branch.model';
 import { MoneyPipe } from '../../../../shared/pipes/money.pipe';
 import { StatusChip } from '../../../../shared/ui/status-chip/status-chip';
-import { activeRegisters, placeLabel } from '../../../branches/branch-utils';
-import { BranchService } from '../../../branches/services/branch.service';
 import { APERTURA_DENOMINATIONS, aperturaTotal, denominationLabel } from '../../pos-logic';
+import { activeRegisters } from '../../register-utils';
 import { CashRegisterStore } from '../../services/cash-register.store';
+import { RegisterService } from '../../services/register.service';
 
 const WHEN_FORMAT = new Intl.DateTimeFormat('es-SV', {
   weekday: 'short',
@@ -19,10 +19,9 @@ const WHEN_FORMAT = new Intl.DateTimeFormat('es-SV', {
 });
 
 /**
- * Abrir caja: vista que ve el cajero mientras la caja está cerrada. Muestra su sucursal, deja
- * elegir la caja si la sucursal tiene más de una (con una sola, queda elegida), cuenta el fondo
- * inicial y abre el turno; el turno se guarda en el navegador hasta que el backend lo
- * soporte (HU-38).
+ * Abrir caja: vista que ve el cajero mientras la caja está cerrada. Deja elegir la caja si hay
+ * más de una activa (con una sola, queda elegida), cuenta el fondo inicial y abre el turno; el
+ * turno se guarda en el navegador hasta que el backend lo soporte (HU-38).
  */
 @Component({
   selector: 'app-pos-apertura',
@@ -32,7 +31,7 @@ const WHEN_FORMAT = new Intl.DateTimeFormat('es-SV', {
 })
 export class PosApertura {
   private readonly register = inject(CashRegisterStore);
-  private readonly branches = inject(BranchService);
+  private readonly registerService = inject(RegisterService);
 
   readonly cashier = input('');
   /** El usuario tiene enlaces del panel: se muestra "Ir al panel". */
@@ -40,13 +39,15 @@ export class PosApertura {
   readonly panel = output<void>();
   readonly logout = output<void>();
 
-  /** Sucursal del cajero con sus cajas activas. */
-  protected readonly branch = httpResource<Branch>(() => this.branches.mineUrl());
-  protected readonly branchValue = computed(() => valueOr<Branch | undefined>(this.branch, undefined));
-  protected readonly registers = computed(() => activeRegisters(this.branchValue()));
-  /** Sin sucursal asignada el backend responde 404. */
-  protected readonly noBranch = computed(() => {
-    const error = this.branch.error() as { status?: number } | undefined;
+  /** Cajas activas de la panadería. */
+  protected readonly source = httpResource<RegisterBranch>(() => this.registerService.registersUrl());
+  protected readonly sourceValue = computed(() =>
+    valueOr<RegisterBranch | undefined>(this.source, undefined),
+  );
+  protected readonly registers = computed(() => activeRegisters(this.sourceValue()));
+  /** El backend responde 404 si la panadería no tiene dónde cobrar configurado. */
+  protected readonly notFound = computed(() => {
+    const error = this.source.error() as { status?: number } | undefined;
     return error?.status === 404;
   });
 
@@ -62,10 +63,8 @@ export class PosApertura {
   protected readonly selected = computed(
     () => this.registers().find((item) => item.id === this.selectedId()) ?? null,
   );
-  protected readonly place = computed(() =>
-    placeLabel(this.branchValue()?.nombre, this.selected()?.nombre ?? 'Elegí una caja'),
-  );
-  protected readonly canOpen = computed(() => this.branchValue() !== undefined && this.selected() !== null);
+  protected readonly place = computed(() => this.selected()?.nombre ?? 'Elegí una caja');
+  protected readonly canOpen = computed(() => this.sourceValue() !== undefined && this.selected() !== null);
   protected readonly previous = this.register.ultimoCierre;
   protected readonly denominations = APERTURA_DENOMINATIONS;
   protected readonly label = denominationLabel;
@@ -87,14 +86,8 @@ export class PosApertura {
   }
 
   protected open(): void {
-    const branch = this.branchValue();
     const caja = this.selected();
-    if (!branch || !caja) return;
-    this.register.abrir(this.fondo(), this.note(), {
-      sucursalId: branch.id,
-      sucursal: branch.nombre,
-      cajaId: caja.id,
-      caja: caja.nombre,
-    });
+    if (!this.sourceValue() || !caja) return;
+    this.register.abrir(this.fondo(), this.note(), { cajaId: caja.id, caja: caja.nombre });
   }
 }

@@ -37,7 +37,6 @@ export function formatReceipt(
     ...center(business.razonSocial),
     ...center(business.giro),
     ...center(business.direccion),
-    ...(receipt.sucursal ? center(`Sucursal: ${receipt.sucursal}`) : []),
     ...center(`NIT: ${business.nit}`),
     ...center(`NRC: ${business.nrc}  Tel. ${business.telefono}`),
     rule,

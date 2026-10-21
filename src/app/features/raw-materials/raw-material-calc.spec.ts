@@ -186,31 +186,19 @@ describe('consumption y daysOfSupply', () => {
   });
 });
 
-describe('existencias por sucursal (HU-61)', () => {
-  it('la fila consolidada (suma de todas las sucursales) tiene existencia aunque no tenga id de inventario', () => {
-    const [row] = buildMaterialRows(
-      [material({ stockMinimo: 25 })],
-      [stock({ id: null, cantidad: 18.9 })],
-      new Map(),
-    );
-
-    expect(row.consolidado).toBe(true);
-    expect(row.inventarioId).toBeNull();
-    expect(row.estado).toBe('bajo');
-    expect(row.bajoMinimo).toBe(true);
-  });
-
-  it('un insumo sin fila en la sucursal sigue figurando sin inventario', () => {
+describe('inventario habilitado', () => {
+  it('un insumo sin fila de inventario figura sin inventario', () => {
     const [row] = buildMaterialRows([material()], [], new Map());
 
-    expect(row.consolidado).toBe(false);
+    expect(row.inventarioId).toBeNull();
     expect(row.estado).toBe('sin-inventario');
   });
 
-  it('una fila de una sucursal concreta no es consolidada', () => {
-    const [row] = buildMaterialRows([material()], [stock({ sucursalId: 2, sucursal: 'Norte' })], new Map());
+  it('con fila de inventario toma su id y su existencia', () => {
+    const [row] = buildMaterialRows([material({ stockMinimo: 25 })], [stock({ cantidad: 18.9 })], new Map());
 
-    expect(row.consolidado).toBe(false);
     expect(row.inventarioId).toBe(10);
+    expect(row.estado).toBe('bajo');
+    expect(row.bajoMinimo).toBe(true);
   });
 });

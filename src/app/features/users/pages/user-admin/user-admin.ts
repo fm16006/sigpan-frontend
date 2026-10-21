@@ -1,13 +1,11 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { httpResource } from '@angular/common/http';
-import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { API_ENDPOINTS } from '../../../../core/constants/api-endpoints';
 import { ApiClient } from '../../../../core/http/api-client';
 import { asAppError } from '../../../../core/http/as-app-error';
 import { applyFieldErrors, firstErrorMessage, formLevelMessage } from '../../../../core/http/form-errors';
 import { Id } from '../../../../core/models/api.model';
-import { Branch } from '../../../../core/models/branch.model';
 import { ApiUser, ROLE_LABELS, USER_ROLES, UserRole } from '../../../../core/models/user.model';
 import { Auth } from '../../../../core/services/auth';
 import { Notifications } from '../../../../core/services/notifications';
@@ -19,14 +17,13 @@ import { ResourceState } from '../../../../shared/ui/resource-state/resource-sta
 import { StatusChip } from '../../../../shared/ui/status-chip/status-chip';
 import { RoleSegment, countByRole, filterUsers } from '../../users-utils';
 import { valueOr } from '../../../../core/http/resource-value';
-import { BranchService } from '../../../branches/services/branch.service';
 
 interface ApiRole {
   readonly id: Id;
   readonly nombre: UserRole;
 }
 
-type UserField = 'nombre' | 'email' | 'password' | 'telefono' | 'rolId' | 'sucursalId';
+type UserField = 'nombre' | 'email' | 'password' | 'telefono' | 'rolId';
 
 @Component({
   selector: 'app-user-admin',
@@ -38,7 +35,6 @@ export class UserAdmin {
   private readonly api = inject(ApiClient);
   private readonly notifications = inject(Notifications);
   private readonly auth = inject(Auth);
-  private readonly branchService = inject(BranchService);
 
   protected readonly crumbs = [{ label: 'Administración' }, { label: 'Usuarios' }];
   protected readonly roleLabels = ROLE_LABELS;
@@ -50,10 +46,6 @@ export class UserAdmin {
     defaultValue: [],
   });
   protected readonly roles = httpResource<ApiRole[]>(() => this.api.url(API_ENDPOINTS.roles.root), {
-    defaultValue: [],
-  });
-
-  protected readonly branches = httpResource<Branch[]>(() => this.branchService.listUrl(), {
     defaultValue: [],
   });
 
@@ -91,21 +83,6 @@ export class UserAdmin {
     password: ['', [Validators.minLength(8), Validators.maxLength(72)]],
     telefono: ['', [Validators.maxLength(30)]],
     rolId: [0, [Validators.required, Validators.min(1)]],
-    sucursalId: [0],
-  });
-
-  private readonly selectedRoleId = toSignal(this.form.controls.rolId.valueChanges, { initialValue: 0 });
-
-  /** El personal (todo rol menos Cliente) pertenece a una sucursal; los clientes no. */
-  protected readonly needsBranch = computed(() => {
-    const role = this.roleItems().find((item) => item.id === Number(this.selectedRoleId()));
-    return !!role && role.nombre !== 'CLIENTE';
-  });
-
-  /** Sucursales activas; en edición se conserva la actual aunque esté inactiva. */
-  protected readonly branchOptions = computed(() => {
-    const current = this.editing()?.sucursalId ?? null;
-    return valueOr(this.branches, []).filter((branch) => branch.activo || branch.id === current);
   });
 
   protected readonly toggleMessage = computed(() => {
@@ -127,7 +104,7 @@ export class UserAdmin {
   protected openCreate(): void {
     this.editing.set(null);
     this.formError.set(null);
-    this.form.reset({ nombre: '', email: '', password: '', telefono: '', rolId: 0, sucursalId: 0 });
+    this.form.reset({ nombre: '', email: '', password: '', telefono: '', rolId: 0 });
     this.form.controls.password.setValidators([Validators.required, Validators.minLength(8), Validators.maxLength(72)]);
     this.form.controls.password.updateValueAndValidity();
     this.form.controls.email.enable();
@@ -144,7 +121,6 @@ export class UserAdmin {
       password: '',
       telefono: user.telefono ?? '',
       rolId: user.rolId,
-      sucursalId: user.sucursalId ?? 0,
     });
     this.form.controls.password.setValidators([]);
     this.form.controls.password.updateValueAndValidity();
@@ -173,13 +149,6 @@ export class UserAdmin {
     const current = this.editing();
     const telefono = raw.telefono.trim() || null;
 
-    if (this.needsBranch() && Number(raw.sucursalId) < 1) {
-      this.form.controls.sucursalId.setErrors({ server: 'Elegí la sucursal del usuario.' });
-      this.form.controls.sucursalId.markAsTouched();
-      return;
-    }
-    const sucursalId = this.needsBranch() ? Number(raw.sucursalId) : null;
-
     this.saving.set(true);
     const request = current
       ? this.api.put<ApiUser>(API_ENDPOINTS.usuarios.byId(current.id), {
@@ -187,7 +156,6 @@ export class UserAdmin {
           email: current.email,
           telefono,
           rolId: Number(raw.rolId),
-          sucursalId,
           activo: current.activo,
         })
       : this.api.post<ApiUser>(API_ENDPOINTS.usuarios.root, {
@@ -196,7 +164,6 @@ export class UserAdmin {
           password: raw.password,
           telefono,
           rolId: Number(raw.rolId),
-          sucursalId,
         });
 
     request.subscribe({
@@ -234,7 +201,6 @@ export class UserAdmin {
         email: user.email,
         telefono: user.telefono,
         rolId: user.rolId,
-        sucursalId: user.sucursalId ?? null,
         activo: !user.activo,
       })
       .subscribe({

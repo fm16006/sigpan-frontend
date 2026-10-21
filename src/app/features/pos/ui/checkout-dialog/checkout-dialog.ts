@@ -334,7 +334,7 @@ export class CheckoutDialog {
           cantidad: line.quantity,
         })),
         totalEsperado: this.total(),
-        // Sin caja registrada (turno anterior a HU-60) el backend usa la primera de la sucursal.
+        // Sin caja registrada (turno anterior a HU-60) el backend usa la primera caja activa.
         ...(this.register.lugar()?.cajaId != null ? { cajaId: this.register.lugar()!.cajaId! } : {}),
       })
       .pipe(
@@ -405,7 +405,6 @@ export class CheckoutDialog {
       numero: sale.id,
       fecha: sale.fecha ? new Date(sale.fecha) : new Date(),
       cajero: this.cashier(),
-      sucursal: sale.sucursal ?? this.register.lugar()?.sucursal ?? '',
       caja: sale.caja ?? this.register.lugar()?.caja ?? '',
       documento: this.document(),
       metodo: this.method(),

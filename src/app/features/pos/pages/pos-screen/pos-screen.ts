@@ -58,7 +58,7 @@ import { CheckoutDialog } from '../../ui/checkout-dialog/checkout-dialog';
 import { PosApertura } from '../../ui/pos-apertura/pos-apertura';
 import { PosCaja } from '../../ui/pos-caja/pos-caja';
 import { PosPedidos } from '../../ui/pos-pedidos/pos-pedidos';
-import { placeLabel } from '../../../branches/branch-utils';
+import { registerLabel } from '../../register-utils';
 import { valueOr } from '../../../../core/http/resource-value';
 
 /** Qué ve el cajero: con la caja cerrada solo la apertura; abierta, la venta, el cierre o los pedidos. */
@@ -132,11 +132,8 @@ export class PosScreen {
 
   protected readonly auth = inject(Auth);
   protected readonly isAdmin = this.auth.hasAnyRole(['ADMINISTRADOR']);
-  /** "Sucursal · Caja" del turno abierto, para la barra superior. */
-  protected readonly place = computed(() => {
-    const lugar = this.register.lugar();
-    return placeLabel(lugar?.sucursal ?? this.auth.user()?.sucursal, lugar?.caja ?? 'Caja');
-  });
+  /** Caja del turno abierto ("Caja 01"), para la barra superior. */
+  protected readonly place = computed(() => registerLabel(this.register.lugar()?.caja));
 
   /** Líneas del pedido activo: todo lo que sigue (cotización, pasos, cobro) opera sobre él. */
   private readonly ticket = this.orders.lineas;
@@ -261,25 +258,19 @@ export class PosScreen {
     return matches ? quote.total : null;
   });
 
-  /** El catálogo del mostrador muestra la existencia de la sucursal de la caja abierta. */
-  private readonly branchId = computed(
-    () => this.register.lugar()?.sucursalId ?? this.auth.user()?.sucursalId ?? null,
-  );
-
-  protected readonly catalog = httpResource<CatalogProduct[]>(() => this.products.activePosUrl(this.branchId()), {
+  protected readonly catalog = httpResource<CatalogProduct[]>(() => this.products.activePosUrl(), {
     defaultValue: [],
   });
 
   private readonly catalogItems = computed(() => valueOr(this.catalog, []));
 
   /**
-   * Combos activos que se pueden vender, con cuántos alcanzan en la sucursal de la caja. Si esta
-   * consulta falla, el punto de venta sigue vendiendo productos (los combos simplemente no salen).
+   * Combos activos que se pueden vender, con cuántos alcanzan con la existencia. Si esta consulta
+   * falla, el punto de venta sigue vendiendo productos (los combos simplemente no salen).
    */
-  protected readonly comboCatalog = httpResource<PosCombo[]>(
-    () => this.comboService.posUrl(this.branchId()),
-    { defaultValue: [] },
-  );
+  protected readonly comboCatalog = httpResource<PosCombo[]>(() => this.comboService.posUrl(), {
+    defaultValue: [],
+  });
   private readonly comboItems = computed(() => valueOr(this.comboCatalog, []));
 
   /** Categorías de productos y de combos: una categoría con solo combos también aparece. */

@@ -6,7 +6,6 @@ const receipt: Receipt = {
   numero: 123,
   fecha: new Date(2026, 9, 13, 8, 5),
   cajero: 'Ana',
-  sucursal: 'Principal',
   caja: 'Caja 01',
   documento: 'TICKET',
   metodo: 'EFECTIVO',
@@ -69,13 +68,12 @@ describe('formatReceipt', () => {
     expect(wrapWords('', 8)).toEqual(['']);
   });
 
-  it('muestra la sucursal y la caja donde se cobró', () => {
-    expect(lines.some((line) => line.trim() === 'Sucursal: Principal')).toBe(true);
+  it('muestra la caja donde se cobró y no la sucursal', () => {
+    expect(lines.some((line) => line.trim().startsWith('Sucursal:'))).toBe(false);
     expect(lines.some((line) => line.startsWith('TICKET No.') && line.trimEnd().endsWith('Caja 01'))).toBe(true);
 
-    const norte = formatReceipt({ ...receipt, sucursal: 'Norte', caja: 'Caja 02' }, BUSINESS_INFO);
-    expect(norte.some((line) => line.trim() === 'Sucursal: Norte')).toBe(true);
-    expect(norte.some((line) => line.endsWith('Caja 02'))).toBe(true);
+    const otra = formatReceipt({ ...receipt, caja: 'Caja 02' }, BUSINESS_INFO);
+    expect(otra.some((line) => line.endsWith('Caja 02'))).toBe(true);
   });
 
   it('numera el ticket con ceros a la izquierda', () => {

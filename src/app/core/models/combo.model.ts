@@ -27,7 +27,7 @@ export interface PosComboLine {
   readonly precio: number;
 }
 
-/** Combo activo que se puede vender en el POS, con cuántos alcanzan en la sucursal de la caja. */
+/** Combo activo que se puede vender en el POS, con cuántos alcanzan con la existencia. */
 export interface PosCombo {
   readonly id: Id;
   readonly nombre: string;
@@ -35,8 +35,7 @@ export interface PosCombo {
   readonly precio: number;
   readonly categoriaId: Id | null;
   readonly categoria: string | null;
-  readonly sucursalId: Id | null;
-  /** Combos completos que alcanzan con la existencia de la sucursal. */
+  /** Combos completos que alcanzan con la existencia. */
   readonly disponible: number;
   readonly lineas: readonly PosComboLine[];
 }

@@ -92,8 +92,6 @@ export function buildMaterialRow(
     cantidad: Number(stock?.cantidad ?? 0),
     minimo: Number(material.stockMinimo ?? 0),
     fechaActualizacion: stock?.fechaActualizacion ?? null,
-    // Una fila sin id es la suma de todas las sucursales: tiene existencia pero no inventario propio.
-    consolidado: stock !== undefined && (stock.id ?? null) === null,
   };
   const activo = material.activo !== false;
   const precio =

@@ -7,7 +7,6 @@ const mixed: Receipt = {
   numero: 123,
   fecha: new Date(2026, 9, 13, 8, 5),
   cajero: 'Ana',
-  sucursal: 'Principal',
   caja: 'Caja 01',
   documento: 'TICKET',
   metodo: 'EFECTIVO',

@@ -5,7 +5,6 @@ import { API_ENDPOINTS } from '../../../../../core/constants/api-endpoints';
 import { ApiClient } from '../../../../../core/http/api-client';
 import { Id } from '../../../../../core/models/api.model';
 import { MoneyPipe } from '../../../../../shared/pipes/money.pipe';
-import { BranchScopePicker } from '../../../../../shared/ui/branch-scope-picker/branch-scope-picker';
 import { Icon } from '../../../../../shared/ui/icon/icon';
 import { StatCard } from '../../../../../shared/ui/stat-card/stat-card';
 import { StatusChip } from '../../../../../shared/ui/status-chip/status-chip';
@@ -15,7 +14,7 @@ import { ProductContext } from '../product-context';
 
 @Component({
   selector: 'app-product-stock',
-  imports: [DatePipe, DecimalPipe, MoneyPipe, Icon, BranchScopePicker, StatCard, StatusChip],
+  imports: [DatePipe, DecimalPipe, MoneyPipe, Icon, StatCard, StatusChip],
   templateUrl: './product-stock.html',
 })
 export class ProductStock {
@@ -30,7 +29,7 @@ export class ProductStock {
   ];
 
   protected readonly movementsRes = httpResource<ProductMovement[]>(() =>
-    this.api.url(API_ENDPOINTS.movimientos.byProducto(this.ctx.id()), this.ctx.scope.params()),
+    this.api.url(API_ENDPOINTS.movimientos.byProducto(this.ctx.id())),
   );
   private readonly movements = computed(() =>
     this.movementsRes.hasValue() ? this.movementsRes.value() : [],

@@ -107,8 +107,8 @@ describe('CashRegisterStore', () => {
     expect(again.store.turno()).toBeNull();
   });
 
-  it('abrir guarda la sucursal y la caja elegidas, y sobreviven a una recarga', () => {
-    const lugar = { sucursalId: 1, sucursal: 'Principal', cajaId: 11, caja: 'Caja 02' };
+  it('abrir guarda la caja elegida, y sobrevive a una recarga', () => {
+    const lugar = { cajaId: 11, caja: 'Caja 02' };
     store.abrir(30, '', lugar);
 
     expect(store.lugar()).toEqual(lugar);
@@ -138,7 +138,7 @@ describe('CashRegisterStore', () => {
           fondo: 5,
           nota: '',
           cajero: 'Ana',
-          lugar: { sucursal: 7 },
+          lugar: { caja: 7 },
         },
       }),
     );
@@ -147,6 +147,27 @@ describe('CashRegisterStore', () => {
 
     expect(again.store.estado()).toBe('abierta');
     expect(again.store.lugar()).toBeNull();
+  });
+
+  it('un turno guardado con sucursal (antes de la sucursal única) sigue valiendo por su caja', () => {
+    localStorage.setItem(
+      'sigpan.caja.7',
+      JSON.stringify({
+        turno: {
+          abiertaEn: '2026-10-19T10:00:00.000Z',
+          fondo: 5,
+          nota: '',
+          cajero: 'Ana',
+          lugar: { sucursalId: 1, sucursal: 'Principal', cajaId: 1, caja: 'Caja 01' },
+        },
+      }),
+    );
+    const again = reload();
+    again.sessionStore.set(session(7, 'ana@sigpan.test'));
+
+    expect(again.store.estado()).toBe('abierta');
+    expect(again.store.lugar()?.cajaId).toBe(1);
+    expect(again.store.lugar()?.caja).toBe('Caja 01');
   });
 
   it('sigue funcionando en memoria si localStorage falla', () => {
