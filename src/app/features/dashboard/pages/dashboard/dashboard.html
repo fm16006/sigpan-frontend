@@ -3,7 +3,6 @@
   [subtitle]="'Resumen de la jornada · ' + (auth.user()?.name ?? '')"
   [crumbs]="crumbs"
 >
-  <app-branch-scope-picker />
   <button type="button" class="btn btn-sm sm:btn-md" [disabled]="loading()" (click)="reload()">
     Actualizar
   </button>
@@ -16,7 +15,7 @@
   <app-stat-card
     label="Insumos en mínimo"
     [value]="lowStock()"
-    [hint]="'Requieren reposición · ' + (scope.isAll() ? 'todas las sucursales' : scope.label())"
+    hint="Requieren reposición"
   />
 </section>
 

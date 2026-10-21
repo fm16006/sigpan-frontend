@@ -34,12 +34,9 @@ export class ComboService extends CrudClient<Combo, ComboDraft> {
     return this.api.url(API_ENDPOINTS.categorias.root);
   }
 
-  /**
-   * Combos vendibles en el punto de venta con cuántos alcanzan en la sucursal (solo personal del POS).
-   * Sin sucursal el backend usa la del usuario.
-   */
-  posUrl(sucursalId?: Id | null): string {
-    return this.api.url(API_ENDPOINTS.combos.pos, { sucursalId });
+  /** Combos vendibles en el punto de venta con cuántos alcanzan con la existencia (solo personal del POS). */
+  posUrl(): string {
+    return this.api.url(API_ENDPOINTS.combos.pos);
   }
 
   productsUrl(): string {

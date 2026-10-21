@@ -14,30 +14,14 @@ describe('toAuthSession', () => {
         rolId: 4,
         rol: 'CAJERO',
         activo: true,
-        sucursalId: 1,
-        sucursal: 'Principal',
       },
     });
 
     expect(session).toEqual({
       accessToken: 'abc',
       expiresIn: 1800,
-      user: { id: 9, name: 'Ana', email: 'ana@sigpan.test', role: 'CAJERO', sucursalId: 1, sucursal: 'Principal' },
+      user: { id: 9, name: 'Ana', email: 'ana@sigpan.test', role: 'CAJERO' },
     });
-  });
-});
-
-describe('toAuthSession sin sucursal', () => {
-  it('los clientes no traen sucursal', () => {
-    const session = toAuthSession({
-      tokenAcceso: 'abc',
-      tipoToken: 'Bearer',
-      expiraEn: 1800,
-      usuario: { id: 2, nombre: 'Luis', email: 'luis@sigpan.test', telefono: null, rolId: 6, rol: 'CLIENTE', activo: true },
-    });
-
-    expect(session.user.sucursalId).toBeNull();
-    expect(session.user.sucursal).toBeNull();
   });
 });
 

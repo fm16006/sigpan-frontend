@@ -96,12 +96,6 @@ export const routes: Routes = [
           import('./features/movements/movements.routes').then((m) => m.MOVEMENTS_ROUTES),
       },
       {
-        path: 'transfers',
-        canActivate: [roleGuard(['ADMINISTRADOR', 'JEFE_PRODUCCION', 'BODEGUERO'])],
-        loadChildren: () =>
-          import('./features/transfers/transfers.routes').then((m) => m.TRANSFERS_ROUTES),
-      },
-      {
         path: 'production',
         canActivate: [roleGuard(['ADMINISTRADOR', 'JEFE_PRODUCCION'])],
         loadChildren: () =>
@@ -151,12 +145,6 @@ export const routes: Routes = [
         path: 'users',
         canActivate: [roleGuard(['ADMINISTRADOR'])],
         loadChildren: () => import('./features/users/users.routes').then((m) => m.USERS_ROUTES),
-      },
-      {
-        path: 'branches',
-        canActivate: [roleGuard(['ADMINISTRADOR'])],
-        loadChildren: () =>
-          import('./features/branches/branches.routes').then((m) => m.BRANCHES_ROUTES),
       },
     ],
   },

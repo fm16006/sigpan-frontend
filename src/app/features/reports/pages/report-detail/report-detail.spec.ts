@@ -82,10 +82,10 @@ describe('Ficha de un reporte', () => {
     expect(Array.from(grouping.options).map((o) => o.textContent?.trim())).toEqual(['Día', 'Semana', 'Mes']);
     expect(grouping.value).toBe('DIA');
 
-    // Una lista opcional ofrece "Todas" y arranca ahí.
-    const branch = input('rp-sucursalId') as HTMLSelectElement;
-    expect(Array.from(branch.options).map((o) => o.textContent?.trim())).toEqual(['Todas', 'Principal', 'Norte']);
-    expect(branch.value).toBe('');
+    // Una lista opcional ofrece su texto "sin filtro" y arranca ahí.
+    const channel = input('rp-tipo') as HTMLSelectElement;
+    expect(Array.from(channel.options).map((o) => o.textContent?.trim())).toEqual(['Todos', 'Mostrador', 'En línea']);
+    expect(channel.value).toBe('');
   });
 
   it('migas Reportes › RG-01 y los botones de exportar bloqueados hasta generar', async () => {
@@ -119,7 +119,7 @@ describe('Ficha de un reporte', () => {
   it('Generar pide el reporte con los parámetros elegidos y muestra filas con formato y la fila de totales', async () => {
     await open();
     await setValue('rp-agrupacion', 'MES');
-    await setValue('rp-sucursalId', '2');
+    await setValue('rp-tipo', 'PEDIDO');
 
     await submit();
     const request = httpMock.expectOne((r) => r.urlWithParams.startsWith(`${BASE}/reportes/RG-01?`));
@@ -127,7 +127,7 @@ describe('Ficha de un reporte', () => {
     expect(params.get('desde')).toBe('2026-10-01');
     expect(params.get('hasta')).toBe('2026-10-19');
     expect(params.get('agrupacion')).toBe('MES');
-    expect(params.get('sucursalId')).toBe('2');
+    expect(params.get('tipo')).toBe('PEDIDO');
     expect(params.get('page')).toBe('0');
     expect(params.get('size')).toBe('25');
     request.flush(RG01_PAGE);

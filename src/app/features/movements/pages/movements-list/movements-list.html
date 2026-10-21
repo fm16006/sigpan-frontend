@@ -3,12 +3,11 @@
   subtitle="Kárdex de entradas y salidas de productos y materia prima. Hacé clic en un movimiento para abrir el artículo."
   [crumbs]="crumbs"
 >
-  <app-branch-scope-picker />
   @if (canWrite) {
-    <button type="button" class="btn" [disabled]="!scope.canWrite()" (click)="drawer.set('adjustment')">
+    <button type="button" class="btn" (click)="drawer.set('adjustment')">
       Ajuste de inventario
     </button>
-    <button type="button" class="btn btn-primary" [disabled]="!scope.canWrite()" (click)="drawer.set('purchase')">
+    <button type="button" class="btn btn-primary" (click)="drawer.set('purchase')">
       <app-icon name="plus" /> Registrar compra
     </button>
   }
@@ -95,7 +94,6 @@
           <span class="truncate font-semibold">{{ entry.articulo }}</span>
           <span class="truncate text-xs text-base-content/60">
             {{ entry.kind === 'materia-prima' ? 'Materia prima' : 'Producto'
-            }}{{ scope.isAll() && entry.sucursal ? ' · ' + entry.sucursal : ''
             }}{{ entry.motivo ? ' · ' + entry.motivo : '' }}
           </span>
         </span>
@@ -120,9 +118,8 @@
       class="flex flex-wrap items-center justify-between gap-3 border-t border-base-300 px-5 py-3 text-sm text-base-content/60"
     >
       <span>
-        {{ entries().length }} de {{ matching() }} movimientos
-        {{ scope.isAll() ? 'de todas las sucursales' : 'de ' + scope.label() }}. No se editan ni se borran: un
-        error se corrige con un ajuste.
+        {{ entries().length }} de {{ matching() }} movimientos. No se editan ni se borran: un error se
+        corrige con un ajuste.
       </span>
       @if (entries().length < matching()) {
         <button type="button" class="btn btn-sm" (click)="showMore()">Mostrar más</button>

@@ -5,7 +5,7 @@ import { StatusChip } from '../../../../shared/ui/status-chip/status-chip';
 import { Icon } from '../../../../shared/ui/icon/icon';
 import { MAX_ORDERS, PosOrder, itemCount, orderTotal } from '../../pos-orders';
 import { orderPreview } from '../../pos-pedidos-logic';
-import { placeLabel } from '../../../branches/branch-utils';
+import { registerLabel } from '../../register-utils';
 import { CashRegisterStore } from '../../services/cash-register.store';
 import { PosOrdersStore } from '../../services/pos-orders.store';
 import { PosHistorial } from '../pos-historial/pos-historial';
@@ -33,11 +33,8 @@ export class PosPedidos {
   readonly create = output<void>();
 
   private readonly register = inject(CashRegisterStore);
-  /** "Sucursal · Caja" del turno abierto; "Caja" si el turno es anterior a las sucursales. */
-  protected readonly lugar = computed(() => {
-    const lugar = this.register.lugar();
-    return placeLabel(lugar?.sucursal, lugar?.caja) || 'Caja';
-  });
+  /** Caja del turno abierto; "Caja" si el turno es anterior a las cajas. */
+  protected readonly lugar = computed(() => registerLabel(this.register.lugar()?.caja));
   protected readonly maxOrders = MAX_ORDERS;
   protected readonly tab = signal<PedidosTab>('borradores');
   protected readonly drafts = this.store.pendientes;

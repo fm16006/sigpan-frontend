@@ -12,7 +12,6 @@ const OLD_SALE: Sale = {
   id: 77,
   usuarioId: 8,
   usuario: 'Ana',
-  sucursal: 'Principal',
   caja: 'Caja 01',
   tipo: 'MOSTRADOR',
   estado: 'COMPLETADA',

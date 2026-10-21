@@ -5,7 +5,6 @@ import { ActivatedRoute } from '@angular/router';
 import { map } from 'rxjs';
 import { API_ENDPOINTS } from '../../../../core/constants/api-endpoints';
 import { ApiClient } from '../../../../core/http/api-client';
-import { BranchScope } from '../../../../core/services/branch-scope';
 import { Id } from '../../../../core/models/api.model';
 import { CatalogProduct, isResale } from '../../../../core/models/catalog.model';
 import { Combo, ComboLine } from '../../../../core/models/combo.model';
@@ -33,8 +32,6 @@ export class ProductContext {
   private readonly purchaseService = inject(PurchaseService);
   private readonly productService = inject(ProductAdminService);
   private readonly notifications = inject(Notifications);
-  /** Sucursal cuyas existencias se ven (la del usuario por defecto). */
-  readonly scope = inject(BranchScope);
 
   readonly id = toSignal(this.route.paramMap.pipe(map((params) => Number(params.get('id')))), {
     initialValue: Number(this.route.snapshot.paramMap.get('id')),
@@ -48,10 +45,10 @@ export class ProductContext {
   readonly channelPending = (channel: ChannelKey): boolean => this.pendingChannels().has(channel);
 
   readonly productRes = httpResource<CatalogProduct>(() =>
-    this.api.url(API_ENDPOINTS.productos.byId(this.id()), this.scope.params()),
+    this.api.url(API_ENDPOINTS.productos.byId(this.id())),
   );
   readonly stockRes = httpResource<ProductInventory>(() =>
-    this.api.url(API_ENDPOINTS.inventarios.byProducto(this.id()), this.scope.params()),
+    this.api.url(API_ENDPOINTS.inventarios.byProducto(this.id())),
   );
   // Se pide la lista y se filtra: /formulas/producto/:id responde 404 cuando no hay receta y el
   // interceptor lo mostraría como un aviso de error en un caso que es normal.
@@ -187,7 +184,7 @@ export class ProductContext {
     this.productService.updateChannels(product.id, { [channel]: enabled }).subscribe({
       next: (updated) => {
         this.releaseChannel(channel);
-        // Se confirma con lo que guardó el backend, sin tocar la existencia de la sucursal que se ve.
+        // Se confirma con lo que guardó el backend, sin tocar la existencia que ya se ve.
         this.patchChannel(channel, isChannelOn(updated, channel));
         const label = CHANNEL_LABELS[channel].label;
         this.notifications.success(

@@ -51,7 +51,6 @@ function combo(
     precio: 1.5,
     categoriaId: categoria ? 90 + id : null,
     categoria,
-    sucursalId: 1,
     disponible,
     lineas,
   };

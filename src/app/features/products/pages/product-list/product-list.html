@@ -3,7 +3,6 @@
   subtitle="Lo que se vende en mostrador y en la tienda en línea. Hacé clic en un producto para abrir su ficha."
   [crumbs]="crumbs"
 >
-  <app-branch-scope-picker />
   @if (isAdmin) {
     <button type="button" class="btn btn-primary" (click)="drawerOpen.set(true)">
       <app-icon name="plus" />

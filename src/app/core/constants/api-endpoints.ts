@@ -34,13 +34,8 @@ export const API_ENDPOINTS = {
     root: '/roles',
   },
   sucursales: {
-    root: '/sucursales',
-    byId: (id: Id) => `/sucursales/${id}`,
-    /** Sucursal del usuario de la sesión, con sus cajas activas. */
+    /** La sucursal (única) con sus cajas activas; la usa el punto de venta para elegir caja. */
     mine: '/sucursales/mi-sucursal',
-    usuarios: (id: Id) => `/sucursales/${id}/usuarios`,
-    cajas: (id: Id) => `/sucursales/${id}/cajas`,
-    cajaById: (id: Id, cajaId: Id) => `/sucursales/${id}/cajas/${cajaId}`,
   },
   materiasPrimas: {
     root: '/materias-primas',
@@ -50,8 +45,6 @@ export const API_ENDPOINTS = {
   inventarios: {
     materiasPrimas: '/inventarios/materia-prima',
     productos: '/inventarios/producto',
-    /** Sucursales (id, nombre, código, estado) para elegirlas en inventario y traslados. */
-    sucursales: '/inventarios/sucursales',
     /** Inventario de un producto, por id de producto. */
     byProducto: (productoId: Id) => `/inventarios/producto/${productoId}`,
     /** Inventario de una materia prima, por id de materia prima. */
@@ -112,7 +105,7 @@ export const API_ENDPOINTS = {
   combos: {
     root: '/combos',
     byId: (id: Id) => `/combos/${id}`,
-    /** Combos vendibles en el punto de venta, con su existencia por sucursal (cajero y administración). */
+    /** Combos vendibles en el punto de venta, con su existencia (cajero y administración). */
     pos: '/combos/pos',
   },
   combosDetalles: {
@@ -135,10 +128,6 @@ export const API_ENDPOINTS = {
     root: '/proveedores',
     byId: (id: Id) => `/proveedores/${id}`,
     activo: (id: Id) => `/proveedores/${id}/activo`,
-  },
-  traslados: {
-    root: '/traslados',
-    byId: (id: Id) => `/traslados/${id}`,
   },
   compras: {
     root: '/compras',

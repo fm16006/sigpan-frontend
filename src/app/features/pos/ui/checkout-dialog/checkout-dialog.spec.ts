@@ -48,7 +48,6 @@ const SALE: Sale = {
   id: 501,
   usuarioId: 8,
   usuario: 'Ana',
-  sucursal: 'Principal',
   caja: 'Caja 01',
   tipo: 'MOSTRADOR',
   estado: 'COMPLETADA',

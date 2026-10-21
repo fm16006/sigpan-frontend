@@ -15,18 +15,6 @@
       </legend>
 
       <div>
-        <label class="label" for="ordenSucursal"><span class="label-text">Sucursal</span></label>
-        <select id="ordenSucursal" formControlName="sucursalId" class="select select-bordered w-full">
-          @for (branch of scope.activeBranches(); track branch.id) {
-            <option [ngValue]="branch.id">{{ branch.nombre }}</option>
-          }
-        </select>
-        <p class="mt-1 text-xs text-base-content/55">
-          Los insumos salen de esta sucursal y el producto entra a ella.
-        </p>
-      </div>
-
-      <div>
         <label class="label" for="ordenProducto"><span class="label-text">Producto</span></label>
         <select
           id="ordenProducto"

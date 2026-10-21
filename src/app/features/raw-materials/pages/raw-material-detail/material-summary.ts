@@ -19,13 +19,7 @@ import { CONSUMPTION_DAYS, MaterialDetailStore } from './material-detail.store';
         <app-stat-card
           label="Existencia"
           [value]="!hasInventory(row) ? '—' : (row.cantidad | number: '1.0-3') + ' ' + row.unidad"
-          [hint]="
-            !hasInventory(row)
-              ? 'Sin inventario habilitado'
-              : row.consolidado
-                ? 'Suma de todas las sucursales'
-                : 'En ' + store.scope.label()
-          "
+          [hint]="!hasInventory(row) ? 'Sin inventario habilitado' : 'Disponible en bodega'"
         />
         <app-stat-card label="Mínimo" [value]="(row.minimo | number: '1.0-3') + ' ' + row.unidad" />
         <app-stat-card

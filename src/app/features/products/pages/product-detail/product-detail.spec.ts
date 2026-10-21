@@ -65,7 +65,7 @@ describe('Ficha del producto: canales de venta', () => {
     TestBed.inject(SessionStore).set({
       accessToken: 't',
       expiresIn: 900,
-      user: { id: 1, name: 'Ana', email: 'ana@sigpan.test', role, sucursalId: 1, sucursal: 'Principal' },
+      user: { id: 1, name: 'Ana', email: 'ana@sigpan.test', role },
     });
     const fixture = TestBed.createComponent(ProductDetail);
     fixture.detectChanges();

@@ -4,10 +4,11 @@ import { SessionStore } from '../../../core/services/session-store';
 
 export type CashRegisterState = 'cerrada' | 'abierta';
 
-/** Sucursal y caja donde se abrió el turno. */
+/**
+ * Caja donde se abrió el turno. Los turnos guardados antes de pasar a una sola sucursal pueden
+ * traer además `sucursalId`/`sucursal`: se conservan tal cual pero ya no se leen ni se muestran.
+ */
 export interface ShiftPlace {
-  readonly sucursalId: number | null;
-  readonly sucursal: string;
   readonly cajaId: number | null;
   readonly caja: string;
 }
@@ -64,7 +65,7 @@ export class CashRegisterStore {
   readonly turno = computed(() => this.data().turno);
   readonly estado = computed<CashRegisterState>(() => (this.data().turno ? 'abierta' : 'cerrada'));
   readonly ultimoCierre = computed(() => this.data().ultimoCierre);
-  /** Sucursal y caja del turno abierto; null con la caja cerrada o en turnos anteriores a HU-60. */
+  /** Caja del turno abierto; null con la caja cerrada o en turnos anteriores a HU-60. */
   readonly lugar = computed(() => this.data().turno?.lugar ?? null);
 
   /** Abre el turno con el fondo contado en la caja elegida. Si ya hay uno abierto no hace nada. */
@@ -127,7 +128,7 @@ export class CashRegisterStore {
 
 function isPlace(value: unknown): value is ShiftPlace {
   const place = value as Partial<ShiftPlace> | null | undefined;
-  return !!place && typeof place.sucursal === 'string' && typeof place.caja === 'string';
+  return !!place && typeof place.caja === 'string';
 }
 
 /** Descarta una caja guardada con forma inválida en vez de rechazar todo el turno. */

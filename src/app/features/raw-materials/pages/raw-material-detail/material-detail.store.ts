@@ -12,7 +12,6 @@ import {
 import { Formula, RawMaterial } from '../../../../core/models/production.model';
 import { ItemPurchase } from '../../../../core/models/purchase.model';
 import { Auth } from '../../../../core/services/auth';
-import { BranchScope } from '../../../../core/services/branch-scope';
 import {
   buildMaterialRow,
   consumption,
@@ -48,7 +47,6 @@ export class MaterialDetailStore {
   private readonly purchaseService = inject(PurchaseService);
   private readonly route = inject(ActivatedRoute);
   private readonly auth = inject(Auth);
-  readonly scope = inject(BranchScope);
 
   readonly id = toSignal(this.route.paramMap.pipe(map((params) => Number(params.get('id')))), {
     initialValue: Number(this.route.snapshot.paramMap.get('id')),
@@ -61,11 +59,11 @@ export class MaterialDetailStore {
 
   readonly material = httpResource<RawMaterial>(() => this.service.materialUrl(this.id()));
   private readonly stocks = httpResource<RawMaterialStock[]>(
-    () => this.service.stockUrl('materia-prima', this.scope.params()),
+    () => this.service.stockUrl('materia-prima'),
     { defaultValue: [] },
   );
   readonly movements = httpResource<StockMovement[]>(
-    () => this.service.movementsUrl('materia-prima', this.id(), this.scope.params()),
+    () => this.service.movementsUrl('materia-prima', this.id()),
     { defaultValue: [] },
   );
   /** Últimas compras a proveedores de este insumo (con proveedor y documento). */

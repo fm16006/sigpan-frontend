@@ -38,7 +38,7 @@ describe('Formulario desde el contrato', () => {
       desde: '2026-10-01',
       hasta: '2026-10-19',
       agrupacion: 'DIA',
-      sucursalId: '',
+      tipo: '',
     });
   });
 
@@ -48,7 +48,7 @@ describe('Formulario desde el contrato', () => {
       hasta: '2026-10-19',
       agrupacion: 'DIA',
     });
-    expect(toQuery(RG01, { ...initialValues(RG01), sucursalId: '2' })['sucursalId']).toBe('2');
+    expect(toQuery(RG01, { ...initialValues(RG01), tipo: 'PEDIDO' })['tipo']).toBe('PEDIDO');
   });
 
   it('valida obligatorios y que desde no pase de hasta', () => {

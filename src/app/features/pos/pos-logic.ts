@@ -106,7 +106,7 @@ export function comboContents(combo: PosCombo): string {
   return combo.lineas.map((line) => `${line.cantidad} × ${line.producto}`).join(' · ');
 }
 
-/** El combo no alcanza ni una vez con la existencia de la sucursal. */
+/** El combo no alcanza ni una vez con la existencia. */
 export function comboSoldOut(combo: Pick<PosCombo, 'disponible'>): boolean {
   return combo.disponible <= 0;
 }

@@ -28,8 +28,6 @@ export interface Sale {
   readonly id: Id;
   readonly usuarioId: Id | null;
   readonly usuario: string | null;
-  readonly sucursalId?: Id | null;
-  readonly sucursal?: string | null;
   /** Nulo en los pedidos en línea. */
   readonly cajaId?: Id | null;
   readonly caja?: string | null;
@@ -52,17 +50,12 @@ export interface Sale {
 
 export interface SaleRequest {
   readonly lineas: readonly { readonly productoId: Id; readonly cantidad: number }[];
-  /** Solo en la venta de mostrador: caja donde se cobra (de la sucursal del cajero). */
+  /** Solo en la venta de mostrador: caja donde se cobra. */
   readonly cajaId?: Id;
   /** Total que el cliente vio al cotizar; si ya no coincide al confirmar, el servidor responde 409 TOTAL_CAMBIO. */
   readonly totalEsperado?: number;
 }
 
-/** Filtro del corte y de los listados de ventas. */
-export interface SaleFilter {
-  readonly sucursalId?: Id | null;
-  readonly cajaId?: Id | null;
-}
 
 export interface CashCut {
   readonly fecha: string;

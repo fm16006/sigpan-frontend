@@ -52,9 +52,6 @@ export interface Purchase {
   readonly id: Id;
   readonly proveedorId: Id;
   readonly proveedor: string;
-  /** Sucursal que recibió la mercadería. */
-  readonly sucursalId?: Id | null;
-  readonly sucursal?: string | null;
   readonly tipoDocumento: DocumentType;
   readonly numeroDocumento: string;
   /** "YYYY-MM-DD". */
@@ -77,8 +74,6 @@ export interface PurchaseLineDraft {
 /** Cuerpo de POST /compras. */
 export interface PurchaseDraft {
   readonly proveedorId: Id;
-  /** Sucursal que recibe la compra; si se omite, el backend usa la del usuario. */
-  readonly sucursalId?: Id;
   readonly tipoDocumento: DocumentType;
   readonly numeroDocumento: string;
   readonly fecha: string;

@@ -23,7 +23,7 @@
 
   <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
     <div class="rounded-box border border-base-300 bg-base-100 p-4">
-      <p class="text-xs text-base-content/60">Ventas del día · {{ scope() }}</p>
+      <p class="text-xs text-base-content/60">Ventas del día</p>
       <p class="font-serif text-2xl font-semibold tabular-nums">{{ (cutValue()?.total ?? 0) | money }}</p>
       <p class="text-xs text-base-content/60">
         {{ cutValue()?.cantidadVentas ?? 0 }} ticket(s) · {{ cutValue()?.productosVendidos ?? 0 }}
@@ -168,36 +168,6 @@
       <div class="flex flex-wrap items-end justify-between gap-3">
         <h2 id="caja-ventas" class="font-serif text-lg font-semibold">Ventas del día</h2>
         <div class="flex flex-wrap items-end gap-2">
-          @if (isAdmin) {
-            <label class="grid gap-1 text-xs text-base-content/60">
-              Sucursal
-              <select
-                #branchSelect
-                class="select select-sm"
-                [value]="branchFilter() ?? ''"
-                (change)="pickBranch(branchSelect.value)"
-              >
-                <option value="">Todas</option>
-                @for (branch of branchOptions(); track branch.id) {
-                  <option [value]="branch.id" [selected]="branch.id === branchFilter()">{{ branch.nombre }}</option>
-                }
-              </select>
-            </label>
-          }
-          <label class="grid gap-1 text-xs text-base-content/60">
-            Caja
-            <select
-              #registerSelect
-              class="select select-sm"
-              [disabled]="registerOptions().length === 0"
-              (change)="pickRegister(registerSelect.value)"
-            >
-              <option value="" [selected]="registerFilter() === null">Todas</option>
-              @for (item of registerOptions(); track item.id) {
-                <option [value]="item.id" [selected]="item.id === registerFilter()">{{ item.nombre }}</option>
-              }
-            </select>
-          </label>
           <label class="grid gap-1 text-xs text-base-content/60">
             Fecha
             <input
@@ -243,8 +213,8 @@
                 <span class="font-mono">#{{ venta.id }}</span>
                 <span class="tabular-nums max-md:order-last">{{ venta.fecha | date: 'HH:mm' }}</span>
                 <span class="text-base-content/70 max-md:col-span-2">
-                  @if (whereOf(venta); as where) {
-                    <span class="me-1.5 rounded bg-base-200 px-1.5 py-0.5 text-[0.6875rem] font-medium">{{ where }}</span>
+                  @if (venta.caja) {
+                    <span class="me-1.5 rounded bg-base-200 px-1.5 py-0.5 text-[0.6875rem] font-medium">{{ venta.caja }}</span>
                   }
                   @for (linea of venta.detalles ?? []; track linea.id; let last = $last) {
                     {{ linea.cantidad }} × {{ linea.producto }}{{ last ? '' : ', ' }}
