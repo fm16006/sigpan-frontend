@@ -120,6 +120,36 @@ describe('formatReceipt', () => {
     expect(card.every((text) => text.length <= RECEIPT_WIDTH)).toBe(true);
   });
 
+  it('pago mixto: parte con tarjeta, efectivo y cambio (HU-35)', () => {
+    const mixed = formatReceipt(
+      {
+        ...receipt,
+        metodo: 'MIXTO',
+        montoTarjeta: 10,
+        recibido: 5,
+        cambio: 1.5,
+        tarjeta: { uid: 'A1', marca: 'VISA', ultimos: '7364', autorizacion: '048213' },
+      },
+      BUSINESS_INFO,
+    );
+    const line = (start: string) => mixed.find((text) => text.startsWith(start))?.trim();
+
+    expect(line('TARJETA VISA')?.endsWith('10.00')).toBe(true);
+    expect(line('EFECTIVO')?.endsWith('5.00')).toBe(true);
+    expect(line('CAMBIO')?.endsWith('1.50')).toBe(true);
+  });
+
+  it('imprime el número de control y el código de generación (HU-36)', () => {
+    const dte = formatReceipt(
+      { ...receipt, numeroControl: 'DTE-01-M001P001-000000000000015', codigoGeneracion: 'ABC-123' },
+      BUSINESS_INFO,
+    );
+
+    expect(dte.some((text) => text.includes('DTE-01-M001P001-000000000000015'))).toBe(true);
+    expect(dte.some((text) => text.includes('ABC-123'))).toBe(true);
+    expect(dte.every((text) => text.length <= RECEIPT_WIDTH)).toBe(true);
+  });
+
   it('sin detalle de pago omite recibido y cambio, sin dejar líneas dobles', () => {
     const past = formatReceipt({ ...receipt, sinDetallePago: true }, BUSINESS_INFO);
 

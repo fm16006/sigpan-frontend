@@ -1,13 +1,16 @@
-import { Injectable, PLATFORM_ID, computed, inject, linkedSignal } from '@angular/core';
+import { Injectable, PLATFORM_ID, computed, effect, inject, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
+import { Observable, map, tap } from 'rxjs';
+import { API_ENDPOINTS } from '../../../core/constants/api-endpoints';
+import { ApiClient } from '../../../core/http/api-client';
+import { CashShift as ServerShift } from '../../../core/models/order.model';
 import { SessionStore } from '../../../core/services/session-store';
+import { todayIso } from '../../../core/utils/dates';
 
 export type CashRegisterState = 'cerrada' | 'abierta';
 
-/**
- * Caja donde se abrió el turno. Los turnos guardados antes de pasar a una sola sucursal pueden
- * traer además `sucursalId`/`sucursal`: se conservan tal cual pero ya no se leen ni se muestran.
- */
+/** Caja donde se abrió el turno. */
 export interface ShiftPlace {
   readonly cajaId: number | null;
   readonly caja: string;
@@ -15,14 +18,20 @@ export interface ShiftPlace {
 
 /** Turno abierto en la caja. */
 export interface CashShift {
+  readonly id: number;
   /** Instante de apertura, ISO 8601. */
   readonly abiertaEn: string;
   /** Efectivo con el que se abrió la gaveta. */
   readonly fondo: number;
   readonly nota: string;
   readonly cajero: string;
-  /** Caja del turno. Los turnos guardados antes de HU-60 no la traen. */
   readonly lugar?: ShiftPlace;
+  /** Efectivo neto de las ventas del turno (recibido menos cambio). */
+  readonly efectivoVentas: number;
+  readonly tarjetaVentas: number;
+  readonly cantidadVentas: number;
+  /** Fondo más efectivo de las ventas. */
+  readonly esperado: number;
 }
 
 /** Último turno cerrado, para mostrarlo como "turno anterior" al abrir. */
@@ -30,128 +39,109 @@ export interface ClosedShift extends CashShift {
   readonly cerradaEn: string;
   /** Efectivo contado en el arqueo del cierre. */
   readonly contado: number;
+  /** Contado menos esperado; negativo es faltante. */
+  readonly diferencia: number;
 }
 
-interface Persisted {
-  readonly turno: CashShift | null;
-  readonly ultimoCierre: ClosedShift | null;
-}
-
-const EMPTY: Persisted = { turno: null, ultimoCierre: null };
-const KEY_PREFIX = 'sigpan.caja.';
-
-/**
- * Estado de la caja: cerrada → abierta → cerrada. Mientras está cerrada no se vende.
- * El turno vive en localStorage, separado por usuario (`sigpan.caja.<id o correo>`).
- */
-// Provisional hasta HU-38: el backend todavía no guarda turnos; reemplazar por la API.
+/** HU-38: estado de la caja según el turno abierto del cajero en el servidor. */
 @Injectable({ providedIn: 'root' })
 export class CashRegisterStore {
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
   private readonly session = inject(SessionStore);
+  private readonly api = inject(ApiClient);
+  private readonly http = inject(HttpClient);
 
-  private readonly key = computed(() => {
-    const user = this.session.user();
-    const owner = user?.id ?? user?.email;
-    return owner == null ? null : `${KEY_PREFIX}${owner}`;
-  });
+  private readonly abierto = signal<ServerShift | null>(null);
+  private readonly cerrado = signal<ServerShift | null>(null);
+  readonly cargando = signal(false);
 
-  /** Se vuelve a leer el almacenamiento cuando cambia el usuario de la sesión. */
-  private readonly data = linkedSignal<string | null, Persisted>({
-    source: this.key,
-    computation: (key) => this.read(key),
-  });
+  readonly turno = computed(() => toShift(this.abierto()));
+  readonly estado = computed<CashRegisterState>(() => (this.abierto() ? 'abierta' : 'cerrada'));
+  readonly ultimoCierre = computed(() => toClosed(this.cerrado()));
+  readonly lugar = computed(() => this.turno()?.lugar ?? null);
 
-  readonly turno = computed(() => this.data().turno);
-  readonly estado = computed<CashRegisterState>(() => (this.data().turno ? 'abierta' : 'cerrada'));
-  readonly ultimoCierre = computed(() => this.data().ultimoCierre);
-  /** Caja del turno abierto; null con la caja cerrada o en turnos anteriores a HU-60. */
-  readonly lugar = computed(() => this.data().turno?.lugar ?? null);
-
-  /** Abre el turno con el fondo contado en la caja elegida. Si ya hay uno abierto no hace nada. */
-  abrir(fondo: number, nota: string, lugar?: ShiftPlace): void {
-    if (this.data().turno) {
-      return;
-    }
-    const turno: CashShift = {
-      abiertaEn: new Date().toISOString(),
-      fondo,
-      nota: nota.trim(),
-      cajero: this.session.user()?.name ?? '',
-      ...(lugar ? { lugar } : {}),
-    };
-    this.save({ ...this.data(), turno });
-  }
-
-  /** Cierra el turno con el efectivo contado y lo deja como último cierre. */
-  cerrar(contado: number): void {
-    const turno = this.data().turno;
-    if (!turno) {
-      return;
-    }
-    const ultimoCierre: ClosedShift = { ...turno, cerradaEn: new Date().toISOString(), contado };
-    this.save({ turno: null, ultimoCierre });
-  }
-
-  private save(next: Persisted): void {
-    this.data.set(next);
-    const key = this.key();
-    if (!this.isBrowser || key === null) {
-      return;
-    }
-    try {
-      localStorage.setItem(key, JSON.stringify(next));
-    } catch {
-      // Sin almacenamiento (modo privado, cuota llena): el turno sigue en memoria.
-    }
-  }
-
-  private read(key: string | null): Persisted {
-    if (!this.isBrowser || key === null) {
-      return EMPTY;
-    }
-    try {
-      const raw = localStorage.getItem(key);
-      if (!raw) {
-        return EMPTY;
+  constructor() {
+    effect(() => {
+      if (this.isBrowser && this.session.user()) {
+        this.refrescar();
+      } else {
+        this.abierto.set(null);
+        this.cerrado.set(null);
       }
-      const parsed = JSON.parse(raw) as Partial<Persisted> | null;
-      return {
-        turno: isShift(parsed?.turno) ? withPlace(parsed.turno) : null,
-        ultimoCierre: isClosed(parsed?.ultimoCierre) ? withPlace(parsed.ultimoCierre) : null,
-      };
-    } catch {
-      return EMPTY;
+    });
+  }
+
+  /** Vuelve a leer el turno abierto (y el último cierre del día) del servidor. */
+  refrescar(): void {
+    this.cargando.set(true);
+    this.http.get<ServerShift | null>(this.api.url(API_ENDPOINTS.turnos.actual)).subscribe({
+      next: (turno) => {
+        this.abierto.set(turno ?? null);
+        this.cargando.set(false);
+      },
+      error: () => this.cargando.set(false),
+    });
+    this.api.get<ServerShift[]>(API_ENDPOINTS.turnos.root, { fecha: todayIso() }).subscribe({
+      next: (turnos) => this.cerrado.set(turnos.find((t) => t.estado === 'CERRADO') ?? null),
+      error: () => this.cerrado.set(null),
+    });
+  }
+
+  /** Abre el turno con el fondo contado en la caja elegida. */
+  abrir(fondo: number, _nota: string, lugar?: ShiftPlace): Observable<void> {
+    return this.api
+      .post<ServerShift>(API_ENDPOINTS.turnos.abrir, { cajaId: lugar?.cajaId ?? undefined, fondoInicial: fondo })
+      .pipe(
+        tap((turno) => this.abierto.set(turno)),
+        map(() => undefined),
+      );
+  }
+
+  /** Cierra el turno con el efectivo contado; el servidor calcula esperado y diferencia. */
+  cerrar(contado: number, observacion?: string): Observable<ClosedShift> {
+    const turno = this.abierto();
+    if (!turno) {
+      throw new Error('No hay turno abierto.');
     }
+    return this.api
+      .post<ServerShift>(API_ENDPOINTS.turnos.cerrar(turno.id), { efectivoContado: contado, observacion })
+      .pipe(
+        tap((cerrado) => {
+          this.abierto.set(null);
+          this.cerrado.set(cerrado);
+        }),
+        map((cerrado) => toClosed(cerrado)!),
+      );
   }
 }
 
-function isPlace(value: unknown): value is ShiftPlace {
-  const place = value as Partial<ShiftPlace> | null | undefined;
-  return !!place && typeof place.caja === 'string';
-}
-
-/** Descarta una caja guardada con forma inválida en vez de rechazar todo el turno. */
-function withPlace<T extends CashShift>(shift: T): T {
-  if (shift.lugar === undefined || isPlace(shift.lugar)) {
-    return shift;
+function toShift(turno: ServerShift | null): CashShift | null {
+  if (!turno) {
+    return null;
   }
-  const { lugar: _descartado, ...rest } = shift;
-  return rest as T;
+  return {
+    id: Number(turno.id),
+    abiertaEn: turno.apertura,
+    fondo: Number(turno.fondoInicial),
+    nota: turno.observacion ?? '',
+    cajero: turno.usuario,
+    lugar: { cajaId: Number(turno.cajaId), caja: turno.caja },
+    efectivoVentas: Number(turno.efectivoVentas),
+    tarjetaVentas: Number(turno.tarjetaVentas),
+    cantidadVentas: turno.cantidadVentas,
+    esperado: Number(turno.efectivoEsperado),
+  };
 }
 
-function isShift(value: unknown): value is CashShift {
-  const shift = value as Partial<CashShift> | null | undefined;
-  return (
-    !!shift &&
-    typeof shift.abiertaEn === 'string' &&
-    typeof shift.fondo === 'number' &&
-    typeof shift.nota === 'string' &&
-    typeof shift.cajero === 'string'
-  );
-}
-
-function isClosed(value: unknown): value is ClosedShift {
-  const closed = value as Partial<ClosedShift> | null | undefined;
-  return isShift(value) && typeof closed?.cerradaEn === 'string' && typeof closed.contado === 'number';
+function toClosed(turno: ServerShift | null): ClosedShift | null {
+  const shift = toShift(turno);
+  if (!shift || !turno?.cierre) {
+    return null;
+  }
+  return {
+    ...shift,
+    cerradaEn: turno.cierre,
+    contado: Number(turno.efectivoContado ?? 0),
+    diferencia: Number(turno.diferencia ?? 0),
+  };
 }

@@ -24,7 +24,7 @@ import {
 } from 'rxjs';
 import { CompanyStore } from '../../../../core/services/company-store';
 import { AppError } from '../../../../core/http/app-error';
-import { Sale } from '../../../../core/models/order.model';
+import { Sale, SaleRequest } from '../../../../core/models/order.model';
 import { Quote } from '../../../../core/models/quote.model';
 import { MoneyPipe } from '../../../../shared/pipes/money.pipe';
 import { IvaLine } from '../../../../shared/ui/iva-line/iva-line';
@@ -122,6 +122,12 @@ export class CheckoutDialog {
   protected readonly document = signal<DocumentKind>('TICKET');
   protected readonly method = signal<PaymentMethod>('EFECTIVO');
   protected readonly cashText = signal('');
+  /** Pago mixto: parte con tarjeta. */
+  protected readonly cardText = signal('');
+  // HU-36: receptor para crédito fiscal o factura.
+  protected readonly receptorNombre = signal('');
+  protected readonly receptorNit = signal('');
+  protected readonly receptorNrc = signal('');
   protected readonly error = signal<string | null>(null);
   protected readonly receipt = signal<Receipt | null>(null);
   protected readonly printed = signal<readonly string[]>([]);
@@ -141,16 +147,33 @@ export class CheckoutDialog {
   );
   protected readonly cash = computed(() => parseCash(this.cashText()));
   /** Cambio (o faltante) a dos decimales; sin monto recibido todavía es null. */
+  protected readonly cardAmount = computed(() => parseCash(this.cardText()));
+  /** En el mixto el efectivo solo cubre lo que no va a la tarjeta. */
+  protected readonly cashDue = computed(() =>
+    this.method() === 'MIXTO' ? roundMoney(this.total() - (this.cardAmount() ?? 0)) : this.total(),
+  );
+  protected readonly cardValid = computed(() => {
+    const card = this.cardAmount();
+    return card !== null && card > 0 && card < this.total();
+  });
+  protected readonly receptorValid = computed(
+    () =>
+      this.document() !== 'CCF' ||
+      (!!this.receptorNombre().trim() && !!this.receptorNit().trim() && !!this.receptorNrc().trim()),
+  );
   protected readonly change = computed(() => {
     const cash = this.cash();
-    return cash === null ? null : cashChange(cash, this.total());
+    return cash === null ? null : cashChange(cash, this.cashDue());
   });
   protected readonly short = computed(() => this.change()?.short ?? false);
   protected readonly changeAmount = computed(() => this.change()?.amount ?? 0);
   /** Efectivo exige haber recibido al menos el total; tarjeta se confirma con la terminal. */
-  protected readonly canConfirm = computed(() =>
-    this.method() === 'TARJETA' ? true : this.cash() !== null && !this.short(),
-  );
+  protected readonly canConfirm = computed(() => {
+    if (!this.receptorValid()) return false;
+    if (this.method() === 'TARJETA') return true;
+    const cashOk = this.cash() !== null && !this.short();
+    return this.method() === 'MIXTO' ? this.cardValid() && cashOk : cashOk;
+  });
   protected readonly canCancelCard = computed(() =>
     ['conectando', 'presentar'].includes(this.cardScreen().kind),
   );
@@ -164,7 +187,7 @@ export class CheckoutDialog {
   }
 
   protected selectMethod(option: PaymentOptionId): void {
-    if (option === 'MIXTO' || this.phase() !== 'pago') {
+    if (this.phase() !== 'pago') {
       return;
     }
     this.error.set(null);
@@ -181,7 +204,7 @@ export class CheckoutDialog {
   }
 
   protected exactCash(): void {
-    this.cashText.set(roundMoney(this.total()).toFixed(2));
+    this.cashText.set(roundMoney(this.cashDue()).toFixed(2));
     this.focusCash();
   }
 
@@ -220,7 +243,7 @@ export class CheckoutDialog {
     }
 
     this.error.set(null);
-    if (this.method() === 'TARJETA') {
+    if (this.method() !== 'EFECTIVO') {
       this.startCard();
     } else {
       this.registerSale(this.cash() ?? this.total(), null);
@@ -247,7 +270,6 @@ export class CheckoutDialog {
    * terminal, la conecta (el clic del cajero permite abrir el selector de puertos).
    */
   private startCard(): void {
-    this.method.set('TARJETA');
     this.phase.set('tarjeta');
     this.cardScreen.set({ kind: 'conectando' });
     this.cardCharge = forkJoin([defer(() => this.terminal.connect()), timer(CONNECTING_MS)])
@@ -266,7 +288,7 @@ export class CheckoutDialog {
   }
 
   private chargeCard(): void {
-    const amount = this.total();
+    const amount = this.cardCharged();
     let decision: CardDecision | null = null;
 
     this.cardScreen.set({ kind: 'presentar' });
@@ -319,7 +341,7 @@ export class CheckoutDialog {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
         this.cardCharge = null;
-        this.registerSale(this.total(), pago);
+        this.registerSale(this.method() === 'MIXTO' ? (this.cash() ?? 0) : this.total(), pago);
       });
   }
 
@@ -334,6 +356,10 @@ export class CheckoutDialog {
           cantidad: line.quantity,
         })),
         totalEsperado: this.total(),
+        metodoPago: this.method(),
+        ...(this.method() === 'TARJETA' ? {} : { efectivoRecibido: recibido }),
+        ...(this.method() === 'MIXTO' ? { montoTarjeta: this.cardCharged() } : {}),
+        ...this.documentData(),
         // Sin caja registrada (turno anterior a HU-60) el backend usa la primera caja activa.
         ...(this.register.lugar()?.cajaId != null ? { cajaId: this.register.lugar()!.cajaId! } : {}),
       })
@@ -362,6 +388,27 @@ export class CheckoutDialog {
           }
         },
       });
+  }
+
+  /** Monto que se cobra en la terminal. */
+  protected cardCharged(): number {
+    return this.method() === 'MIXTO' ? (this.cardAmount() ?? 0) : this.total();
+  }
+
+  private documentData(): Partial<SaleRequest> {
+    const nombre = this.receptorNombre().trim() || undefined;
+    if (this.document() === 'CCF') {
+      return {
+        tipoDte: '03',
+        receptorNombre: nombre,
+        receptorNumDocumento: this.receptorNit().trim(),
+        receptorNrc: this.receptorNrc().trim(),
+      };
+    }
+    if (this.document() === 'FACTURA') {
+      return { tipoDte: '01', receptorNombre: nombre, receptorNumDocumento: this.receptorNit().trim() || undefined };
+    }
+    return { tipoDte: '01' };
   }
 
   /** Abre la impresión del navegador solo con el ticket (ver ReceiptPrint). */
@@ -414,8 +461,12 @@ export class CheckoutDialog {
       impuestos,
       total,
       recibido,
-      cambio: Math.max(0, recibido - total),
+      cambio: sale.cambio != null ? Number(sale.cambio) : Math.max(0, recibido - this.cashDue()),
       tarjeta,
+      ...(this.method() === 'MIXTO' ? { montoTarjeta: this.cardCharged() } : {}),
+      numeroControl: sale.numeroControl,
+      codigoGeneracion: sale.codigoGeneracion,
+      receptor: sale.receptorNombre,
     };
   }
 }

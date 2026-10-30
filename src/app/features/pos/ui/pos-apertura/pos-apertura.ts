@@ -21,7 +21,7 @@ const WHEN_FORMAT = new Intl.DateTimeFormat('es-SV', {
 /**
  * Abrir caja: vista que ve el cajero mientras la caja está cerrada. Deja elegir la caja si hay
  * más de una activa (con una sola, queda elegida), cuenta el fondo inicial y abre el turno; el
- * turno se guarda en el navegador hasta que el backend lo soporte (HU-38).
+ * turno queda en el servidor (HU-38).
  */
 @Component({
   selector: 'app-pos-apertura',
@@ -72,6 +72,7 @@ export class PosApertura {
   protected readonly note = signal('');
   protected readonly fondo = computed(() => aperturaTotal(this.counts()));
   protected readonly when = WHEN_FORMAT.format(new Date());
+  protected readonly opening = signal(false);
 
   protected count(value: number): number {
     return this.counts()[value] ?? 0;
@@ -88,6 +89,13 @@ export class PosApertura {
   protected open(): void {
     const caja = this.selected();
     if (!this.sourceValue() || !caja) return;
-    this.register.abrir(this.fondo(), this.note(), { cajaId: caja.id, caja: caja.nombre });
+    this.opening.set(true);
+    this.register.abrir(this.fondo(), this.note(), { cajaId: caja.id, caja: caja.nombre }).subscribe({
+      next: () => this.opening.set(false),
+      error: () => {
+        this.opening.set(false);
+        this.register.refrescar();
+      },
+    });
   }
 }

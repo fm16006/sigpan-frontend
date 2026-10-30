@@ -12,12 +12,7 @@ import { registerLabel } from '../../register-utils';
 import { CashRegisterStore } from '../../services/cash-register.store';
 import { valueOr } from '../../../../core/http/resource-value';
 
-/**
- * Cierre de caja. Lo que el backend entrega hoy (corte del día) se muestra de verdad; el
- * arqueo se cuenta en el navegador y el turno vive en `CashRegisterStore`. Método de pago,
- * retiros y anulación no existen en el backend: se muestran como "Próximamente" con su
- * historia de usuario.
- */
+/** HU-38: cierre del turno con arqueo; el servidor calcula esperado y diferencia. */
 @Component({
   selector: 'app-pos-caja',
   imports: [DatePipe, MoneyPipe, StatusChip, ConfirmDialog],
@@ -41,6 +36,9 @@ export class PosCaja {
   protected readonly counts = signal<Readonly<Record<number, number>>>({});
   protected readonly counted = computed(() => arqueoTotal(this.counts()));
   protected readonly confirmOpen = signal(false);
+  protected readonly closing = signal(false);
+  /** Contado menos esperado, como lo calcula el servidor. */
+  protected readonly difference = computed(() => this.counted() - (this.turno()?.esperado ?? 0));
 
   protected readonly cut = httpResource<CashCut>(() => this.orders.cashCutUrl(this.cutDate()));
   protected readonly cutValue = computed(() => valueOr(this.cut, undefined));
@@ -55,13 +53,24 @@ export class PosCaja {
 
   protected readonly label = denominationLabel;
 
+  protected refresh(): void {
+    this.register.refrescar();
+    this.cut.reload();
+  }
+
   protected isCancelled(estado: string): boolean {
     return estado === 'CANCELADO';
   }
 
   protected closeRegister(): void {
     this.confirmOpen.set(false);
-    this.register.cerrar(this.counted());
-    this.closed.emit();
+    this.closing.set(true);
+    this.register.cerrar(this.counted()).subscribe({
+      next: () => {
+        this.closing.set(false);
+        this.closed.emit();
+      },
+      error: () => this.closing.set(false),
+    });
   }
 }

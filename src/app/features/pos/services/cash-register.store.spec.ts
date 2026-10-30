@@ -1,182 +1,106 @@
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { API_CONFIG, ApiConfig } from '../../../core/config/api.config';
+import { CashShift } from '../../../core/models/order.model';
 import { AuthSession } from '../../../core/models/user.model';
 import { SessionStore } from '../../../core/services/session-store';
 import { CashRegisterStore } from './cash-register.store';
 
-function session(id: number, email: string, name = 'Ana Cajera'): AuthSession {
-  return { accessToken: 't', expiresIn: 900, user: { id, name, email, role: 'CAJERO' } };
+const CONFIG: ApiConfig = {
+  baseUrl: 'https://api.sigpan.test/api/v1',
+  origin: 'https://api.sigpan.test',
+  timeoutMs: 5000,
+};
+const BASE = CONFIG.baseUrl;
+
+const SESSION: AuthSession = {
+  accessToken: 't',
+  expiresIn: 900,
+  user: { id: 7, name: 'Ana Cajera', email: 'ana@sigpan.test', role: 'CAJERO' },
+};
+
+function shift(overrides: Partial<CashShift> = {}): CashShift {
+  return {
+    id: 3,
+    cajaId: 1,
+    caja: 'Caja 1',
+    usuarioId: 7,
+    usuario: 'Ana Cajera',
+    estado: 'ABIERTO',
+    apertura: '2026-10-29T08:00:00',
+    fondoInicial: 20,
+    cierre: null,
+    cantidadVentas: 2,
+    totalVentas: 15,
+    efectivoVentas: 10,
+    tarjetaVentas: 5,
+    efectivoEsperado: 30,
+    efectivoContado: null,
+    diferencia: null,
+    observacion: null,
+    ...overrides,
+  };
 }
 
-/** Un store nuevo sobre el mismo localStorage, como al recargar la página. */
-function reload(): { store: CashRegisterStore; sessionStore: SessionStore } {
-  TestBed.resetTestingModule();
-  return { store: TestBed.inject(CashRegisterStore), sessionStore: TestBed.inject(SessionStore) };
-}
-
-describe('CashRegisterStore', () => {
+describe('CashRegisterStore (HU-38)', () => {
   let store: CashRegisterStore;
-  let sessionStore: SessionStore;
+  let http: HttpTestingController;
+
+  function answerStartup(actual: CashShift | null, today: CashShift[] = []): void {
+    TestBed.tick();
+    http.expectOne(`${BASE}/turnos/actual`).flush(actual);
+    http.expectOne((r) => r.url === `${BASE}/turnos`).flush(today);
+  }
 
   beforeEach(() => {
-    localStorage.clear();
-    TestBed.configureTestingModule({});
-    sessionStore = TestBed.inject(SessionStore);
-    sessionStore.set(session(7, 'ana@sigpan.test'));
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting(), { provide: API_CONFIG, useValue: CONFIG }],
+    });
+    http = TestBed.inject(HttpTestingController);
+    TestBed.inject(SessionStore).set(SESSION);
     store = TestBed.inject(CashRegisterStore);
   });
 
-  it('arranca cerrada y sin turno', () => {
-    expect(store.estado()).toBe('cerrada');
-    expect(store.turno()).toBeNull();
-    expect(store.ultimoCierre()).toBeNull();
-  });
+  afterEach(() => http.verify());
 
-  it('abrir deja el turno con fondo, nota y cajero', () => {
-    store.abrir(45.5, '  fondo de Luis ');
-
-    expect(store.estado()).toBe('abierta');
-    const turno = store.turno();
-    expect(turno?.fondo).toBe(45.5);
-    expect(turno?.nota).toBe('fondo de Luis');
-    expect(turno?.cajero).toBe('Ana Cajera');
-    expect(Number.isNaN(Date.parse(turno?.abiertaEn ?? ''))).toBe(false);
-  });
-
-  it('no reabre un turno que ya está abierto', () => {
-    store.abrir(10, '');
-    const first = store.turno();
-    store.abrir(99, 'otro');
-
-    expect(store.turno()).toBe(first);
-  });
-
-  it('cerrar vuelve a cerrada y guarda el último cierre', () => {
-    store.abrir(20, 'nota');
-    store.cerrar(135.25);
+  it('sin turno en el servidor queda cerrada', () => {
+    answerStartup(null);
 
     expect(store.estado()).toBe('cerrada');
     expect(store.turno()).toBeNull();
-    const cierre = store.ultimoCierre();
-    expect(cierre?.fondo).toBe(20);
-    expect(cierre?.contado).toBe(135.25);
-    expect(cierre?.nota).toBe('nota');
-    expect(Number.isNaN(Date.parse(cierre?.cerradaEn ?? ''))).toBe(false);
   });
 
-  it('cerrar sin turno abierto no hace nada', () => {
-    store.cerrar(10);
+  it('toma el turno abierto del servidor con su esperado', () => {
+    answerStartup(shift());
+
+    expect(store.estado()).toBe('abierta');
+    expect(store.turno()?.fondo).toBe(20);
+    expect(store.turno()?.esperado).toBe(30);
+    expect(store.lugar()?.caja).toBe('Caja 1');
+  });
+
+  it('abrir envía la caja y el fondo', () => {
+    answerStartup(null);
+
+    store.abrir(45.5, '', { cajaId: 1, caja: 'Caja 1' }).subscribe();
+    const req = http.expectOne(`${BASE}/turnos/abrir`);
+    expect(req.request.body).toEqual({ cajaId: 1, fondoInicial: 45.5 });
+    req.flush(shift({ fondoInicial: 45.5 }));
+
+    expect(store.estado()).toBe('abierta');
+  });
+
+  it('cerrar envía lo contado y guarda la diferencia del servidor', () => {
+    answerStartup(shift());
+
+    store.cerrar(28).subscribe();
+    const req = http.expectOne(`${BASE}/turnos/3/cerrar`);
+    expect(req.request.body.efectivoContado).toBe(28);
+    req.flush(shift({ estado: 'CERRADO', cierre: '2026-10-29T16:00:00', efectivoContado: 28, diferencia: -2 }));
 
     expect(store.estado()).toBe('cerrada');
-    expect(store.ultimoCierre()).toBeNull();
-  });
-
-  it('guarda en la llave del usuario y se recupera al recargar', () => {
-    store.abrir(30, '');
-    expect(localStorage.getItem('sigpan.caja.7')).toContain('"fondo":30');
-
-    const again = reload();
-    again.sessionStore.set(session(7, 'ana@sigpan.test'));
-
-    expect(again.store.estado()).toBe('abierta');
-    expect(again.store.turno()?.fondo).toBe(30);
-  });
-
-  it('cada usuario tiene su propia caja', () => {
-    store.abrir(30, '');
-
-    sessionStore.set(session(8, 'luis@sigpan.test', 'Luis'));
-    expect(store.estado()).toBe('cerrada');
-
-    sessionStore.set(session(7, 'ana@sigpan.test'));
-    expect(store.estado()).toBe('abierta');
-  });
-
-  it('ignora un valor corrupto en localStorage', () => {
-    localStorage.setItem('sigpan.caja.7', '{no es json');
-    const again = reload();
-    again.sessionStore.set(session(7, 'ana@sigpan.test'));
-
-    expect(again.store.estado()).toBe('cerrada');
-  });
-
-  it('ignora un turno con forma inválida', () => {
-    localStorage.setItem('sigpan.caja.7', JSON.stringify({ turno: { fondo: 'mucho' } }));
-    const again = reload();
-    again.sessionStore.set(session(7, 'ana@sigpan.test'));
-
-    expect(again.store.turno()).toBeNull();
-  });
-
-  it('abrir guarda la caja elegida, y sobrevive a una recarga', () => {
-    const lugar = { cajaId: 11, caja: 'Caja 02' };
-    store.abrir(30, '', lugar);
-
-    expect(store.lugar()).toEqual(lugar);
-
-    const again = reload();
-    again.sessionStore.set(session(7, 'ana@sigpan.test'));
-    expect(again.store.lugar()).toEqual(lugar);
-
-    again.store.cerrar(30);
-    expect(again.store.lugar()).toBeNull();
-    expect(again.store.ultimoCierre()?.lugar).toEqual(lugar);
-  });
-
-  it('un turno guardado antes de HU-60, sin caja, sigue siendo válido', () => {
-    store.abrir(10, '');
-
-    expect(store.estado()).toBe('abierta');
-    expect(store.lugar()).toBeNull();
-  });
-
-  it('descarta una caja guardada con forma inválida sin perder el turno', () => {
-    localStorage.setItem(
-      'sigpan.caja.7',
-      JSON.stringify({
-        turno: {
-          abiertaEn: '2026-10-19T10:00:00.000Z',
-          fondo: 5,
-          nota: '',
-          cajero: 'Ana',
-          lugar: { caja: 7 },
-        },
-      }),
-    );
-    const again = reload();
-    again.sessionStore.set(session(7, 'ana@sigpan.test'));
-
-    expect(again.store.estado()).toBe('abierta');
-    expect(again.store.lugar()).toBeNull();
-  });
-
-  it('un turno guardado con sucursal (antes de la sucursal única) sigue valiendo por su caja', () => {
-    localStorage.setItem(
-      'sigpan.caja.7',
-      JSON.stringify({
-        turno: {
-          abiertaEn: '2026-10-19T10:00:00.000Z',
-          fondo: 5,
-          nota: '',
-          cajero: 'Ana',
-          lugar: { sucursalId: 1, sucursal: 'Principal', cajaId: 1, caja: 'Caja 01' },
-        },
-      }),
-    );
-    const again = reload();
-    again.sessionStore.set(session(7, 'ana@sigpan.test'));
-
-    expect(again.store.estado()).toBe('abierta');
-    expect(again.store.lugar()?.cajaId).toBe(1);
-    expect(again.store.lugar()?.caja).toBe('Caja 01');
-  });
-
-  it('sigue funcionando en memoria si localStorage falla', () => {
-    const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
-      throw new Error('cuota llena');
-    });
-
-    expect(() => store.abrir(5, '')).not.toThrow();
-    expect(store.estado()).toBe('abierta');
-    spy.mockRestore();
+    expect(store.ultimoCierre()?.diferencia).toBe(-2);
+    expect(store.ultimoCierre()?.contado).toBe(28);
   });
 });
