@@ -88,6 +88,14 @@
           >
             <app-icon name="edit" [size]="16" />
           </button>
+          <button
+            type="button"
+            class="btn btn-ghost btn-xs absolute end-12 top-1/2 -translate-y-1/2 max-md:top-3 max-md:translate-y-0"
+            [attr.aria-label]="'Versiones de la receta ' + row.formula.nombre"
+            (click)="versionsOf.set(row.formula)"
+          >
+            v{{ row.formula.version ?? 1 }}
+          </button>
         }
       </div>
     } @empty {
@@ -112,4 +120,8 @@
     (closed)="drawerOpen.set(false)"
     (changed)="reloadAll()"
   />
+}
+
+@if (versionsOf(); as f) {
+  <app-recipe-versions [formula]="f" (closed)="versionsOf.set(null)" />
 }

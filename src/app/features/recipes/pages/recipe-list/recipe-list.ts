@@ -10,6 +10,7 @@ import { PageHeader } from '../../../../shared/ui/page-header/page-header';
 import { ResourceState } from '../../../../shared/ui/resource-state/resource-state';
 import { RecipeDrawer } from '../../components/recipe-drawer/recipe-drawer';
 import { RecipeUnitCost } from '../../components/recipe-unit-cost/recipe-unit-cost';
+import { RecipeVersions } from '../../components/recipe-versions/recipe-versions';
 import { RecipeService } from '../../services/recipe.service';
 import { countByFormula, matchesRecipeSearch } from '../../recipe-summary';
 
@@ -23,6 +24,7 @@ import { countByFormula, matchesRecipeSearch } from '../../recipe-summary';
     Icon,
     RecipeDrawer,
     RecipeUnitCost,
+    RecipeVersions,
   ],
   templateUrl: './recipe-list.html',
 })
@@ -42,6 +44,7 @@ export class RecipeList {
   protected readonly canManage = this.auth.hasAnyRole(['ADMINISTRADOR', 'JEFE_PRODUCCION']);
 
   protected readonly crumbs = [{ label: 'Producción' }, { label: 'Recetas' }];
+  protected readonly versionsOf = signal<Formula | null>(null);
 
   protected readonly formulas = httpResource<Formula[]>(() => this.service.formulasUrl(), {
     defaultValue: [],

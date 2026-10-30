@@ -290,7 +290,7 @@ export class PurchaseFormDrawer {
   private readonly api = inject(ApiClient);
 
   /** HU-66: unidades alternas por insumo, se cargan al elegirlo. */
-  protected readonly altUnits = signal<Record<number, readonly AltUnit[]>>({});
+  protected readonly altUnits = signal<Partial<Record<number, readonly AltUnit[]>>>({});
 
   /** Id del insumo de la línea, o null si es producto o está vacía. */
   protected materialOf(index: number): number | null {

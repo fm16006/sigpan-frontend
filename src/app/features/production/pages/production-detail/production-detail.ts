@@ -200,6 +200,8 @@ export class ProductionDetail {
 
   protected readonly pendingAction = signal<OrderAction | null>(null);
   protected readonly busy = signal(false);
+  /** HU-22: unidades reales al terminar; vacío toma las planificadas. */
+  protected readonly obtained = signal<number | null>(null);
 
   protected readonly dialog = computed(() => {
     const action = this.pendingAction();
@@ -233,7 +235,8 @@ export class ProductionDetail {
     if (!action || !order) return;
 
     this.busy.set(true);
-    this.service.changeStatus(order.id, action).subscribe({
+    const obtenida = action === 'TERMINADO' && this.obtained() != null ? this.obtained()! : undefined;
+    this.service.changeStatus(order.id, action, obtenida).subscribe({
       next: () => {
         this.busy.set(false);
         this.pendingAction.set(null);

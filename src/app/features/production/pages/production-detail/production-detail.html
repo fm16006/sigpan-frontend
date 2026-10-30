@@ -24,7 +24,7 @@
           </button>
         }
         @if (canFinish()) {
-          <button type="button" class="btn btn-sm btn-primary" (click)="pendingAction.set('TERMINADO')">
+          <button type="button" class="btn btn-sm btn-primary" (click)="obtained.set(null); pendingAction.set('TERMINADO')">
             <app-icon name="check" [size]="16" /> Terminar
           </button>
         }
@@ -177,6 +177,20 @@
           @if (o.comentario) {
             <p class="text-xs text-base-content/60">Comentario: «{{ o.comentario }}»</p>
           }
+          @if (o.formulaVersion) {
+            <p class="text-xs text-base-content/60">Receta versión {{ o.formulaVersion }}</p>
+          }
+          @if (o.cantidadObtenida != null) {
+            <p class="text-sm">
+              Obtenidas: <strong>{{ o.cantidadObtenida }}</strong> de {{ o.cantidadPlanificada ?? '—' }}
+              @if (o.mermaProceso) {
+                <span class="text-warning"> · merma de proceso {{ o.mermaProceso }}</span>
+              }
+            </p>
+          }
+          @if (o.faltantes) {
+            <div role="alert" class="alert alert-warning py-2 text-xs">Creada con faltante: {{ o.faltantes }}</div>
+          }
         </section>
       </div>
     </div>
@@ -191,7 +205,22 @@
         [busy]="busy()"
         (confirmed)="confirmAction()"
         (cancelled)="pendingAction.set(null)"
-      />
+      >
+        @if (pendingAction() === 'TERMINADO') {
+          <label class="grid gap-1 text-sm">
+            <span>Unidades obtenidas (planificadas: {{ units() || '—' }})</span>
+            <input
+              class="input w-full"
+              type="number"
+              min="0"
+              step="1"
+              [value]="obtained() ?? ''"
+              (input)="obtained.set($any($event.target).value === '' ? null : +$any($event.target).value)"
+            />
+            <span class="text-xs text-base-content/60">La diferencia queda como merma de proceso y ajusta el costo unitario.</span>
+          </label>
+        }
+      </app-confirm-dialog>
     }
   }
 </app-resource-state>

@@ -32,6 +32,7 @@ import { Component, input, output } from '@angular/core';
               }
             </ul>
           }
+          <ng-content />
           <div class="mt-2 flex justify-end gap-2">
             <button type="button" class="btn btn-ghost" (click)="cancelled.emit()">Cancelar</button>
             <button
