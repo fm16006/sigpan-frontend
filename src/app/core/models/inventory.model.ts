@@ -66,6 +66,8 @@ export interface StockMovementDraft {
   /** Obligatorio cuando tipo es ENTRADA. */
   readonly documento?: string;
   readonly costoInicial?: number;
+  /** Materia prima: AJUSTE o MERMA (HU-14). */
+  readonly clase?: string;
 }
 
 export interface StockRow {

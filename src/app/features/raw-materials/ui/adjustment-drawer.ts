@@ -117,9 +117,18 @@ interface ItemOption {
               <label class="label" for="aj-tipo"><span class="label-text">Tipo</span></label>
               <select id="aj-tipo" formControlName="tipo" class="select select-bordered w-full">
                 <option value="SALIDA">Salida (baja existencia)</option>
-                <option value="ENTRADA">Entrada (sube existencia)</option>
+                <option value="ENTRADA" [disabled]="form.controls.clase.value === 'MERMA'">Entrada (sube existencia)</option>
               </select>
             </div>
+            @if (kind() === 'materia-prima') {
+              <div class="sm:col-span-2">
+                <label class="label" for="aj-clase"><span class="label-text">Clase</span></label>
+                <select id="aj-clase" formControlName="clase" class="select select-bordered w-full">
+                  <option value="AJUSTE">Ajuste (corrección de existencia)</option>
+                  <option value="MERMA">Merma (pérdida: vencido, dañado, derrame)</option>
+                </select>
+              </div>
+            }
             <div>
               <label class="label" for="aj-cantidad"
                 ><span class="label-text">Cantidad{{ item() ? ' (' + item()!.unidad + ')' : '' }}</span></label
@@ -261,6 +270,7 @@ export class AdjustmentDrawer {
     kind: this.kindControl,
     itemId: [0, [Validators.min(1)]],
     tipo: this.tipoControl,
+    clase: ['AJUSTE' as 'AJUSTE' | 'MERMA'],
     cantidad: [0, [Validators.required, Validators.min(0.001)]],
     costoInicial: [0, [Validators.required, Validators.min(0)]],
     motivo: ['', [Validators.required, Validators.minLength(3)]],
@@ -348,6 +358,10 @@ export class AdjustmentDrawer {
     this.form.controls.itemId.valueChanges
       .pipe(takeUntilDestroyed())
       .subscribe((id) => this.selectedId.set(Number(id)));
+    // La merma siempre es salida.
+    this.form.controls.clase.valueChanges.pipe(takeUntilDestroyed()).subscribe((clase) => {
+      if (clase === 'MERMA') this.form.controls.tipo.setValue('SALIDA');
+    });
     this.form.controls.tipo.valueChanges.pipe(takeUntilDestroyed()).subscribe((tipo) => {
       if (tipo === 'ENTRADA') {
         this.form.controls.costoInicial.enable();
@@ -421,6 +435,7 @@ export class AdjustmentDrawer {
         cantidad: Number(value.cantidad),
         motivo: value.motivo.trim(),
         ...(value.kind === 'materia-prima' && documento ? { documento } : {}),
+        ...(value.kind === 'materia-prima' ? { clase: value.clase } : {}),
         ...(value.tipo === 'ENTRADA' ? { costoInicial: Number(value.costoInicial) } : {}),
       })
       .subscribe({
@@ -446,6 +461,7 @@ export class AdjustmentDrawer {
       kind: 'materia-prima',
       itemId: fixed ?? 0,
       tipo: 'SALIDA',
+      clase: 'AJUSTE',
       cantidad: 0,
       costoInicial: 0,
       motivo: '',

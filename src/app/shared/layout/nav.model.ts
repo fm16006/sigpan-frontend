@@ -45,6 +45,7 @@ export const BACKOFFICE_NAV_GROUPS: readonly NavGroup[] = [
       { label: 'Productos', path: '/backoffice/products', icon: 'bread', roles: ADMIN_JEFE },
       { label: 'Categorías', path: '/backoffice/categories', icon: 'tag', roles: ADMIN_JEFE },
       { label: 'Materia prima', path: '/backoffice/raw-materials', icon: 'sack', roles: INVENTARIO },
+      { label: 'Alertas y toma física', path: '/backoffice/stock-control', icon: 'clock', roles: INVENTARIO },
       { label: 'Combos', path: '/backoffice/combos', icon: 'combo', roles: ['ADMINISTRADOR'] },
       { label: 'Compras', path: '/backoffice/purchases', icon: 'receipt', roles: INVENTARIO },
       { label: 'Proveedores', path: '/backoffice/suppliers', icon: 'truck', roles: INVENTARIO },

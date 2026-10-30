@@ -154,7 +154,9 @@ export class RawMaterialDetail {
 
   protected readonly tabs = computed<DetailTab[]>(() => [
     { label: 'Resumen', path: '' },
-    { label: 'Movimientos', path: 'movimientos', count: this.store.movementList().length },
+    { label: 'Kárdex', path: 'movimientos', count: this.store.movementList().length },
+    { label: 'Lotes', path: 'lotes' },
+    { label: 'Unidades', path: 'unidades' },
   ]);
 
   protected readonly chip = computed(() => MATERIAL_STATUS_CHIP[this.store.row()?.estado ?? 'suficiente']);

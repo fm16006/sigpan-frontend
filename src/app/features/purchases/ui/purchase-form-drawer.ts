@@ -4,7 +4,10 @@ import { Component, computed, effect, inject, input, output, signal, untracked }
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { map } from 'rxjs';
+import { API_ENDPOINTS } from '../../../core/constants/api-endpoints';
+import { ApiClient } from '../../../core/http/api-client';
 import { AppError } from '../../../core/http/app-error';
+import { AltUnit } from '../../../core/models/stock-control.model';
 import { applyFieldErrors, firstErrorMessage } from '../../../core/http/form-errors';
 import { valueOr } from '../../../core/http/resource-value';
 import { Id } from '../../../core/models/api.model';
@@ -218,6 +221,27 @@ interface ItemOption {
                     <span class="block py-2 font-semibold tabular-nums">{{ subtotalOf(i) | money }}</span>
                   </div>
                 </div>
+                @if (materialOf(i); as materialId) {
+                  <div class="grid gap-2 sm:grid-cols-3">
+                    <label class="text-xs font-semibold">
+                      Unidad de compra
+                      <select class="select select-bordered select-sm mt-1 w-full" formControlName="unidadId">
+                        <option [ngValue]="null">{{ unitOf(i) || 'Unidad base' }}</option>
+                        @for (u of altUnits()[materialId] ?? []; track u.id) {
+                          <option [ngValue]="u.id">{{ u.nombre }} (= {{ u.factor }} {{ u.unidadBase }})</option>
+                        }
+                      </select>
+                    </label>
+                    <label class="text-xs font-semibold">
+                      Lote (opcional)
+                      <input class="input input-bordered input-sm mt-1 w-full" maxlength="40" formControlName="lote" />
+                    </label>
+                    <label class="text-xs font-semibold">
+                      Vence (opcional)
+                      <input class="input input-bordered input-sm mt-1 w-full" type="date" formControlName="fechaVencimiento" />
+                    </label>
+                  </div>
+                }
                 @if (lineMessage(i); as message) {
                   <p class="-mt-1 text-xs text-error">{{ message }}</p>
                 }
@@ -263,6 +287,32 @@ export class PurchaseFormDrawer {
   private readonly inventory = inject(InventoryService);
   private readonly notifications = inject(Notifications);
   private readonly fb = inject(FormBuilder).nonNullable;
+  private readonly api = inject(ApiClient);
+
+  /** HU-66: unidades alternas por insumo, se cargan al elegirlo. */
+  protected readonly altUnits = signal<Record<number, readonly AltUnit[]>>({});
+
+  /** Id del insumo de la línea, o null si es producto o está vacía. */
+  protected materialOf(index: number): number | null {
+    const ref = parseItemKey(this.values().lineas[index]?.item ?? '');
+    if (!ref || ref.kind === 'producto') return null;
+    return Number(ref.id);
+  }
+
+  private readonly loadUnits = effect(() => {
+    const ids = this.values()
+      .lineas.map((_, i) => this.materialOf(i))
+      .filter((id): id is number => id !== null);
+    untracked(() => {
+      for (const id of ids) {
+        if (id in this.altUnits()) continue;
+        this.altUnits.update((m) => ({ ...m, [id]: [] }));
+        this.api.get<AltUnit[]>(API_ENDPOINTS.materiasPrimas.unidades(id)).subscribe({
+          next: (units) => this.altUnits.update((m) => ({ ...m, [id]: units })),
+        });
+      }
+    });
+  });
 
   readonly open = input(false);
   /** Proveedor fijo (ficha del proveedor). Sin él, se elige. */
@@ -414,6 +464,9 @@ export class PurchaseFormDrawer {
         ...(ref.kind === 'producto' ? { productoId: ref.id } : { materiaPrimaId: ref.id }),
         cantidad: Number(line.cantidad),
         costoUnitario: Number(line.costoUnitario),
+        ...(ref.kind !== 'producto' && line.unidadId ? { unidadId: line.unidadId } : {}),
+        ...(ref.kind !== 'producto' && line.lote.trim() ? { lote: line.lote.trim() } : {}),
+        ...(ref.kind !== 'producto' && line.fechaVencimiento ? { fechaVencimiento: line.fechaVencimiento } : {}),
       });
     }
 
@@ -469,6 +522,9 @@ export class PurchaseFormDrawer {
       item: ['', [Validators.required]],
       cantidad: [0, [Validators.required, Validators.min(0.001)]],
       costoUnitario: [0, [Validators.required, Validators.min(0)]],
+      unidadId: [null as number | null],
+      lote: [''],
+      fechaVencimiento: [''],
     });
   }
 

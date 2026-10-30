@@ -8,6 +8,8 @@ export interface RawMaterial {
   readonly stockMinimo: number;
   readonly precio: number;
   readonly activo: boolean;
+  readonly puntoReorden?: number;
+  readonly cantidadReorden?: number | null;
 }
 
 export interface Formula {

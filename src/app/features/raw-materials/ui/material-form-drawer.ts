@@ -112,6 +112,18 @@ const UNIDADES_COMUNES = ['kg', 'g', 'lb', 'l', 'ml', 'u'] as const;
               }
             </div>
           </div>
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label class="label" for="mp-reorden"><span class="label-text">Punto de reorden</span></label>
+              <input id="mp-reorden" type="number" step="0.001" min="0" formControlName="puntoReorden" class="input input-bordered w-full" />
+              <p class="mt-1 text-xs text-base-content/50">Al llegar aquí aparece la alerta de compra.</p>
+            </div>
+            <div>
+              <label class="label" for="mp-cant-reorden"><span class="label-text">Cantidad a pedir (opcional)</span></label>
+              <input id="mp-cant-reorden" type="number" step="0.001" min="0" formControlName="cantidadReorden" class="input input-bordered w-full" />
+              <p class="mt-1 text-xs text-base-content/50">Vacío: se sugiere según el punto de reorden.</p>
+            </div>
+          </div>
           <div>
             <label class="label" for="mp-precio"><span class="label-text">Precio de referencia (opcional)</span></label>
             <input
@@ -167,6 +179,8 @@ export class MaterialFormDrawer {
     unidadMedida: ['', [Validators.required, Validators.maxLength(20)]],
     precio: [0, [Validators.min(0)]],
     stockMinimo: [0, [Validators.required, Validators.min(0)]],
+    puntoReorden: [0, [Validators.min(0)]],
+    cantidadReorden: [null as number | null, [Validators.min(0)]],
   });
 
   constructor() {
@@ -199,6 +213,8 @@ export class MaterialFormDrawer {
       unidadMedida: value.unidadMedida.trim(),
       precio: Number(value.precio ?? 0),
       stockMinimo: Number(value.stockMinimo),
+      puntoReorden: Number(value.puntoReorden ?? 0),
+      cantidadReorden: value.cantidadReorden ? Number(value.cantidadReorden) : null,
     };
     const editing = this.material();
 
@@ -233,6 +249,8 @@ export class MaterialFormDrawer {
       unidadMedida: material?.unidadMedida ?? '',
       precio: Number(material?.precio ?? 0),
       stockMinimo: Number(material?.stockMinimo ?? 0),
+      puntoReorden: Number(material?.puntoReorden ?? 0),
+      cantidadReorden: material?.cantidadReorden ?? null,
     });
   }
 }
