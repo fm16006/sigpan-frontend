@@ -17,6 +17,8 @@ export const API_ENDPOINTS = {
     activos: '/productos/activos',
     byId: (id: Id) => `/productos/${id}`,
     imagen: (id: Id) => `/productos/${id}/imagen`,
+    /** Ofertas vigentes por producto (público). */
+    ofertas: '/productos/ofertas',
     /** Habilita o deshabilita el producto en el punto de venta y/o la tienda en línea. */
     canales: (id: Id) => `/productos/${id}/canales`,
   },
@@ -142,8 +144,23 @@ export const API_ENDPOINTS = {
     queue: '/ventas/pedidos',
     cashCut: '/ventas/corte',
     status: (id: Id) => `/ventas/${id}/estado`,
+    /** Siguiente estado en un gesto. */
+    advance: (id: Id) => `/ventas/${id}/avanzar`,
+    /** Consulta pública con número de pedido y correo. */
+    tracking: '/ventas/seguimiento',
+    bestSellers: '/ventas/mas-vendidos',
     /** Cotiza una canasta con el motor de promociones. No guarda nada. */
     quote: '/ventas/cotizar',
+  },
+  turnos: {
+    root: '/turnos',
+    actual: '/turnos/actual',
+    abrir: '/turnos/abrir',
+    cerrar: (id: Id) => `/turnos/${id}/cerrar`,
+  },
+  liquidaciones: {
+    root: '/liquidaciones',
+    byId: (id: Id) => `/liquidaciones/${id}`,
   },
 } as const;
 

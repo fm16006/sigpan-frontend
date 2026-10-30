@@ -20,6 +20,8 @@ export interface AppError {
   readonly code?: string;
   /** Errores por campo que informa el backend en un 400 o 422. */
   readonly fieldErrors: Readonly<Record<string, string>>;
+  /** Faltantes de existencia que informa el backend (HU-40). */
+  readonly shortages?: readonly unknown[];
 }
 
 const MESSAGES: Readonly<Record<AppErrorKind, string>> = {
@@ -56,5 +58,6 @@ export function toAppError(response: HttpErrorResponse): AppError {
     message: (kind === 'server' ? null : body?.message) ?? MESSAGES[kind],
     fieldErrors: body?.errors ?? {},
     code: body?.code,
+    shortages: body?.faltantes,
   };
 }

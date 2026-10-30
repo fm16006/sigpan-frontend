@@ -33,13 +33,26 @@
       {{ product().categoria }}
     </p>
     <h3 class="text-lg font-semibold leading-snug text-base-content">{{ product().nombre }}</h3>
+    @if (offers(); as o) {
+      <app-offer-badge [offers]="o" />
+      @for (offer of o.ofertas; track offer.regla) {
+        @if (offer.tipo === 'COMBO' || offer.tipo === 'ESCALA') {
+          <p class="text-xs text-base-content/60">{{ offer.etiqueta }}</p>
+        }
+      }
+    }
     @if (product().descripcion) {
       <p class="line-clamp-2 text-sm text-base-content/60">{{ product().descripcion }}</p>
     }
 
     <div class="mt-auto flex items-center justify-between gap-2 pt-3">
       <span class="text-xl font-bold tabular-nums text-base-content">
-        {{ product().precio | money }}
+        @if (offers()?.precioOferta; as oferta) {
+          <s class="me-1 text-sm font-normal text-base-content/50">{{ product().precio | money }}</s>
+          <span class="text-success">{{ oferta | money }}</span>
+        } @else {
+          {{ product().precio | money }}
+        }
         @if (plusTax()) {
           <span class="ms-1 text-xs font-semibold text-base-content/60">+ IVA</span>
         }

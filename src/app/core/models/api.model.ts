@@ -24,6 +24,8 @@ export interface ApiErrorBody {
   readonly code?: string;
   /** Errores por campo, para pintarlos junto al input correspondiente. */
   readonly errors?: Readonly<Record<string, string>>;
+  /** Productos sin existencia suficiente (EXISTENCIA_INSUFICIENTE). */
+  readonly faltantes?: readonly unknown[];
 }
 
 export const EMPTY_PAGE: Page<never> = {

@@ -14,6 +14,11 @@ export const STOREFRONT_ROUTES: Routes = [
     title: 'Carrito',
   },
   {
+    path: 'seguimiento',
+    loadComponent: () => import('./pages/tracking/tracking').then((m) => m.Tracking),
+    title: 'Seguimiento de pedido',
+  },
+  {
     path: 'orders',
     canActivate: [authGuard, roleGuard(['CLIENTE', 'ADMINISTRADOR'])],
     loadComponent: () => import('./pages/orders/orders').then((m) => m.Orders),

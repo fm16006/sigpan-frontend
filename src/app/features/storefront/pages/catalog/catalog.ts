@@ -6,6 +6,7 @@ import { CategoryIcon } from '../../../../shared/ui/category-icon/category-icon'
 import { ProductCard } from '../../../../shared/ui/product-card/product-card';
 import { ResourceState } from '../../../../shared/ui/resource-state/resource-state';
 import { ProductService } from '../../services/product.service';
+import { OffersStore } from '../../../../core/services/offers-store';
 import { ShopCart } from '../../services/shop-cart';
 import { valueOr } from '../../../../core/http/resource-value';
 
@@ -25,6 +26,10 @@ interface CategorySection {
 export class Catalog {
   private readonly products = inject(ProductService);
   protected readonly shop = inject(ShopCart);
+
+  constructor() {
+    inject(OffersStore).load();
+  }
 
   /** ?categoria=ID, para llegar filtrado desde el inicio. */
   readonly categoria = input<string>();

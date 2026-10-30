@@ -1,11 +1,12 @@
 import { Component, DestroyRef, PLATFORM_ID, computed, inject, signal } from '@angular/core';
 import { httpResource } from '@angular/common/http';
+import { Observable } from 'rxjs';
 import { DatePipe, isPlatformBrowser } from '@angular/common';
 import { Id } from '../../../../core/models/api.model';
 import {
-  NEXT_STATUS,
+  DELIVERY_MODE_LABELS,
+  OPEN_STATUSES,
   ORDER_STATUS_LABELS,
-  OrderStatus,
   Sale,
 } from '../../../../core/models/order.model';
 import { Notifications } from '../../../../core/services/notifications';
@@ -17,13 +18,16 @@ import { ChipTone, StatusChip } from '../../../../shared/ui/status-chip/status-c
 import { OrderService } from '../../../storefront/services/order.service';
 import { valueOr } from '../../../../core/http/resource-value';
 
-const ACTIVE: readonly string[] = ['PENDIENTE', 'EN_PREPARACION', 'LISTO'];
+const ACTIVE = OPEN_STATUSES;
 const REFRESH_MS = 30_000;
 
 const STATUS_TONES: Readonly<Record<string, ChipTone>> = {
   PENDIENTE: 'neutral',
+  CONFIRMADO: 'neutral',
   EN_PREPARACION: 'warn',
   LISTO: 'info',
+  EN_RUTA: 'info',
+  EN_ESPERA_RETIRO: 'info',
   ENTREGADO: 'ok',
   CANCELADO: 'bad',
   COMPLETADA: 'ok',
@@ -40,6 +44,7 @@ export class OrderQueue {
 
   protected readonly crumbs = [{ label: 'Ventas' }, { label: 'Pedidos en línea' }];
   protected readonly statusLabels = ORDER_STATUS_LABELS;
+  protected readonly modeLabels = DELIVERY_MODE_LABELS;
   protected readonly cancelling = signal<Sale | null>(null);
   protected readonly showClosed = signal(false);
   protected readonly busyId = signal<Id | null>(null);
@@ -53,7 +58,7 @@ export class OrderQueue {
   protected readonly items = computed(() =>
     this.queueItems()
       .filter((order) => this.showClosed() || ACTIVE.includes(order.estado))
-      .sort((a, b) => a.fecha.localeCompare(b.fecha)),
+      .sort((a, b) => (a.fechaProgramada ?? a.fecha).localeCompare(b.fechaProgramada ?? b.fecha)),
   );
 
   protected readonly cancelMessage = computed(() => {
@@ -74,19 +79,12 @@ export class OrderQueue {
     }
   }
 
-  protected nextStatus(order: Sale): OrderStatus | undefined {
-    return NEXT_STATUS[order.estado as OrderStatus];
-  }
-
   protected isActive(order: Sale): boolean {
     return ACTIVE.includes(order.estado);
   }
 
   protected advance(order: Sale): void {
-    const next = this.nextStatus(order);
-    if (next) {
-      this.change(order, next);
-    }
+    this.run(order, this.orders.advance(order.id));
   }
 
   protected statusTone(order: Sale): ChipTone {
@@ -109,12 +107,16 @@ export class OrderQueue {
     }
   }
 
-  private change(order: Sale, estado: OrderStatus): void {
+  private change(order: Sale, estado: 'CANCELADO'): void {
+    this.run(order, this.orders.changeStatus(order.id, estado));
+  }
+
+  private run(order: Sale, request: Observable<Sale>): void {
     this.busyId.set(order.id);
-    this.orders.changeStatus(order.id, estado).subscribe({
-      next: () => {
+    request.subscribe({
+      next: (updated) => {
         this.busyId.set(null);
-        this.notifications.success(`Pedido #${order.id}: ${ORDER_STATUS_LABELS[estado]}.`);
+        this.notifications.success(`Pedido #${order.id}: ${ORDER_STATUS_LABELS[updated.estado] ?? updated.estado}.`);
         this.queue.reload();
       },
       error: () => this.busyId.set(null),
