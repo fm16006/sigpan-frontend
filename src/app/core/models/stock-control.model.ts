@@ -103,3 +103,28 @@ export const MOVEMENT_CLASS_LABEL: Readonly<Record<string, string>> = {
   TOMA_FISICA: 'Toma física',
   VENTA: 'Venta',
 };
+
+/** HU-53: GET /tablero */
+export interface ManagementBoard {
+  readonly fecha: string;
+  readonly ventasPorCanal: readonly { readonly canal: 'MOSTRADOR' | 'EN_LINEA'; readonly ventas: number; readonly total: number }[];
+  readonly totalDia: number;
+  readonly masVendidos: readonly { readonly productoId: Id; readonly producto: string; readonly cantidad: number }[];
+  readonly alertasReorden: readonly ReorderAlert[];
+  readonly pedidosPorEstado: Readonly<Record<string, number>>;
+  readonly lotesPorVencer: number;
+}
+
+/** HU-44: GET /ventas/sugerencia-produccion */
+export interface ProductionSuggestion {
+  readonly productoId: Id;
+  readonly producto: string;
+  readonly pedidos: number;
+  readonly unidades: number;
+  readonly porProducir: number;
+  readonly existencia: number;
+  readonly sugerido: number;
+  readonly formulaId: Id | null;
+  readonly rendimiento: number | null;
+  readonly lotesSugeridos: number | null;
+}
