@@ -13,6 +13,7 @@ import { Crumb } from '../../../../shared/ui/breadcrumbs/breadcrumbs';
 import { DetailHeader, DetailTab } from '../../../../shared/ui/detail-header/detail-header';
 import { Icon } from '../../../../shared/ui/icon/icon';
 import { ResourceState } from '../../../../shared/ui/resource-state/resource-state';
+import { PUBLICATION_LABELS, publicationStatus } from '../../product-channels';
 import { StatusChip } from '../../../../shared/ui/status-chip/status-chip';
 import { CHANNEL_KEYS, CHANNEL_LABELS, ChannelKey, isChannelOn } from '../../product-channels';
 import { STOCK_CHIPS, stockState } from '../../product-view';
@@ -61,6 +62,8 @@ export class ProductDetail {
   protected readonly acceptedTypes = IMAGE_TYPES.join(',');
   protected readonly especialidadLabels = ESPECIALIDAD_LABELS;
   protected readonly chips = STOCK_CHIPS;
+  protected readonly publication = PUBLICATION_LABELS;
+  protected readonly publicationOf = publicationStatus;
   protected readonly channelKeys = CHANNEL_KEYS;
   protected readonly channelLabels = CHANNEL_LABELS;
   protected readonly isChannelOn = isChannelOn;

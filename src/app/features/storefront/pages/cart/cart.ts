@@ -1,10 +1,15 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { DatePipe } from '@angular/common';
+import { Component, computed, effect, inject, signal } from '@angular/core';
 import { HttpResourceRequest, httpResource } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { Id } from '../../../../core/models/api.model';
 import { AppError } from '../../../../core/http/app-error';
-import { Quote, QuoteLine, ruleLabel } from '../../../../core/models/quote.model';
+import { Quote, QuoteLine, QuoteSuggestion, ruleLabel } from '../../../../core/models/quote.model';
+import { API_ENDPOINTS } from '../../../../core/constants/api-endpoints';
+import { ApiClient } from '../../../../core/http/api-client';
+import { CatalogProduct } from '../../../../core/models/catalog.model';
+import { SavedAddress } from '../../../../core/models/user.model';
 import { QuoteService } from '../../../../core/services/quote.service';
 import { debouncedSignal } from '../../../../core/utils/debounced-signal';
 import { Auth } from '../../../../core/services/auth';
@@ -20,7 +25,7 @@ import { DeliveryMode, StockShortage } from '../../../../core/models/order.model
 
 @Component({
   selector: 'app-cart',
-  imports: [FormsModule, RouterLink, PageHeader, EmptyState, MoneyPipe, IvaLine],
+  imports: [DatePipe, FormsModule, RouterLink, PageHeader, EmptyState, MoneyPipe, IvaLine],
   templateUrl: './cart.html',
 })
 export class Cart {
@@ -33,6 +38,7 @@ export class Cart {
   protected readonly submitting = signal(false);
 
   private readonly quotes = inject(QuoteService);
+  private readonly api = inject(ApiClient);
   private readonly quoteLines = computed(() =>
     this.cart.lines().map((line) => ({ productoId: line.productId, cantidad: line.quantity })),
   );
@@ -66,6 +72,50 @@ export class Cart {
     return !!quote?.aplicaIva && !quote.ivaIncluido;
   });
 
+  /** HU-55: mayor anticipación de lo que es por encargo. */
+  protected readonly encargoHoras = computed(() =>
+    Math.max(0, ...this.cart.lines().map((line) => line.anticipacionHoras ?? 0)),
+  );
+  protected readonly minEncargo = computed(() => new Date(Date.now() + this.encargoHoras() * 3_600_000));
+  protected readonly minEncargoInput = computed(() => localDateTime(this.minEncargo()));
+
+  protected readonly suggestions = computed(() => this.quoteValue()?.sugerencias ?? []);
+
+  /** HU-15: direcciones guardadas del cliente. */
+  private readonly addressList = httpResource<SavedAddress[]>(
+    () => (this.auth.isAuthenticated() ? this.api.url(API_ENDPOINTS.miCuenta.direcciones) : undefined),
+    { defaultValue: [] },
+  );
+  protected readonly addresses = computed(() => valueOr(this.addressList, []));
+  private readonly applyDefault = effect(() => {
+    const preferida = this.addresses().find((a) => a.predeterminada);
+    if (preferida && !this.direccionEntrega) {
+      this.direccionEntrega = preferida.direccion + (preferida.referencia ? ` (${preferida.referencia})` : '');
+      if (!this.telefonoContacto && preferida.telefono) this.telefonoContacto = preferida.telefono;
+    }
+  });
+
+  protected useAddress(id: string): void {
+    const a = this.addresses().find((x) => String(x.id) === id);
+    if (!a) return;
+    this.direccionEntrega = a.direccion + (a.referencia ? ` (${a.referencia})` : '');
+    if (a.telefono) this.telefonoContacto = a.telefono;
+  }
+
+  protected applySuggestion(s: QuoteSuggestion): void {
+    const line = this.cart.lines().find((l) => l.productId === s.productoId);
+    if (line) {
+      this.cart.setQuantity(s.productoId, line.quantity + s.faltan);
+      return;
+    }
+    this.api.get<CatalogProduct[]>(API_ENDPOINTS.productos.activos).subscribe({
+      next: (list) => {
+        const product = list.find((p) => p.id === s.productoId);
+        if (product) this.cart.add(product, s.faltan);
+      },
+    });
+  }
+
   protected lineQuote(productId: Id): QuoteLine | undefined {
     return this.quoteByProduct().get(productId);
   }
@@ -89,6 +139,11 @@ export class Cart {
       void this.router.navigate(['/auth/login'], {
         queryParams: { returnUrl: '/storefront/cart' },
       });
+      return;
+    }
+
+    if (this.encargoHoras() > 0 && (!this.fechaProgramada || new Date(this.fechaProgramada) < this.minEncargo())) {
+      this.notifications.error(`Los productos por encargo necesitan ${this.encargoHoras()} h de anticipación: elegí la fecha.`);
       return;
     }
 

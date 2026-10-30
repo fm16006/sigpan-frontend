@@ -229,6 +229,19 @@
 
     <fieldset class="flex flex-col gap-3">
       <legend class="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.09em] text-base-content/55">
+        Por encargo
+      </legend>
+      <label class="grid gap-1 text-sm">
+        <span>Anticipación mínima en horas (opcional)</span>
+        <input type="number" min="1" max="720" class="input input-bordered w-40" formControlName="anticipacionHoras" />
+      </label>
+      <p class="text-xs text-base-content/55">
+        Si se indica, en la tienda se pide con esa anticipación y se produce para el pedido (no usa existencia).
+      </p>
+    </fieldset>
+
+    <fieldset class="flex flex-col gap-3">
+      <legend class="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.09em] text-base-content/55">
         Ficha para el cliente
       </legend>
       <div>

@@ -1,7 +1,13 @@
 import { Component, computed, inject, input, linkedSignal, signal } from '@angular/core';
 import { httpResource } from '@angular/common/http';
 import { Id } from '../../../../core/models/api.model';
-import { CatalogProduct, Category } from '../../../../core/models/catalog.model';
+import {
+  CatalogProduct,
+  Category,
+  ESPECIALIDAD_LABELS,
+  ESPECIALIDADES,
+  Especialidad,
+} from '../../../../core/models/catalog.model';
 import { CategoryIcon } from '../../../../shared/ui/category-icon/category-icon';
 import { ProductCard } from '../../../../shared/ui/product-card/product-card';
 import { ResourceState } from '../../../../shared/ui/resource-state/resource-state';
@@ -44,6 +50,11 @@ export class Catalog {
   protected readonly categoryId = linkedSignal<Id | null>(() => Number(this.categoria()) || null);
   protected readonly search = signal('');
   protected readonly sort = signal<SortOrder>('destacados');
+  /** HU-08: filtros por especialidad y disponibilidad. */
+  protected readonly especialidad = signal<Especialidad | ''>('');
+  protected readonly soloDisponibles = signal(false);
+  protected readonly especialidades = ESPECIALIDADES;
+  protected readonly especialidadLabels = ESPECIALIDAD_LABELS;
 
   private readonly catalogItems = computed(() => valueOr(this.catalog, []));
   private readonly categoryItems = computed(() => valueOr(this.categoryList, []));
@@ -63,6 +74,8 @@ export class Catalog {
     const category = this.categoryId();
     const filtered = this.catalogItems()
       .filter((product) => category === null || product.categoriaId === category)
+      .filter((product) => !this.especialidad() || product.especialidad === this.especialidad())
+      .filter((product) => !this.soloDisponibles() || !product.agotado || !!product.anticipacionHoras)
       .filter(
         (product) =>
           !term ||
@@ -73,7 +86,9 @@ export class Catalog {
   });
 
   /** Sin filtros se muestra el menú por secciones, como en una vitrina. */
-  protected readonly grouped = computed(() => this.categoryId() === null && !this.search());
+  protected readonly grouped = computed(
+    () => this.categoryId() === null && !this.search() && !this.especialidad() && !this.soloDisponibles(),
+  );
 
   protected readonly sections = computed<readonly CategorySection[]>(() =>
     this.categories()

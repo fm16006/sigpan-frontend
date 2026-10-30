@@ -14,6 +14,7 @@ const valid = () => ({
   disponiblePos: true,
   disponibleTienda: true,
   exentoIva: false,
+  anticipacionHoras: null as number | null,
 });
 
 describe('createProductForm', () => {

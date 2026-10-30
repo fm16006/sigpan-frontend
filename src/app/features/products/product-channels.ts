@@ -45,3 +45,26 @@ export function matchesChannel(
       return true;
   }
 }
+
+/** HU-09: estado de publicación derivado de los canales y de si está activo. */
+export type PublicationStatus = 'PUBLICADO' | 'SOLO_MOSTRADOR' | 'SOLO_TIENDA' | 'OCULTO' | 'DESCONTINUADO';
+
+export const PUBLICATION_LABELS: Readonly<Record<PublicationStatus, { label: string; tone: 'ok' | 'info' | 'warn' | 'neutral' | 'bad' }>> = {
+  PUBLICADO: { label: 'Publicado', tone: 'ok' },
+  SOLO_MOSTRADOR: { label: 'Exclusivo de mostrador', tone: 'info' },
+  SOLO_TIENDA: { label: 'Solo tienda en línea', tone: 'info' },
+  OCULTO: { label: 'Sin canal de venta', tone: 'warn' },
+  DESCONTINUADO: { label: 'Descontinuado', tone: 'neutral' },
+};
+
+export function publicationStatus(
+  product: Partial<Pick<CatalogProduct, ChannelKey>> & Pick<CatalogProduct, 'activo'>,
+): PublicationStatus {
+  if (!product.activo) return 'DESCONTINUADO';
+  const pos = isChannelOn(product, 'disponiblePos');
+  const tienda = isChannelOn(product, 'disponibleTienda');
+  if (pos && tienda) return 'PUBLICADO';
+  if (pos) return 'SOLO_MOSTRADOR';
+  if (tienda) return 'SOLO_TIENDA';
+  return 'OCULTO';
+}

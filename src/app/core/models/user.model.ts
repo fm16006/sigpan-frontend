@@ -96,3 +96,13 @@ export const ROLE_HOME: Readonly<Record<UserRole, string>> = {
 export function canSeePublicSite(role: UserRole | null): boolean {
   return role === null || role === 'CLIENTE' || role === 'ADMINISTRADOR';
 }
+
+/** HU-15: dirección de entrega guardada. */
+export interface SavedAddress {
+  readonly id: number;
+  readonly alias: string;
+  readonly direccion: string;
+  readonly referencia: string | null;
+  readonly telefono: string | null;
+  readonly predeterminada: boolean;
+}

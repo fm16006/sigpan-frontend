@@ -66,6 +66,11 @@ export interface Sale {
   readonly receptorNrc?: string | null;
   readonly detalles: readonly SaleLine[] | null;
   readonly historial?: readonly OrderStatusChange[] | null;
+  /** HU-55: lleva productos por encargo. */
+  readonly encargo?: boolean;
+  /** HU-37 */
+  readonly motivoAnulacion?: string | null;
+  readonly fechaAnulacion?: string | null;
 }
 
 export type PaymentMethod = 'EFECTIVO' | 'TARJETA' | 'MIXTO';

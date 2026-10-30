@@ -8,9 +8,10 @@ import { orderPreview } from '../../pos-pedidos-logic';
 import { registerLabel } from '../../register-utils';
 import { CashRegisterStore } from '../../services/cash-register.store';
 import { PosOrdersStore } from '../../services/pos-orders.store';
+import { PosConsultas } from '../pos-consultas/pos-consultas';
 import { PosHistorial } from '../pos-historial/pos-historial';
 
-type PedidosTab = 'borradores' | 'anteriores';
+type PedidosTab = 'borradores' | 'anteriores' | 'consultas';
 
 /**
  * Vista "Pedidos" del punto de venta: los borradores (pedidos abiertos con productos) para
@@ -18,7 +19,7 @@ type PedidosTab = 'borradores' | 'anteriores';
  */
 @Component({
   selector: 'app-pos-pedidos',
-  imports: [DatePipe, MoneyPipe, StatusChip, Icon, NgTemplateOutlet, PosHistorial],
+  imports: [DatePipe, MoneyPipe, StatusChip, Icon, NgTemplateOutlet, PosHistorial, PosConsultas],
   templateUrl: './pos-pedidos.html',
   host: { class: 'flex min-h-0 flex-1 flex-col bg-base-200' },
 })
@@ -45,6 +46,7 @@ export class PosPedidos {
   protected readonly tabs: readonly { readonly id: PedidosTab }[] = [
     { id: 'borradores' },
     { id: 'anteriores' },
+    { id: 'consultas' },
   ];
 
   protected readonly items = itemCount;

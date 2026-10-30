@@ -19,7 +19,9 @@
       </div>
     }
 
-    @if (soldOut()) {
+    @if (product().anticipacionHoras; as horas) {
+      <span class="badge badge-info absolute start-3 top-3 shadow-sm">Por encargo · {{ horas }} h</span>
+    } @else if (soldOut()) {
       <span class="badge badge-error absolute start-3 top-3 shadow-sm">Agotado</span>
     } @else if (fewLeft()) {
       <span class="badge badge-warning absolute start-3 top-3 shadow-sm">

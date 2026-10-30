@@ -32,7 +32,8 @@ export class ProductCard {
   protected readonly offers = computed(() => this.offerStore.of(this.product().id));
 
   /** Lo decide el backend: agotado es true cuando disponible <= 0. */
-  protected readonly soldOut = computed(() => this.product().agotado);
+  // Lo que es por encargo (HU-55) se produce para el pedido: nunca se ve agotado.
+  protected readonly soldOut = computed(() => this.product().agotado && !this.product().anticipacionHoras);
   protected readonly fewLeft = computed(() => {
     const { disponible, stockMinimo } = this.product();
     return disponible != null && disponible > 0 && disponible <= Math.max(stockMinimo ?? 0, 5);

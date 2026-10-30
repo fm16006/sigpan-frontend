@@ -1,7 +1,12 @@
 import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { httpResource } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
+import { API_ENDPOINTS } from '../../../../../core/constants/api-endpoints';
+import { ApiClient } from '../../../../../core/http/api-client';
+import { valueOr } from '../../../../../core/http/resource-value';
+import { PriceRecord } from '../../../../../core/models/catalog.model';
 import { Subject, catchError, debounceTime, of, switchMap, tap } from 'rxjs';
 import { PROMOTION_TYPE_LABELS } from '../../../../../core/models/promotion.model';
 import { Quote } from '../../../../../core/models/quote.model';
@@ -35,6 +40,14 @@ export class ProductPricing {
   protected readonly promotionTypeLabels = PROMOTION_TYPE_LABELS;
   protected readonly promotionChips = PROMOTION_CHIPS;
   private readonly today = todayIso();
+  private readonly api = inject(ApiClient);
+
+  /** HU-06: tramos de precio con su vigencia. */
+  private readonly prices = httpResource<PriceRecord[]>(() => {
+    const id = this.product()?.id;
+    return id ? this.api.url(API_ENDPOINTS.productos.precios(id)) : undefined;
+  }, { defaultValue: [] });
+  protected readonly priceHistory = computed(() => valueOr(this.prices, []));
 
   /** Tramos de mayoreo; el primero activo marca dónde termina el precio base. */
   protected readonly firstTierFrom = computed(

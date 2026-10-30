@@ -10,6 +10,8 @@ export interface CartLine {
   readonly name: string;
   readonly unitPrice: number;
   readonly quantity: number;
+  /** HU-55: horas de anticipación si es por encargo. */
+  readonly anticipacionHoras?: number | null;
 }
 
 const STORAGE_KEY = 'sigpan.cart';
@@ -57,6 +59,7 @@ export class CartStore {
           name: product.nombre,
           unitPrice: Number(product.precio),
           quantity: clamp(quantity),
+          anticipacionHoras: product.anticipacionHoras ?? null,
         },
       ];
     });
