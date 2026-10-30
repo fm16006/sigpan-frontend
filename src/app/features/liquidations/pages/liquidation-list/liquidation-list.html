@@ -1,0 +1,109 @@
+<app-page-header
+  title="Liquidaciones"
+  subtitle="Descuento automático sobre lo que sobra después de una hora"
+  [crumbs]="crumbs"
+>
+  <button type="button" class="btn btn-primary" (click)="create()">Nueva liquidación</button>
+</app-page-header>
+
+@if (formOpen()) {
+  <form class="mb-6 grid gap-3 rounded-box border border-base-300 bg-base-100 p-4 sm:grid-cols-3" (ngSubmit)="save()">
+    <label class="grid gap-1 text-sm sm:col-span-3">
+      <span>Producto</span>
+      <select class="select w-full" name="productoId" [(ngModel)]="draft.productoId" required>
+        <option [ngValue]="null" disabled>Elegí un producto</option>
+        @for (p of productItems(); track p.id) {
+          <option [ngValue]="p.id">{{ p.nombre }}</option>
+        }
+      </select>
+    </label>
+    <label class="grid gap-1 text-sm">
+      <span>Conservar (umbral)</span>
+      <input class="input w-full" type="number" min="0" name="umbral" [(ngModel)]="draft.umbral" required />
+    </label>
+    <label class="grid gap-1 text-sm">
+      <span>Desde</span>
+      <input class="input w-full" type="time" name="horaInicio" [(ngModel)]="draft.horaInicio" required />
+    </label>
+    <label class="grid gap-1 text-sm">
+      <span>Hasta</span>
+      <input class="input w-full" type="time" name="horaFin" [(ngModel)]="draft.horaFin" required />
+    </label>
+    <label class="grid gap-1 text-sm">
+      <span>Descuento %</span>
+      <input class="input w-full" type="number" min="1" max="90" step="0.01" name="porcentaje" [(ngModel)]="draft.porcentaje" required />
+    </label>
+    <label class="grid gap-1 text-sm">
+      <span>Prioridad</span>
+      <input class="input w-full" type="number" name="prioridad" [(ngModel)]="draft.prioridad" />
+    </label>
+    <label class="label cursor-pointer gap-2 self-end text-sm">
+      <input type="checkbox" class="toggle toggle-sm" name="activo" [(ngModel)]="draft.activo" />
+      Activa
+    </label>
+    <div class="flex justify-end gap-2 sm:col-span-3">
+      <button type="button" class="btn btn-ghost" (click)="formOpen.set(false)">Cancelar</button>
+      <button type="submit" class="btn btn-primary" [disabled]="saving()">Guardar</button>
+    </div>
+  </form>
+}
+
+<app-resource-state
+  [loading]="list.isLoading() && items().length === 0"
+  [failed]="!!list.error()"
+  [empty]="items().length === 0"
+  emptyTitle="Sin liquidaciones"
+  emptyDescription="Creá una para rebajar lo que sobre al final del día."
+  (retry)="list.reload()"
+>
+  <div class="overflow-x-auto rounded-box border border-base-300 bg-base-100">
+    <table class="table">
+      <thead>
+        <tr>
+          <th scope="col">Producto</th>
+          <th scope="col">Horario</th>
+          <th scope="col" class="text-end">Conservar</th>
+          <th scope="col" class="text-end">Existencia</th>
+          <th scope="col" class="text-end">Descuento</th>
+          <th scope="col">Estado</th>
+          <th scope="col"><span class="sr-only">Acciones</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (item of items(); track item.id) {
+          <tr>
+            <td class="font-medium">{{ item.producto }}</td>
+            <td class="tabular-nums">{{ item.horaInicio }}–{{ item.horaFin }}</td>
+            <td class="text-end tabular-nums">{{ item.umbral }}</td>
+            <td class="text-end tabular-nums">{{ item.existencia ?? '—' }}</td>
+            <td class="text-end tabular-nums">{{ item.porcentaje }} %</td>
+            <td>
+              <app-status-chip
+                [label]="!item.activo ? 'Inactiva' : item.vigente ? 'Aplicando' : 'Programada'"
+                [tone]="!item.activo ? 'neutral' : item.vigente ? 'ok' : 'info'"
+              />
+            </td>
+            <td class="text-end">
+              <button type="button" class="btn btn-ghost btn-xs" (click)="edit(item)">Editar</button>
+              @if (item.activo) {
+                <button type="button" class="btn btn-ghost btn-xs text-error" (click)="removing.set(item)">
+                  Desactivar
+                </button>
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</app-resource-state>
+
+<app-confirm-dialog
+  [open]="removing() !== null"
+  title="¿Desactivar liquidación?"
+  [message]="'Deja de aplicar el descuento a ' + (removing()?.producto ?? '') + '.'"
+  confirmLabel="Desactivar"
+  tone="danger"
+  (confirmed)="confirmRemove()"
+  (cancelled)="removing.set(null)"
+/>

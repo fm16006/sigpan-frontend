@@ -63,6 +63,7 @@ export const BACKOFFICE_NAV_GROUPS: readonly NavGroup[] = [
     items: [
       { label: 'Promociones', path: '/backoffice/promotions', icon: 'tag', roles: ['ADMINISTRADOR'] },
       { label: 'Mayoreo', path: '/backoffice/wholesale', icon: 'scale', roles: ['ADMINISTRADOR'] },
+      { label: 'Liquidaciones', path: '/backoffice/liquidations', icon: 'tag', roles: ['ADMINISTRADOR'] },
     ],
   },
   {

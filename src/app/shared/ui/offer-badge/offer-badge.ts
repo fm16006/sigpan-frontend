@@ -1,7 +1,7 @@
 import { Component, input } from '@angular/core';
 import { OfferKind, ProductOffers } from '../../../core/models/offer.model';
 
-const LABELS: Readonly<Record<OfferKind, string>> = {
+export const OFFER_LABELS: Readonly<Record<OfferKind, string>> = {
   DESCUENTO: 'Oferta',
   LIQUIDACION: 'Liquidación',
   COMBO: 'Combo',
@@ -30,6 +30,6 @@ const TONES: Readonly<Record<OfferKind, string>> = {
 export class OfferBadge {
   readonly offers = input.required<ProductOffers>();
 
-  protected readonly labels = LABELS;
+  protected readonly labels = OFFER_LABELS;
   protected readonly tones = TONES;
 }
