@@ -49,6 +49,9 @@ export function formatReceipt(
       `Hora: ${TIME_FORMAT.format(receipt.fecha)}`,
     ),
     ...wrapWords(`Cajero: ${receipt.cajero}`, width),
+    ...(receipt.numeroControl ? wrapWords(`No. control: ${receipt.numeroControl}`, width) : []),
+    ...(receipt.codigoGeneracion ? wrapWords(`Cod. gen.: ${receipt.codigoGeneracion}`, width) : []),
+    ...(receipt.receptor ? wrapWords(`Cliente: ${receipt.receptor}`, width) : []),
     rule,
     ...(creditNote ? center('Precios unitarios sin IVA') : []),
     ...itemRow('CANT', 'DESCRIPCION', 'P.UNIT', 'TOTAL', width),
@@ -85,6 +88,14 @@ function withRule(rows: string[], rule: string): string[] {
 }
 
 function paymentRows(receipt: Receipt, row: (left: string, right: string) => string): string[] {
+  if (receipt.tarjeta && receipt.metodo === 'MIXTO') {
+    return [
+      row(`TARJETA ${receipt.tarjeta.marca}`, money(receipt.montoTarjeta ?? 0)),
+      row(`AUT. ${receipt.tarjeta.autorizacion}`, 'APROBADA'),
+      row('EFECTIVO', money(receipt.recibido)),
+      row('CAMBIO', money(receipt.cambio)),
+    ];
+  }
   if (receipt.tarjeta) {
     return [
       row(`TARJETA ${receipt.tarjeta.marca}`, money(receipt.total)),

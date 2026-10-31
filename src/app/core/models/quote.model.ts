@@ -37,6 +37,18 @@ export interface Quote {
   readonly ahorro: number;
   readonly reglaAplicada: string | null;
   readonly descartadas: readonly RejectedRule[];
+  /** HU-33: lo que falta para el siguiente descuento. */
+  readonly sugerencias?: readonly QuoteSuggestion[];
+}
+
+export interface QuoteSuggestion {
+  readonly tipo: 'ESCALA' | 'COMBO';
+  readonly regla: string;
+  readonly productoId: Id;
+  readonly producto: string;
+  readonly faltan: number;
+  readonly precio: number;
+  readonly mensaje: string;
 }
 
 export interface QuoteRequest {

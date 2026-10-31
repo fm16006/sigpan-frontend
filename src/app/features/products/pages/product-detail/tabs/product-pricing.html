@@ -280,4 +280,24 @@
       }
     </section>
   </div>
+  <section class="mt-6 rounded-box border border-base-300 bg-base-100 p-5" aria-label="Historial de precios">
+    <h2 class="mb-3 text-lg font-semibold">Historial de precios</h2>
+    @if (priceHistory().length === 0) {
+      <p class="text-sm text-base-content/60">Sin cambios de precio registrados.</p>
+    } @else {
+      <ol class="relative ms-2 border-s border-base-300">
+        @for (h of priceHistory(); track h.id) {
+          <li class="mb-4 ms-4">
+            <span class="absolute -start-1.5 mt-1.5 size-3 rounded-full" [class]="h.vigente ? 'bg-success' : 'bg-base-300'"></span>
+            <p class="font-semibold tabular-nums">{{ h.precio | money }} @if (h.vigente) { <span class="badge badge-success badge-sm">vigente</span> }</p>
+            <p class="text-xs text-base-content/60">
+              {{ h.vigenteDesde | date: 'd MMM y, HH:mm' }} → {{ h.vigenteHasta ? (h.vigenteHasta | date: 'd MMM y, HH:mm') : 'hoy' }}
+              @if (h.usuario) { · {{ h.usuario }} }
+            </p>
+          </li>
+        }
+      </ol>
+      <p class="text-xs text-base-content/55">Cada venta guarda el precio que regía en su momento.</p>
+    }
+  </section>
 }

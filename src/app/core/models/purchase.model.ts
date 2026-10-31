@@ -46,6 +46,10 @@ export interface PurchaseLine {
   readonly cantidad: number;
   readonly costoUnitario: number;
   readonly subtotal: number;
+  readonly lote?: string | null;
+  readonly fechaVencimiento?: string | null;
+  readonly unidadCompra?: string | null;
+  readonly cantidadCompra?: number | null;
 }
 
 export interface Purchase {
@@ -69,6 +73,10 @@ export interface PurchaseLineDraft {
   readonly productoId?: Id;
   readonly cantidad: number;
   readonly costoUnitario: number;
+  /** HU-66: cantidad y costo en esa unidad; se convierten a la base. */
+  readonly unidadId?: number;
+  readonly lote?: string;
+  readonly fechaVencimiento?: string;
 }
 
 /** Cuerpo de POST /compras. */

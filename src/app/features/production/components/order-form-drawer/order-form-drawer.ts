@@ -6,7 +6,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AppError } from '../../../../core/http/app-error';
 import { applyFieldErrors, firstErrorMessage, formLevelMessage } from '../../../../core/http/form-errors';
 import { CatalogProduct } from '../../../../core/models/catalog.model';
-import { Formula, MaterialExplosion, Production } from '../../../../core/models/production.model';
+import { Formula, MaterialExplosion, Production, Shortage } from '../../../../core/models/production.model';
 import { Notifications } from '../../../../core/services/notifications';
 import { debouncedSignal } from '../../../../core/utils/debounced-signal';
 import { notBeforeToday, todayIso } from '../../../../core/utils/dates';
@@ -88,6 +88,18 @@ export class OrderFormDrawer {
       : undefined;
   });
 
+  /** HU-21: faltantes de insumos para la orden, antes de crearla. */
+  private readonly feasibility = httpResource<Shortage[]>(() => {
+    const formula = this.formula();
+    const batches = Number(this.queryBatches() || 0);
+    return this.open() && formula && batches > 0
+      ? this.service.feasibilityUrl(formula.id, batches)
+      : undefined;
+  });
+  protected readonly shortages = computed(() => (this.feasibility.hasValue() ? this.feasibility.value() ?? [] : []));
+  protected readonly confirmShortage = signal(false);
+  private readonly queryBatches = debouncedSignal(computed(() => this.batches()), 300);
+
   protected readonly explosionMessage = computed<string | null>(() => {
     const error = this.explosion.error() as AppError | undefined;
     if (!error) {
@@ -130,6 +142,7 @@ export class OrderFormDrawer {
       const prefill = this.prefill();
       untracked(() => {
         this.formError.set(null);
+        this.confirmShortage.set(false);
         this.form.reset({
           productoId: 0,
           formulaId: 0,
@@ -164,6 +177,10 @@ export class OrderFormDrawer {
       return;
     }
 
+    if (this.shortages().length > 0 && !this.confirmShortage()) {
+      this.formError.set('Faltan insumos: marcá la confirmación para crear la orden igual.');
+      return;
+    }
     this.saving.set(true);
     const value = this.form.getRawValue();
     this.service
@@ -173,6 +190,7 @@ export class OrderFormDrawer {
         cantidad: Number(value.cantidad),
         fechaPlanificada: value.fechaPlanificada,
         comentario: value.comentario.trim(),
+        ...(this.confirmShortage() ? { confirmarConFaltante: true } : {}),
       })
       .subscribe({
         next: (production) => {

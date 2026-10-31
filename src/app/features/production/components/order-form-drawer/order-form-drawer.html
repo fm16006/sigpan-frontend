@@ -9,6 +9,21 @@
       <div role="alert" class="alert alert-error text-sm">{{ message }}</div>
     }
 
+    @if (shortages().length > 0) {
+      <div role="alert" class="alert alert-warning flex-col items-start text-sm">
+        <strong>No alcanza la existencia para esta orden:</strong>
+        <ul class="list-disc ps-5">
+          @for (f of shortages(); track f.materiaPrimaId) {
+            <li>{{ f.materiaPrima }}: faltan {{ f.falta | number: '1.0-3' }} {{ f.unidad }} (hay {{ f.disponible | number: '1.0-3' }})</li>
+          }
+        </ul>
+        <label class="flex items-center gap-2">
+          <input type="checkbox" class="checkbox checkbox-sm" [checked]="confirmShortage()" (change)="confirmShortage.set(!confirmShortage())" />
+          Crear la orden igual; el faltante queda anotado en la orden.
+        </label>
+      </div>
+    }
+
     <fieldset class="flex flex-col gap-3">
       <legend class="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.09em] text-base-content/55">
         Qué se produce

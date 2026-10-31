@@ -10,6 +10,12 @@ export class ShopCart {
   private readonly notifications = inject(Notifications);
 
   add(product: CatalogProduct): void {
+    // Por encargo (HU-55): se produce para el pedido, no se limita a la existencia.
+    if (product.anticipacionHoras) {
+      this.cart.add(product);
+      this.notifications.success(`${product.nombre} se agregó: es por encargo, con ${product.anticipacionHoras} h de anticipación.`);
+      return;
+    }
     if (product.agotado) {
       this.notifications.error(`${product.nombre} está agotado por hoy.`);
       return;

@@ -18,6 +18,10 @@ import { Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Id } from '../../../../core/models/api.model';
 import { CatalogProduct } from '../../../../core/models/catalog.model';
+import { BestSeller } from '../../../../core/models/order.model';
+import { OffersStore } from '../../../../core/services/offers-store';
+import { OFFER_LABELS } from '../../../../shared/ui/offer-badge/offer-badge';
+import { OrderService } from '../../../storefront/services/order.service';
 import { PosCombo } from '../../../../core/models/combo.model';
 import { PriceScale } from '../../../../core/models/price-scale.model';
 import { Quote, QuoteLine, ruleLabel } from '../../../../core/models/quote.model';
@@ -166,6 +170,14 @@ export class PosScreen {
   protected readonly sheetOpen = signal(false);
   protected readonly search = signal('');
   protected readonly category = signal('');
+  private readonly offers = inject(OffersStore);
+  /** HU-34: los 12 más vendidos de los últimos 30 días. */
+  private readonly orderService = inject(OrderService);
+  protected readonly bestSellers = httpResource<BestSeller[]>(() => this.orderService.bestSellersUrl(), {
+    defaultValue: [],
+  });
+  protected readonly bestIds = computed(() => valueOr(this.bestSellers, []).map((b) => b.productoId));
+  protected readonly BEST = '★ Más vendidos';
   protected readonly selectedId = signal<Id | null>(null);
   protected readonly checkoutOpen = signal(false);
   protected readonly clearOpen = signal(false);
@@ -279,9 +291,15 @@ export class PosScreen {
   );
 
   /** Tarjetas de la cuadrícula: productos y combos agrupados por categoría. */
-  protected readonly tiles = computed(() =>
-    posTiles(this.catalogItems(), this.comboItems(), this.search(), this.category()),
-  );
+  protected readonly tiles = computed((): PosTile[] => {
+    if (this.category() !== this.BEST) {
+      return posTiles(this.catalogItems(), this.comboItems(), this.search(), this.category());
+    }
+    const found = posTiles(this.catalogItems(), [], this.search(), '');
+    return this.bestIds()
+      .map((id) => found.find((tile) => tile.kind === 'product' && tile.product.id === id))
+      .filter((tile): tile is PosTile => !!tile);
+  });
 
   protected readonly selected = computed(
     () => this.catalogItems().find((product) => product.id === this.selectedId()) ?? null,
@@ -299,6 +317,7 @@ export class PosScreen {
   );
 
   constructor() {
+    this.offers.load();
     if (isPlatformBrowser(inject(PLATFORM_ID))) {
       const clock = setInterval(() => this.now.set(new Date()), 30_000);
       const refresh = setInterval(() => {
@@ -345,7 +364,9 @@ export class PosScreen {
 
   /** Insignia de oferta: solo si la última cotización muestra una regla para ese producto. */
   protected offerBadge(product: CatalogProduct): string {
-    return ruleBadge(this.quoteByProduct().get(product.id)?.regla);
+    const inTicket = ruleBadge(this.quoteByProduct().get(product.id)?.regla);
+    const offer = this.offers.of(product.id)?.ofertas[0];
+    return inTicket || (offer ? OFFER_LABELS[offer.tipo] : '');
   }
 
   protected pickTile(tile: PosTile): void {

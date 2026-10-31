@@ -47,6 +47,8 @@ export interface CatalogProduct {
   readonly disponibleTienda?: boolean;
   /** Exento de IVA (HU-36). Ausente solo en respuestas viejas: se trata como gravado. */
   readonly exentoIva?: boolean;
+  /** HU-55: horas mínimas de anticipación; null si no es por encargo. */
+  readonly anticipacionHoras?: number | null;
   readonly stockMinimo: number | null;
   readonly disponible?: number | null;
   /** true cuando disponible <= 0. */
@@ -76,6 +78,7 @@ export interface CatalogProductDraft {
   readonly disponiblePos: boolean;
   readonly disponibleTienda: boolean;
   readonly exentoIva: boolean;
+  readonly anticipacionHoras?: number | null;
 }
 
 export interface Category {
@@ -88,3 +91,13 @@ export interface Category {
 export const IMAGE_TYPES: readonly string[] = ['image/jpeg', 'image/png', 'image/webp'];
 
 export const MAX_IMAGE_MB = 3;
+
+/** HU-06: GET /productos/:id/precios */
+export interface PriceRecord {
+  readonly id: Id;
+  readonly precio: number;
+  readonly vigenteDesde: string;
+  readonly vigenteHasta: string | null;
+  readonly vigente: boolean;
+  readonly usuario: string | null;
+}

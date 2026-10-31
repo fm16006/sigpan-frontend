@@ -161,12 +161,9 @@
       ></textarea>
     </label>
 
-    <button type="button" class="btn btn-primary btn-lg" [disabled]="!canOpen()" (click)="open()">
+    <button type="button" class="btn btn-primary btn-lg" [disabled]="!canOpen() || opening()" (click)="open()">
       Abrir turno con {{ fondo() | money }}
     </button>
-    <p class="-mt-2 text-center text-xs text-base-content/60">
-      Por ahora el turno se guarda solo en este navegador.
-    </p>
   </section>
 
   <aside class="flex min-w-0 flex-col gap-4">
@@ -187,8 +184,16 @@
             <dd>{{ turno.fondo | money }}</dd>
           </div>
           <div class="flex justify-between gap-3 border-t border-base-300 py-2">
+            <dt>Efectivo esperado</dt>
+            <dd>{{ turno.esperado | money }}</dd>
+          </div>
+          <div class="flex justify-between gap-3 border-t border-base-300 py-2">
             <dt>Efectivo contado</dt>
             <dd>{{ turno.contado | money }}</dd>
+          </div>
+          <div class="flex justify-between gap-3 border-t border-base-300 py-2">
+            <dt>Diferencia</dt>
+            <dd [class.text-error]="turno.diferencia < 0">{{ turno.diferencia | money }}</dd>
           </div>
           @if (turno.cajero) {
             <div class="flex justify-between gap-3 border-t border-base-300 py-2">

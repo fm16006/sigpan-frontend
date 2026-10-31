@@ -8,6 +8,8 @@ export interface RawMaterial {
   readonly stockMinimo: number;
   readonly precio: number;
   readonly activo: boolean;
+  readonly puntoReorden?: number;
+  readonly cantidadReorden?: number | null;
 }
 
 export interface Formula {
@@ -19,6 +21,8 @@ export interface Formula {
   readonly porcentajeMerma: number;
   readonly productoId: Id;
   readonly producto: string;
+  /** HU-17: versión vigente. */
+  readonly version?: number;
 }
 
 export interface FormulaDraft {
@@ -120,6 +124,42 @@ export interface Production {
   /** "YYYY-MM-DD". */
   readonly fechaPlanificada: string;
   readonly comentario: string | null;
+  readonly formulaVersion?: number | null;
+  readonly cantidadPlanificada?: number | null;
+  readonly cantidadObtenida?: number | null;
+  readonly mermaProceso?: number | null;
+  readonly faltantes?: string | null;
+}
+
+/** Insumo que no alcanza para una orden (HU-21). */
+export interface Shortage {
+  readonly materiaPrimaId: Id;
+  readonly materiaPrima: string;
+  readonly unidad: string;
+  readonly requerido: number;
+  readonly disponible: number;
+  readonly falta: number;
+}
+
+/** HU-17: versión de una receta. */
+export interface FormulaVersion {
+  readonly formulaId: Id;
+  readonly version: number;
+  readonly vigenteDesde: string;
+  readonly vigenteHasta: string | null;
+  readonly vigente: boolean;
+  readonly usuario: string | null;
+  readonly contenido: {
+    readonly nombre: string;
+    readonly cantidadProduccion: number;
+    readonly porcentajeMerma: number;
+    readonly detalles: readonly {
+      readonly materiaPrimaId: Id;
+      readonly materiaPrima: string;
+      readonly cantidad: number;
+      readonly unidadMedida: string;
+    }[];
+  };
 }
 
 export interface ProductionDraft {
@@ -129,4 +169,5 @@ export interface ProductionDraft {
   /** "YYYY-MM-DD", hoy o futura. */
   readonly fechaPlanificada: string;
   readonly comentario: string;
+  readonly confirmarConFaltante?: boolean;
 }

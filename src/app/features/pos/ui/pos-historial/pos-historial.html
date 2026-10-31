@@ -231,18 +231,35 @@
           <app-icon name="order" [size]="16" />
           Imprimir
         </button>
-        <!-- Pendiente backend (HU-37): anular ventas, con motivo y autorización -->
         <button
           type="button"
-          class="btn btn-outline btn-error h-auto min-h-11 flex-col gap-0 py-1.5 leading-tight"
-          disabled
-          title="Próximamente"
-          aria-label="Anular venta (próximamente)"
+          class="btn btn-outline btn-error h-auto min-h-11"
+          [disabled]="isCancelled(sale) || voiding()"
+          (click)="voidOpen.set(true)"
         >
-          Anular venta
-          <span class="text-[0.65rem] font-normal">Próximamente</span>
+          {{ isCancelled(sale) ? 'Anulada' : 'Anular venta' }}
         </button>
       </div>
+      @if (voidOpen() && !isCancelled(sale)) {
+        <form class="grid gap-2 border-t border-base-300 px-4 py-3" (submit)="$event.preventDefault(); voidSale(sale)">
+          <label class="grid gap-1 text-sm">
+            <span>Motivo</span>
+            <input class="input input-sm w-full" maxlength="255" required [value]="voidReason()" (input)="voidReason.set($any($event.target).value)" />
+          </label>
+          @if (!isAdmin) {
+            <p class="text-xs text-base-content/60">Autoriza un administrador:</p>
+            <input class="input input-sm w-full" type="email" placeholder="Correo del administrador" autocomplete="off"
+                   [value]="authEmail()" (input)="authEmail.set($any($event.target).value)" />
+            <input class="input input-sm w-full" type="password" placeholder="Contraseña" autocomplete="off"
+                   [value]="authPassword()" (input)="authPassword.set($any($event.target).value)" />
+          }
+          <div class="flex gap-2">
+            <button class="btn btn-sm btn-error" [disabled]="voiding() || voidReason().trim().length < 3">Confirmar anulación</button>
+            <button type="button" class="btn btn-sm btn-ghost" (click)="voidOpen.set(false)">Cancelar</button>
+          </div>
+          <p class="text-xs text-base-content/55">Se devuelve el inventario y queda en la bitácora con el motivo.</p>
+        </form>
+      }
     </section>
   } @else {
     <aside

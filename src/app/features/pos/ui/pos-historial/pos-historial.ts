@@ -1,6 +1,9 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { httpResource } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
+import { API_ENDPOINTS } from '../../../../core/constants/api-endpoints';
+import { ApiClient } from '../../../../core/http/api-client';
+import { Notifications } from '../../../../core/services/notifications';
 import { CompanyStore } from '../../../../core/services/company-store';
 import { valueOr } from '../../../../core/http/resource-value';
 import { CashCut, Sale } from '../../../../core/models/order.model';
@@ -38,7 +41,7 @@ function upperFirst(text: string): string {
 /**
  * Ventas anteriores del mostrador, tomadas del corte del día (`GET /ventas/corte`): un cajero
  * ve solo las suyas y la administración, todas. Se puede revisar el detalle de cada una y
- * reimprimir su ticket con la impresión del navegador. Anular ventas depende de HU-37.
+ * reimprimir su ticket con la impresión del navegador, o anularla (HU-37).
  */
 @Component({
   selector: 'app-pos-historial',
@@ -53,6 +56,8 @@ export class PosHistorial {
   private readonly orders = inject(OrderService);
   private readonly receiptPrint = inject(ReceiptPrint);
   private readonly company = inject(CompanyStore);
+  private readonly api = inject(ApiClient);
+  private readonly notifications = inject(Notifications);
 
   protected readonly isAdmin = inject(Auth).hasAnyRole(['ADMINISTRADOR']);
 
@@ -98,10 +103,47 @@ export class PosHistorial {
 
   protected open(sale: Sale): void {
     this.selectedId.set(sale.id);
+    this.resetVoid();
   }
 
   protected closeDetail(): void {
     this.selectedId.set(null);
+    this.resetVoid();
+  }
+
+  // HU-37: anulación con motivo y autorización.
+  protected readonly voidOpen = signal(false);
+  protected readonly voiding = signal(false);
+  protected readonly voidReason = signal('');
+  protected readonly authEmail = signal('');
+  protected readonly authPassword = signal('');
+
+  protected voidSale(sale: Sale): void {
+    this.voiding.set(true);
+    this.api
+      .post<Sale>(API_ENDPOINTS.orders.anular(sale.id), {
+        motivo: this.voidReason().trim(),
+        ...(this.isAdmin ? {} : { autorizadorEmail: this.authEmail().trim(), autorizadorPassword: this.authPassword() }),
+      })
+      .subscribe({
+        next: () => {
+          this.notifications.success(`Venta #${sale.id} anulada.`);
+          this.resetVoid();
+          this.cut.reload();
+        },
+        error: () => {
+          this.voiding.set(false);
+          this.authPassword.set('');
+        },
+      });
+  }
+
+  private resetVoid(): void {
+    this.voidOpen.set(false);
+    this.voiding.set(false);
+    this.voidReason.set('');
+    this.authEmail.set('');
+    this.authPassword.set('');
   }
 
   /** Abre la impresión del navegador solo con el ticket (ver ReceiptPrint). */

@@ -116,6 +116,8 @@
         </ul>
       }
     </div>
+  } @else if (tab() === 'consultas') {
+    <app-pos-consultas />
   } @else {
     <app-pos-historial />
   }
@@ -126,7 +128,7 @@
   <div
     role="tablist"
     aria-label="Tipo de pedidos"
-    class="grid grid-cols-2 gap-1 rounded-field p-1 max-sm:w-full"
+    class="grid grid-cols-3 gap-1 rounded-field p-1 max-sm:w-full"
     [class]="dark ? 'bg-neutral-content/15' : 'bg-base-200'"
   >
     @for (item of tabs; track item.id) {
@@ -146,6 +148,8 @@
       >
         @if (item.id === 'borradores') {
           Borradores ({{ drafts().length }})
+        } @else if (item.id === 'consultas') {
+          Consultas
         } @else {
           Anteriores
         }

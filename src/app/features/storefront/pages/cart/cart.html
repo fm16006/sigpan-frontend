@@ -26,6 +26,9 @@
                 <td>
                   <p class="font-medium">{{ line.name }}</p>
                   <p class="text-sm text-base-content/55">{{ line.unitPrice | money }} c/u</p>
+                  @if (line.anticipacionHoras) {
+                    <p class="text-xs text-info">Por encargo: {{ line.anticipacionHoras }} h de anticipación</p>
+                  }
                 </td>
                 <td>
                   <input
@@ -97,15 +100,122 @@
           } @else {
             <div class="flex items-baseline justify-between">
               <dt class="text-sm text-base-content/60">Total</dt>
-              <dd class="text-sm text-base-content/55">
-                {{ auth.isAuthenticated() ? 'Calculando…' : 'Inicia sesión para ver el total' }}
-              </dd>
+              <dd class="text-sm text-base-content/55">Calculando…</dd>
             </div>
           }
         </dl>
         <p class="mt-2 text-xs text-base-content/50">
           El total incluye las promociones vigentes{{ addsIva() ? ' y el IVA' : '' }}. Se confirma al procesar el pedido.
         </p>
+        @if (suggestions().length > 0) {
+          <ul class="mt-4 grid gap-2" aria-label="Sugerencias de ahorro">
+            @for (s of suggestions(); track s.regla) {
+              <li class="flex items-center justify-between gap-2 rounded-box bg-success/10 px-3 py-2 text-sm">
+                <span>{{ s.mensaje }}</span>
+                <button type="button" class="btn btn-xs" (click)="applySuggestion(s)">Agregar</button>
+              </li>
+            }
+          </ul>
+        }
+        @if (shortages().length > 0) {
+          <div role="alert" class="alert alert-warning mt-4 grid gap-2 text-sm">
+            <p class="font-medium">Algunos productos ya no alcanzan:</p>
+            <ul class="grid gap-1">
+              @for (s of shortages(); track s.productoId) {
+                <li class="flex items-center justify-between gap-2">
+                  <span>{{ s.producto }}: quedan {{ s.disponible }} de {{ s.solicitado }}</span>
+                  <button type="button" class="btn btn-xs" (click)="adjust(s)">
+                    {{ s.disponible > 0 ? 'Dejar ' + s.disponible : 'Quitar' }}
+                  </button>
+                </li>
+              }
+            </ul>
+            <button type="button" class="btn btn-sm" (click)="adjustAll()">Ajustar todo y continuar</button>
+          </div>
+        }
+
+        @if (auth.isAuthenticated()) {
+          <fieldset class="mt-5 grid gap-3 border-t border-base-300 pt-4">
+            <legend class="text-sm font-semibold">¿Cómo lo recibís?</legend>
+            <div class="join w-full">
+              <input
+                class="join-item btn btn-sm flex-1"
+                type="radio"
+                name="modalidad"
+                aria-label="Retiro en tienda"
+                value="RETIRO"
+                [(ngModel)]="modalidad"
+              />
+              <input
+                class="join-item btn btn-sm flex-1"
+                type="radio"
+                name="modalidad"
+                aria-label="Entrega a domicilio"
+                value="ENTREGA"
+                [(ngModel)]="modalidad"
+              />
+            </div>
+            <label class="grid gap-1 text-sm">
+              <span>Fecha y hora</span>
+              <input
+                type="datetime-local"
+                class="input input-sm w-full"
+                name="fechaProgramada"
+                [min]="encargoHoras() > 0 ? minEncargoInput() : minFecha"
+                [(ngModel)]="fechaProgramada"
+              />
+              @if (encargoHoras() > 0) {
+                <span class="text-xs text-info">
+                  Tu pedido lleva productos por encargo: elegí una fecha desde {{ minEncargo() | date: 'd MMM, HH:mm' }}.
+                </span>
+              } @else {
+                <span class="text-xs text-base-content/50">Vacío: lo antes posible.</span>
+              }
+            </label>
+            @if (modalidad === 'ENTREGA') {
+              @if (addresses().length > 0) {
+                <label class="grid gap-1 text-sm">
+                  <span>Mis direcciones</span>
+                  <select class="select select-sm w-full" (change)="useAddress($any($event.target).value)">
+                    <option value="">Elegí una dirección guardada</option>
+                    @for (a of addresses(); track a.id) {
+                      <option [value]="a.id">{{ a.alias }} — {{ a.direccion }}</option>
+                    }
+                  </select>
+                </label>
+              }
+              <label class="grid gap-1 text-sm">
+                <span>Dirección</span>
+                <textarea
+                  class="textarea textarea-sm w-full"
+                  name="direccionEntrega"
+                  rows="2"
+                  maxlength="255"
+                  [(ngModel)]="direccionEntrega"
+                ></textarea>
+              </label>
+            }
+            <label class="grid gap-1 text-sm">
+              <span>Teléfono</span>
+              <input
+                type="tel"
+                class="input input-sm w-full"
+                name="telefonoContacto"
+                maxlength="30"
+                autocomplete="tel"
+                [(ngModel)]="telefonoContacto"
+              />
+            </label>
+            <label class="grid gap-1 text-sm">
+              <span>Pago {{ modalidad === 'ENTREGA' ? 'contra entrega' : 'al retirar' }}</span>
+              <select class="select select-sm w-full" name="metodoPago" [(ngModel)]="metodoPago">
+                <option value="EFECTIVO">Efectivo</option>
+                <option value="TARJETA">Tarjeta</option>
+              </select>
+            </label>
+          </fieldset>
+        }
+
         <button
           type="button"
           class="btn btn-primary mt-5 w-full"

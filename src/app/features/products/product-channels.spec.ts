@@ -1,5 +1,5 @@
 import { CatalogProduct } from '../../core/models/catalog.model';
-import { CHANNEL_KEYS, isChannelOn, matchesChannel } from './product-channels';
+import { CHANNEL_KEYS, isChannelOn, matchesChannel, publicationStatus } from './product-channels';
 import { filterProducts } from './product-view';
 
 function product(overrides: Partial<CatalogProduct> = {}): CatalogProduct {
@@ -77,5 +77,14 @@ describe('canales de venta del producto', () => {
       });
       expect(resultado.map((item) => item.nombre)).toEqual(['Agotado POS']);
     });
+  });
+});
+
+describe('estado de publicación (HU-09)', () => {
+  it('se deriva de activo y los canales', () => {
+    expect(publicationStatus({ activo: true, disponiblePos: true, disponibleTienda: true })).toBe('PUBLICADO');
+    expect(publicationStatus({ activo: true, disponiblePos: true, disponibleTienda: false })).toBe('SOLO_MOSTRADOR');
+    expect(publicationStatus({ activo: true, disponiblePos: false, disponibleTienda: false })).toBe('OCULTO');
+    expect(publicationStatus({ activo: false, disponiblePos: true, disponibleTienda: true })).toBe('DESCONTINUADO');
   });
 });

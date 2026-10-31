@@ -87,25 +87,19 @@
           <dd>{{ turno()?.fondo ?? 0 | money }}</dd>
         </div>
         <div class="flex justify-between border-b border-base-300 py-2">
-          <dt>+ Ventas en efectivo</dt>
-          <dd class="text-base-content/40">Próximamente</dd>
+          <dt>+ Ventas en efectivo ({{ turno()?.cantidadVentas ?? 0 }})</dt>
+          <dd>{{ turno()?.efectivoVentas ?? 0 | money }}</dd>
         </div>
-        <div class="flex justify-between border-b border-base-300 py-2">
-          <dt>− Retiros</dt>
-          <dd class="text-base-content/40">Próximamente</dd>
+        <div class="flex justify-between border-b border-base-300 py-2 text-base-content/60">
+          <dt>Ventas con tarjeta</dt>
+          <dd>{{ turno()?.tarjetaVentas ?? 0 | money }}</dd>
         </div>
         <div class="flex justify-between py-2 font-bold">
           <dt>Efectivo esperado</dt>
-          <dd class="text-base-content/40">Próximamente</dd>
+          <dd>{{ turno()?.esperado ?? 0 | money }}</dd>
         </div>
       </dl>
-      <!-- Pendiente backend (HU-38): ventas en efectivo y retiros dependen del método de pago por venta -->
-      <div class="flex items-center gap-2">
-        <app-status-chip label="Próximamente" tone="neutral" />
-        <span class="text-xs text-base-content/60">
-          Las ventas en efectivo y los retiros dependen de guardar el método de pago.
-        </span>
-      </div>
+      <button type="button" class="btn btn-ghost btn-xs self-start" (click)="refresh()">Actualizar totales</button>
 
       <fieldset class="grid gap-2">
         <legend
@@ -153,13 +147,16 @@
         </div>
         <div class="rounded-box bg-base-200 px-4 py-3">
           <p class="text-xs text-base-content/60">Diferencia</p>
-          <p class="font-serif text-2xl font-semibold text-base-content/40">—</p>
-          <!-- Pendiente backend (HU-38): diferencia contra fondo + ventas en efectivo -->
-          <p class="text-xs text-base-content/60">Próximamente</p>
+          <p class="font-serif text-2xl font-semibold tabular-nums" [class.text-error]="difference() < 0">
+            {{ difference() | money }}
+          </p>
+          <p class="text-xs text-base-content/60">
+            {{ difference() < 0 ? 'Faltante' : difference() > 0 ? 'Sobrante' : 'Cuadra' }}
+          </p>
         </div>
       </div>
 
-      <button type="button" class="btn btn-primary btn-lg" (click)="confirmOpen.set(true)">
+      <button type="button" class="btn btn-primary btn-lg" [disabled]="closing()" (click)="confirmOpen.set(true)">
         Cerrar caja
       </button>
     </section>

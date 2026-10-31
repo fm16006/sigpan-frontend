@@ -161,6 +161,7 @@ export class ProductDrawer {
       // El validador de required ya garantiza que hay una opción elegida.
       especialidad: value.especialidad as Especialidad,
       alergenos: value.alergenos.trim() || null,
+      anticipacionHoras: value.anticipacionHoras ? Number(value.anticipacionHoras) : null,
     };
     const current = this.product();
     const request =
@@ -231,6 +232,7 @@ export class ProductDrawer {
         disponiblePos: isChannelOn(product, 'disponiblePos'),
         disponibleTienda: isChannelOn(product, 'disponibleTienda'),
         exentoIva: product.exentoIva ?? false,
+        anticipacionHoras: product.anticipacionHoras ?? null,
       });
     }
     if (this.isAdmin) {

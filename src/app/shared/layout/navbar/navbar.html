@@ -37,6 +37,7 @@
         <li><a routerLink="/storefront">Menú</a></li>
         @if (auth.isAuthenticated()) {
           <li><a routerLink="/storefront/orders">Mis pedidos</a></li>
+          <li><a routerLink="/storefront/cuenta">Mi cuenta</a></li>
         }
         @if (canEnterBackoffice()) {
           <li><a routerLink="/backoffice">Panel administrativo</a></li>
@@ -127,6 +128,7 @@
               <li><a routerLink="/backoffice">Panel administrativo</a></li>
             }
             <li><a routerLink="/storefront/orders">Mis pedidos</a></li>
+            <li><a routerLink="/storefront/cuenta">Mi cuenta</a></li>
             <li><button type="button" (click)="auth.logout()">Cerrar sesión</button></li>
           </ul>
         </div>

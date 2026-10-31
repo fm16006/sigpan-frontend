@@ -7,6 +7,8 @@ export interface RawMaterialDraft {
   readonly unidadMedida: string;
   readonly precio: number;
   readonly stockMinimo: number;
+  readonly puntoReorden?: number;
+  readonly cantidadReorden?: number | null;
 }
 
 /** Línea de receta que usa un insumo (`/formula-detalles/materia-prima/:id`). */

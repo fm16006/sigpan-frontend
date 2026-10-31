@@ -29,6 +29,18 @@ export class OrderService {
     return this.api.url(API_ENDPOINTS.orders.cashCut, { fecha });
   }
 
+  advance(id: Id): Observable<Sale> {
+    return this.api.patch<Sale>(API_ENDPOINTS.orders.advance(id), {});
+  }
+
+  track(numero: Id, correo: string): Observable<Sale> {
+    return this.api.get<Sale>(API_ENDPOINTS.orders.tracking, { numero, correo });
+  }
+
+  bestSellersUrl(): string {
+    return this.api.url(API_ENDPOINTS.orders.bestSellers);
+  }
+
   changeStatus(id: Id, estado: OrderStatus): Observable<Sale> {
     return this.api.patch<Sale>(
       `${API_ENDPOINTS.orders.status(id)}?estado=${encodeURIComponent(estado)}`,

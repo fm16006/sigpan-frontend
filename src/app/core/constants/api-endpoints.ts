@@ -17,8 +17,11 @@ export const API_ENDPOINTS = {
     activos: '/productos/activos',
     byId: (id: Id) => `/productos/${id}`,
     imagen: (id: Id) => `/productos/${id}/imagen`,
+    /** Ofertas vigentes por producto (público). */
+    ofertas: '/productos/ofertas',
     /** Habilita o deshabilita el producto en el punto de venta y/o la tienda en línea. */
     canales: (id: Id) => `/productos/${id}/canales`,
+    precios: (id: Id) => `/productos/${id}/precios`,
   },
   categorias: {
     root: '/categorias',
@@ -41,6 +44,20 @@ export const API_ENDPOINTS = {
     root: '/materias-primas',
     stockBajo: '/materias-primas/stock-bajo',
     byId: (id: Id) => `/materias-primas/${id}`,
+    kardex: (id: Id) => `/materias-primas/${id}/kardex`,
+    existencia: (id: Id) => `/materias-primas/${id}/existencia`,
+    existencias: '/materias-primas/existencias',
+    alertasReorden: '/materias-primas/alertas-reorden',
+    porVencer: '/materias-primas/por-vencer',
+    unidades: (id: Id) => `/materias-primas/${id}/unidades`,
+    unidad: (id: Id, unidadId: Id) => `/materias-primas/${id}/unidades/${unidadId}`,
+  },
+  tomasFisicas: {
+    root: '/tomas-fisicas',
+    byId: (id: Id) => `/tomas-fisicas/${id}`,
+    conteos: (id: Id) => `/tomas-fisicas/${id}/conteos`,
+    cerrar: (id: Id) => `/tomas-fisicas/${id}/cerrar`,
+    anular: (id: Id) => `/tomas-fisicas/${id}/anular`,
   },
   inventarios: {
     materiasPrimas: '/inventarios/materia-prima',
@@ -62,6 +79,7 @@ export const API_ENDPOINTS = {
     byProducto: (productoId: Id) => `/formulas/producto/${productoId}`,
     /** Costo unitario calculado por el backend (solo administración y jefe de producción). */
     costoUnitario: (id: Id) => `/formulas/${id}/costo-unitario`,
+    versiones: (id: Id) => `/formulas/${id}/versiones`,
     /** Explosion de materiales de la formula de un producto (administracion y jefe de produccion). */
     explosion: (productoId: Id) => `/formulas/producto/${productoId}/explosion`,
   },
@@ -75,6 +93,7 @@ export const API_ENDPOINTS = {
     root: '/producciones',
     byId: (id: Id) => `/producciones/${id}`,
     status: (id: Id) => `/producciones/${id}/estado`,
+    factibilidad: '/producciones/factibilidad',
   },
   produccionDetalle: {
     byProduccion: (id: Id) => `/produccion-detalle/produccion/${id}`,
@@ -142,8 +161,33 @@ export const API_ENDPOINTS = {
     queue: '/ventas/pedidos',
     cashCut: '/ventas/corte',
     status: (id: Id) => `/ventas/${id}/estado`,
+    /** Siguiente estado en un gesto. */
+    advance: (id: Id) => `/ventas/${id}/avanzar`,
+    /** Consulta pública con número de pedido y correo. */
+    tracking: '/ventas/seguimiento',
+    bestSellers: '/ventas/mas-vendidos',
     /** Cotiza una canasta con el motor de promociones. No guarda nada. */
     quote: '/ventas/cotizar',
+    anular: (id: Id) => `/ventas/${id}/anular`,
+    consulta: (id: Id) => `/ventas/${id}/consulta`,
+    byClient: '/ventas/cliente',
+    productionSuggestion: '/ventas/sugerencia-produccion',
+  },
+  tablero: '/tablero',
+  miCuenta: {
+    perfil: '/mi-cuenta/perfil',
+    direcciones: '/mi-cuenta/direcciones',
+    direccion: (id: Id) => `/mi-cuenta/direcciones/${id}`,
+  },
+  turnos: {
+    root: '/turnos',
+    actual: '/turnos/actual',
+    abrir: '/turnos/abrir',
+    cerrar: (id: Id) => `/turnos/${id}/cerrar`,
+  },
+  liquidaciones: {
+    root: '/liquidaciones',
+    byId: (id: Id) => `/liquidaciones/${id}`,
   },
 } as const;
 

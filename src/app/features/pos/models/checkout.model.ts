@@ -8,10 +8,9 @@ export interface PosLine {
 
 export type DocumentKind = 'TICKET' | 'CCF' | 'FACTURA';
 
-export type PaymentMethod = 'EFECTIVO' | 'TARJETA';
+export type PaymentMethod = 'EFECTIVO' | 'TARJETA' | 'MIXTO';
 
-/** Lo que se ofrece en el cobro: Mixto se muestra pero todavía no se puede elegir. */
-export type PaymentOptionId = PaymentMethod | 'MIXTO';
+export type PaymentOptionId = PaymentMethod;
 
 export interface CheckoutOption<T extends string> {
   readonly id: T;
@@ -22,14 +21,14 @@ export interface CheckoutOption<T extends string> {
 
 export const DOCUMENT_OPTIONS: readonly CheckoutOption<DocumentKind>[] = [
   { id: 'TICKET', label: 'Ticket', hint: 'Consumidor final', available: true },
-  { id: 'CCF', label: 'Crédito fiscal', hint: 'Próximamente', available: false },
-  { id: 'FACTURA', label: 'Factura', hint: 'Próximamente', available: false },
+  { id: 'CCF', label: 'Crédito fiscal', hint: 'Con NIT y NRC', available: true },
+  { id: 'FACTURA', label: 'Factura', hint: 'A nombre del cliente', available: true },
 ];
 
 export const PAYMENT_OPTIONS: readonly CheckoutOption<PaymentOptionId>[] = [
   { id: 'EFECTIVO', label: 'Efectivo', hint: 'Billetes y monedas', available: true },
   { id: 'TARJETA', label: 'Tarjeta', hint: 'Débito o crédito', available: true },
-  { id: 'MIXTO', label: 'Mixto', hint: 'Próximamente', available: false },
+  { id: 'MIXTO', label: 'Mixto', hint: 'Tarjeta + efectivo', available: true },
 ];
 
 /** Billetes del cobro en efectivo; "Exacto" y "Borrar" van aparte. */
@@ -93,6 +92,12 @@ export interface Receipt {
   readonly recibido: number;
   readonly cambio: number;
   readonly tarjeta: CardPayment | null;
+  /** Parte cobrada con tarjeta en el pago mixto. */
+  readonly montoTarjeta?: number;
+  /** HU-36: identificación del DTE. */
+  readonly numeroControl?: string | null;
+  readonly codigoGeneracion?: string | null;
+  readonly receptor?: string | null;
   /** Venta ya registrada de la que no se guardó el pago: el ticket omite recibido y cambio. */
   readonly sinDetallePago?: boolean;
   /** Venta anulada: el ticket lo dice. */

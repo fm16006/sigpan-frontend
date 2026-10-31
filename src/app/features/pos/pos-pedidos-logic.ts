@@ -7,8 +7,11 @@ import { PosOrder } from './pos-orders';
 /** Estado con el que el backend marca una venta anulada. */
 export const CANCELLED_STATE = 'CANCELADO';
 
+/** HU-37: las anuladas con autorización también quedan fuera del total. */
+export const VOIDED_STATE = 'ANULADA';
+
 export function isCancelled(sale: Sale): boolean {
-  return sale.estado === CANCELLED_STATE;
+  return sale.estado === CANCELLED_STATE || sale.estado === VOIDED_STATE;
 }
 
 /** Nombres de los primeros productos de un borrador y cuántos quedan fuera. */

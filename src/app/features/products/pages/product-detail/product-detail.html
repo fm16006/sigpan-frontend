@@ -37,6 +37,10 @@
         @if (p.exentoIva) {
           <app-status-chip label="Exento" tone="info" title="Exento de IVA" />
         }
+        <app-status-chip [label]="publication[publicationOf(p)].label" [tone]="publication[publicationOf(p)].tone" />
+        @if (p.anticipacionHoras) {
+          <app-status-chip [label]="'Encargo ' + p.anticipacionHoras + ' h'" tone="info" />
+        }
         @if (state(); as s) {
           <app-status-chip
             [label]="s === 'inactivo' ? chips[s].label : chips[s].label + ' · ' + (p.disponible ?? 0) + ' u'"

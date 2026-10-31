@@ -52,11 +52,20 @@ export class ProductionService {
     return this.api.url(API_ENDPOINTS.formulas.explosion(productoId), { cantidad });
   }
 
+  feasibilityUrl(formulaId: Id, cantidad: number): string {
+    return this.api.url(API_ENDPOINTS.producciones.factibilidad, { formulaId, cantidad });
+  }
+
+  versionsUrl(formulaId: Id): string {
+    return this.api.url(API_ENDPOINTS.formulas.versiones(formulaId));
+  }
+
   create(draft: ProductionDraft): Observable<Production> {
     return this.api.post<Production>(API_ENDPOINTS.producciones.root, draft);
   }
 
-  changeStatus(id: Id, estado: ProductionStatus): Observable<Production> {
-    return this.api.patch<Production>(API_ENDPOINTS.producciones.status(id), {}, { estado });
+  /** Al terminar se informa lo que realmente salió (HU-22). */
+  changeStatus(id: Id, estado: ProductionStatus, cantidadObtenida?: number): Observable<Production> {
+    return this.api.patch<Production>(API_ENDPOINTS.producciones.status(id), {}, { estado, cantidadObtenida });
   }
 }

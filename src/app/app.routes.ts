@@ -78,6 +78,12 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'stock-control',
+        canActivate: [roleGuard(['ADMINISTRADOR', 'JEFE_PRODUCCION', 'BODEGUERO'])],
+        loadChildren: () =>
+          import('./features/stock-control/stock-control.routes').then((m) => m.STOCK_CONTROL_ROUTES),
+      },
+      {
         path: 'purchases',
         canActivate: [roleGuard(['ADMINISTRADOR', 'JEFE_PRODUCCION', 'BODEGUERO'])],
         loadChildren: () =>
@@ -112,6 +118,12 @@ export const routes: Routes = [
         canActivate: [roleGuard(['ADMINISTRADOR'])],
         loadChildren: () =>
           import('./features/promotions/promotions.routes').then((m) => m.PROMOTIONS_ROUTES),
+      },
+      {
+        path: 'liquidations',
+        canActivate: [roleGuard(['ADMINISTRADOR'])],
+        loadChildren: () =>
+          import('./features/liquidations/liquidations.routes').then((m) => m.LIQUIDATIONS_ROUTES),
       },
       {
         path: 'combos',

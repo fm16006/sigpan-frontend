@@ -25,5 +25,7 @@ export function createProductForm(
     disponibleTienda: [true],
     // Exento de IVA (HU-36): por defecto un producto nuevo lleva IVA.
     exentoIva: [false],
+    // HU-55: vacío = se vende de existencia.
+    anticipacionHoras: [null as number | null, [Validators.min(1), Validators.max(720)]],
   });
 }

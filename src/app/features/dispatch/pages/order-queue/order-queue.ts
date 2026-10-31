@@ -1,13 +1,20 @@
 import { Component, DestroyRef, PLATFORM_ID, computed, inject, signal } from '@angular/core';
 import { httpResource } from '@angular/common/http';
+import { Observable } from 'rxjs';
 import { DatePipe, isPlatformBrowser } from '@angular/common';
 import { Id } from '../../../../core/models/api.model';
 import {
-  NEXT_STATUS,
+  DELIVERY_MODE_LABELS,
+  OPEN_STATUSES,
+  ORDER_STATUSES,
   ORDER_STATUS_LABELS,
-  OrderStatus,
   Sale,
 } from '../../../../core/models/order.model';
+import { RouterLink } from '@angular/router';
+import { API_ENDPOINTS } from '../../../../core/constants/api-endpoints';
+import { ApiClient } from '../../../../core/http/api-client';
+import { ProductionSuggestion } from '../../../../core/models/stock-control.model';
+import { Auth } from '../../../../core/services/auth';
 import { Notifications } from '../../../../core/services/notifications';
 import { MoneyPipe } from '../../../../shared/pipes/money.pipe';
 import { ConfirmDialog } from '../../../../shared/ui/confirm-dialog/confirm-dialog';
@@ -17,13 +24,16 @@ import { ChipTone, StatusChip } from '../../../../shared/ui/status-chip/status-c
 import { OrderService } from '../../../storefront/services/order.service';
 import { valueOr } from '../../../../core/http/resource-value';
 
-const ACTIVE: readonly string[] = ['PENDIENTE', 'EN_PREPARACION', 'LISTO'];
+const ACTIVE = OPEN_STATUSES;
 const REFRESH_MS = 30_000;
 
 const STATUS_TONES: Readonly<Record<string, ChipTone>> = {
   PENDIENTE: 'neutral',
+  CONFIRMADO: 'neutral',
   EN_PREPARACION: 'warn',
   LISTO: 'info',
+  EN_RUTA: 'info',
+  EN_ESPERA_RETIRO: 'info',
   ENTREGADO: 'ok',
   CANCELADO: 'bad',
   COMPLETADA: 'ok',
@@ -31,15 +41,18 @@ const STATUS_TONES: Readonly<Record<string, ChipTone>> = {
 
 @Component({
   selector: 'app-order-queue',
-  imports: [PageHeader, ResourceState, ConfirmDialog, StatusChip, MoneyPipe, DatePipe],
+  imports: [RouterLink, PageHeader, ResourceState, ConfirmDialog, StatusChip, MoneyPipe, DatePipe],
   templateUrl: './order-queue.html',
 })
 export class OrderQueue {
   private readonly orders = inject(OrderService);
   private readonly notifications = inject(Notifications);
+  private readonly api = inject(ApiClient);
+  private readonly auth = inject(Auth);
 
   protected readonly crumbs = [{ label: 'Ventas' }, { label: 'Pedidos en línea' }];
   protected readonly statusLabels = ORDER_STATUS_LABELS;
+  protected readonly modeLabels = DELIVERY_MODE_LABELS;
   protected readonly cancelling = signal<Sale | null>(null);
   protected readonly showClosed = signal(false);
   protected readonly busyId = signal<Id | null>(null);
@@ -53,8 +66,26 @@ export class OrderQueue {
   protected readonly items = computed(() =>
     this.queueItems()
       .filter((order) => this.showClosed() || ACTIVE.includes(order.estado))
-      .sort((a, b) => a.fecha.localeCompare(b.fecha)),
+      .sort((a, b) => (a.fechaProgramada ?? a.fecha).localeCompare(b.fechaProgramada ?? b.fecha)),
   );
+
+  /** HU-44: agrupados por estado en el orden del flujo, cada grupo por hora prometida. */
+  protected readonly groups = computed(() => {
+    const byState = new Map<string, Sale[]>();
+    for (const order of this.items()) {
+      byState.set(order.estado, [...(byState.get(order.estado) ?? []), order]);
+    }
+    return ORDER_STATUSES.filter((estado) => byState.has(estado)).map((estado) => ({ estado, orders: byState.get(estado)! }));
+  });
+
+  protected readonly canSeeSuggestion = this.auth.hasAnyRole(['ADMINISTRADOR', 'DESPACHADOR', 'JEFE_PRODUCCION']);
+  protected readonly canPlanProduction = this.auth.hasAnyRole(['ADMINISTRADOR', 'JEFE_PRODUCCION']);
+  private readonly suggestion = httpResource<ProductionSuggestion[]>(
+    () => (this.canSeeSuggestion ? this.api.url(API_ENDPOINTS.orders.productionSuggestion) : undefined),
+    { defaultValue: [] },
+  );
+  protected readonly suggestionItems = computed(() => valueOr(this.suggestion, []));
+  protected readonly toProduce = computed(() => this.suggestionItems().filter((s) => s.sugerido > 0));
 
   protected readonly cancelMessage = computed(() => {
     const order = this.cancelling();
@@ -69,13 +100,12 @@ export class OrderQueue {
 
   constructor() {
     if (isPlatformBrowser(inject(PLATFORM_ID))) {
-      const timer = setInterval(() => this.queue.reload(), REFRESH_MS);
+      const timer = setInterval(() => {
+        this.queue.reload();
+        this.suggestion.reload();
+      }, REFRESH_MS);
       inject(DestroyRef).onDestroy(() => clearInterval(timer));
     }
-  }
-
-  protected nextStatus(order: Sale): OrderStatus | undefined {
-    return NEXT_STATUS[order.estado as OrderStatus];
   }
 
   protected isActive(order: Sale): boolean {
@@ -83,10 +113,7 @@ export class OrderQueue {
   }
 
   protected advance(order: Sale): void {
-    const next = this.nextStatus(order);
-    if (next) {
-      this.change(order, next);
-    }
+    this.run(order, this.orders.advance(order.id));
   }
 
   protected statusTone(order: Sale): ChipTone {
@@ -109,12 +136,16 @@ export class OrderQueue {
     }
   }
 
-  private change(order: Sale, estado: OrderStatus): void {
+  private change(order: Sale, estado: 'CANCELADO'): void {
+    this.run(order, this.orders.changeStatus(order.id, estado));
+  }
+
+  private run(order: Sale, request: Observable<Sale>): void {
     this.busyId.set(order.id);
-    this.orders.changeStatus(order.id, estado).subscribe({
-      next: () => {
+    request.subscribe({
+      next: (updated) => {
         this.busyId.set(null);
-        this.notifications.success(`Pedido #${order.id}: ${ORDER_STATUS_LABELS[estado]}.`);
+        this.notifications.success(`Pedido #${order.id}: ${ORDER_STATUS_LABELS[updated.estado] ?? updated.estado}.`);
         this.queue.reload();
       },
       error: () => this.busyId.set(null),
