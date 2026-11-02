@@ -24,6 +24,7 @@ export function firstErrorMessage(form: FormGroup, field: string): string | null
   if (typeof errors['server'] === 'string') return errors['server'];
   if (errors['required']) return 'Este campo es obligatorio.';
   if (errors['email']) return 'Ingresá un correo válido.';
+  if (errors['passwordPolicy']) return 'Usá mayúscula, minúscula y número.';
   if (errors['minlength']) {
     return `Debe tener al menos ${errors['minlength'].requiredLength} caracteres.`;
   }

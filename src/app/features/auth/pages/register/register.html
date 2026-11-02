@@ -74,7 +74,7 @@
         @if (errorFor('password'); as message) {
           <p class="mt-1 text-xs text-error">{{ message }}</p>
         } @else {
-          <p class="mt-1 text-xs text-base-content/50">Mínimo {{ minLength }} caracteres.</p>
+          <p class="mt-1 text-xs text-base-content/50">{{ passwordHint }}</p>
         }
       </div>
 

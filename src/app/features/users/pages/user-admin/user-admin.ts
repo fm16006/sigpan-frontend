@@ -4,6 +4,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { API_ENDPOINTS } from '../../../../core/constants/api-endpoints';
 import { ApiClient } from '../../../../core/http/api-client';
 import { asAppError } from '../../../../core/http/as-app-error';
+import { PASSWORD_HINT, passwordPolicy } from '../../../../core/utils/password-policy';
 import { applyFieldErrors, firstErrorMessage, formLevelMessage } from '../../../../core/http/form-errors';
 import { Id } from '../../../../core/models/api.model';
 import { ApiUser, ROLE_LABELS, USER_ROLES, UserRole } from '../../../../core/models/user.model';
@@ -74,13 +75,14 @@ export class UserAdmin {
   protected readonly saving = signal(false);
   protected readonly formError = signal<string | null>(null);
 
+  protected readonly passwordHint = PASSWORD_HINT;
   protected readonly toggling = signal<ApiUser | null>(null);
   protected readonly toggleBusy = signal(false);
 
   protected readonly form = this.fb.nonNullable.group({
     nombre: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(150)]],
     email: ['', [Validators.required, Validators.email, Validators.maxLength(150)]],
-    password: ['', [Validators.minLength(8), Validators.maxLength(72)]],
+    password: ['', [Validators.minLength(8), Validators.maxLength(72), passwordPolicy]],
     telefono: ['', [Validators.maxLength(30)]],
     rolId: [0, [Validators.required, Validators.min(1)]],
   });
@@ -105,7 +107,7 @@ export class UserAdmin {
     this.editing.set(null);
     this.formError.set(null);
     this.form.reset({ nombre: '', email: '', password: '', telefono: '', rolId: 0 });
-    this.form.controls.password.setValidators([Validators.required, Validators.minLength(8), Validators.maxLength(72)]);
+    this.form.controls.password.setValidators([Validators.required, Validators.minLength(8), Validators.maxLength(72), passwordPolicy]);
     this.form.controls.password.updateValueAndValidity();
     this.form.controls.email.enable();
     this.form.controls.rolId.enable();
