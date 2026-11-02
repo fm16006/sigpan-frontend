@@ -157,6 +157,8 @@ export const API_ENDPOINTS = {
   orders: {
     place: '/ventas/pedido',
     counter: '/ventas/mostrador',
+    /** Encargo que registra la caja a nombre de un cliente. */
+    encargo: (clienteId: Id) => `/ventas/encargo/${clienteId}`,
     mine: '/ventas/mis-pedidos',
     queue: '/ventas/pedidos',
     cashCut: '/ventas/corte',
@@ -171,6 +173,7 @@ export const API_ENDPOINTS = {
     anular: (id: Id) => `/ventas/${id}/anular`,
     consulta: (id: Id) => `/ventas/${id}/consulta`,
     byClient: '/ventas/cliente',
+    findClient: '/ventas/cliente/buscar',
     productionSuggestion: '/ventas/sugerencia-produccion',
   },
   tablero: '/tablero',

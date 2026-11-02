@@ -59,6 +59,7 @@ import { MAX_ORDERS, PosOrder, hasLines, itemCount, orderTotal } from '../../pos
 import { CashRegisterStore } from '../../services/cash-register.store';
 import { PosOrdersStore } from '../../services/pos-orders.store';
 import { CheckoutDialog } from '../../ui/checkout-dialog/checkout-dialog';
+import { PosEncargo } from '../../ui/pos-encargo/pos-encargo';
 import { PosApertura } from '../../ui/pos-apertura/pos-apertura';
 import { PosCaja } from '../../ui/pos-caja/pos-caja';
 import { PosPedidos } from '../../ui/pos-pedidos/pos-pedidos';
@@ -94,6 +95,11 @@ const CATEGORY_TONES = [
   'border-success bg-success/10',
   'border-warning bg-warning/10',
 ] as const;
+/** HU-55: se produce para el pedido, así que agotado no impide registrarlo como encargo. */
+function isMadeToOrder(product: CatalogProduct): boolean {
+  return (product.anticipacionHoras ?? 0) > 0;
+}
+
 const ROLE_NAMES: Readonly<Record<string, string>> = {
   ADMINISTRADOR: 'Administración',
   CAJERO: 'Cajero',
@@ -112,6 +118,7 @@ const ROLE_NAMES: Readonly<Record<string, string>> = {
     ConfirmDialog,
     IvaLine,
     CheckoutDialog,
+    PosEncargo,
     PosCaja,
     PosPedidos,
     PosApertura,
@@ -135,6 +142,7 @@ export class PosScreen {
   private readonly injector = inject(Injector);
 
   protected readonly auth = inject(Auth);
+  protected readonly isMadeToOrder = isMadeToOrder;
   protected readonly isAdmin = this.auth.hasAnyRole(['ADMINISTRADOR']);
   /** Caja del turno abierto ("Caja 01"), para la barra superior. */
   protected readonly place = computed(() => registerLabel(this.register.lugar()?.caja));
@@ -180,6 +188,7 @@ export class PosScreen {
   protected readonly BEST = '★ Más vendidos';
   protected readonly selectedId = signal<Id | null>(null);
   protected readonly checkoutOpen = signal(false);
+  protected readonly encargoOpen = signal(false);
   protected readonly clearOpen = signal(false);
   protected readonly logoutOpen = signal(false);
   protected readonly closeRegisterOpen = signal(false);
@@ -404,7 +413,7 @@ export class PosScreen {
   }
 
   protected add(product: CatalogProduct, quantity = 1): void {
-    if (this.soldOut(product)) {
+    if (this.soldOut(product) && !isMadeToOrder(product)) {
       this.notifications.error(`${product.nombre} está agotado.`);
       return;
     }
@@ -654,8 +663,17 @@ export class PosScreen {
     }
   }
 
+  protected openEncargo(): void {
+    if (this.ticket().length > 0 && !this.quotePending() && !this.quote.error()) {
+      this.sheetOpen.set(false);
+      this.menuOpen.set(false);
+      this.encargoOpen.set(true);
+    }
+  }
+
   protected finishSale(): void {
     this.checkoutOpen.set(false);
+    this.encargoOpen.set(false);
     // La venta descontó inventario: se recarga para que el POS vea la existencia nueva.
     this.catalog.reload();
     this.comboCatalog.reload();
@@ -671,6 +689,7 @@ export class PosScreen {
     if (
       this.mode() !== 'venta' ||
       this.checkoutOpen() ||
+      this.encargoOpen() ||
       this.clearOpen() ||
       this.logoutOpen() ||
       this.closeRegisterOpen() ||
@@ -745,6 +764,9 @@ export class PosScreen {
   }
 
   private fitsStock(product: CatalogProduct, quantity: number): boolean {
+    if (isMadeToOrder(product)) {
+      return true;
+    }
     const stock = this.stockOf(product);
     if (stock === null || quantity <= stock) {
       return true;
