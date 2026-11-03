@@ -20,7 +20,8 @@ import { Id } from '../../../../core/models/api.model';
 import { CatalogProduct } from '../../../../core/models/catalog.model';
 import { BestSeller } from '../../../../core/models/order.model';
 import { OffersStore } from '../../../../core/services/offers-store';
-import { OFFER_LABELS } from '../../../../shared/ui/offer-badge/offer-badge';
+import { ProductOffers } from '../../../../core/models/offer.model';
+import { OfferBadge } from '../../../../shared/ui/offer-badge/offer-badge';
 import { OrderService } from '../../../storefront/services/order.service';
 import { PosCombo } from '../../../../core/models/combo.model';
 import { PriceScale } from '../../../../core/models/price-scale.model';
@@ -117,6 +118,7 @@ const ROLE_NAMES: Readonly<Record<string, string>> = {
     Icon,
     ConfirmDialog,
     IvaLine,
+    OfferBadge,
     CheckoutDialog,
     PosEncargo,
     PosCaja,
@@ -371,11 +373,15 @@ export class PosScreen {
     return CATEGORY_TONES[Math.max(0, index) % CATEGORY_TONES.length];
   }
 
-  /** Insignia de oferta: solo si la última cotización muestra una regla para ese producto. */
-  protected offerBadge(product: CatalogProduct): string {
-    const inTicket = ruleBadge(this.quoteByProduct().get(product.id)?.regla);
-    const offer = this.offers.of(product.id)?.ofertas[0];
-    return inTicket || (offer ? OFFER_LABELS[offer.tipo] : '');
+  /** Ofertas vigentes del producto (HU-30): las mismas insignias y precios que muestra la tienda. */
+  protected offersOf(product: CatalogProduct): ProductOffers | undefined {
+    const offers = this.offers.of(product.id);
+    return offers?.ofertas.length ? offers : undefined;
+  }
+
+  /** Regla que la última cotización aplicó al producto, si no tiene una oferta de catálogo. */
+  protected ticketBadge(product: CatalogProduct): string {
+    return ruleBadge(this.quoteByProduct().get(product.id)?.regla);
   }
 
   protected pickTile(tile: PosTile): void {

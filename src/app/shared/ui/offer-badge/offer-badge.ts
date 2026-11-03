@@ -21,7 +21,12 @@ const TONES: Readonly<Record<OfferKind, string>> = {
   host: { class: 'flex flex-wrap gap-1' },
   template: `
     @for (offer of offers().ofertas; track offer.regla) {
-      <span class="badge badge-sm {{ tones[offer.tipo] }}" [title]="offer.etiqueta">
+      <span
+        class="badge {{ tones[offer.tipo] }}"
+        [class.badge-sm]="size() === 'sm'"
+        [class.badge-xs]="size() === 'xs'"
+        [title]="offer.etiqueta"
+      >
         {{ labels[offer.tipo] }}
       </span>
     }
@@ -29,6 +34,8 @@ const TONES: Readonly<Record<OfferKind, string>> = {
 })
 export class OfferBadge {
   readonly offers = input.required<ProductOffers>();
+  /** El punto de venta usa la insignia chica: el mosaico de producto tiene poco espacio. */
+  readonly size = input<'sm' | 'xs'>('sm');
 
   protected readonly labels = OFFER_LABELS;
   protected readonly tones = TONES;
