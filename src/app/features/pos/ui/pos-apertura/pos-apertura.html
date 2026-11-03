@@ -5,8 +5,13 @@
   <span
     class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-neutral-content/15 px-2.5 py-0.5 text-xs font-semibold text-neutral-content"
   >
-    <span class="size-1.5 rounded-full bg-warning" aria-hidden="true"></span>
-    Cerrada
+    <span
+      class="size-1.5 rounded-full"
+      [class.bg-warning]="!occupied()"
+      [class.bg-error]="!!occupied()"
+      aria-hidden="true"
+    ></span>
+    {{ occupied() ? 'Ocupada' : 'Cerrada' }}
   </span>
   @if (cashier()) {
     <span class="hidden min-w-0 truncate text-sm opacity-75 sm:inline">{{ cashier() }}</span>
@@ -54,6 +59,20 @@
     } @else if (sourceValue() && registers().length === 0) {
       <div role="alert" class="alert alert-warning text-sm">
         No hay cajas activas para cobrar. Pedile a la administración que active una.
+      </div>
+    }
+
+    @if (occupied(); as status) {
+      <div role="alert" class="alert alert-error text-sm">
+        <span>
+          La {{ status.caja }} está ocupada por <strong>{{ status.usuario }}</strong>
+          @if (occupiedSince(); as since) {
+            desde {{ since }}
+          }
+          (turno #{{ status.turnoId }}). Tiene que cerrarlo esa persona, o la administración desde
+          Ventas → Cajas.
+        </span>
+        <button type="button" class="btn btn-sm" (click)="statuses.reload()">Volver a revisar</button>
       </div>
     }
 

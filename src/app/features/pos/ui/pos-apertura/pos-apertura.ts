@@ -1,8 +1,12 @@
 import { Component, computed, inject, input, linkedSignal, output, signal } from '@angular/core';
 import { httpResource } from '@angular/common/http';
+import { API_ENDPOINTS } from '../../../../core/constants/api-endpoints';
+import { ApiClient } from '../../../../core/http/api-client';
 import { valueOr } from '../../../../core/http/resource-value';
 import { Id } from '../../../../core/models/api.model';
 import { Register, RegisterBranch } from '../../../../core/models/branch.model';
+import { RegisterStatus } from '../../../../core/models/order.model';
+import { occupiedSince } from '../../../cash-registers/register-status';
 import { MoneyPipe } from '../../../../shared/pipes/money.pipe';
 import { StatusChip } from '../../../../shared/ui/status-chip/status-chip';
 import { APERTURA_DENOMINATIONS, aperturaTotal, denominationLabel } from '../../pos-logic';
@@ -32,6 +36,7 @@ const WHEN_FORMAT = new Intl.DateTimeFormat('es-SV', {
 export class PosApertura {
   private readonly register = inject(CashRegisterStore);
   private readonly registerService = inject(RegisterService);
+  private readonly api = inject(ApiClient);
 
   readonly cashier = input('');
   /** El usuario tiene enlaces del panel: se muestra "Ir al panel". */
@@ -64,7 +69,25 @@ export class PosApertura {
     () => this.registers().find((item) => item.id === this.selectedId()) ?? null,
   );
   protected readonly place = computed(() => this.selected()?.nombre ?? 'Elegí una caja');
-  protected readonly canOpen = computed(() => this.sourceValue() !== undefined && this.selected() !== null);
+
+  /**
+   * HU-68: quién tiene cada caja. Si la elegida tiene el turno abierto de otro usuario (el propio
+   * ya habría pasado la caja a "abierta"), no se puede abrir y se dice quién la tiene.
+   */
+  protected readonly statuses = httpResource<RegisterStatus[]>(() => this.api.url(API_ENDPOINTS.turnos.cajas), {
+    defaultValue: [],
+  });
+  protected readonly occupied = computed(() => {
+    const id = this.selectedId();
+    return valueOr(this.statuses, []).find((status) => status.cajaId === id && status.ocupada) ?? null;
+  });
+  protected readonly occupiedSince = computed(() => {
+    const status = this.occupied();
+    return status?.apertura ? occupiedSince(status.apertura).label : null;
+  });
+  protected readonly canOpen = computed(
+    () => this.sourceValue() !== undefined && this.selected() !== null && this.occupied() === null,
+  );
   protected readonly previous = this.register.ultimoCierre;
   protected readonly denominations = APERTURA_DENOMINATIONS;
   protected readonly label = denominationLabel;
@@ -95,6 +118,7 @@ export class PosApertura {
       error: () => {
         this.opening.set(false);
         this.register.refrescar();
+        this.statuses.reload();
       },
     });
   }

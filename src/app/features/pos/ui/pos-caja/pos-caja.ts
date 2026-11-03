@@ -7,6 +7,10 @@ import { MoneyPipe } from '../../../../shared/pipes/money.pipe';
 import { ConfirmDialog } from '../../../../shared/ui/confirm-dialog/confirm-dialog';
 import { StatusChip } from '../../../../shared/ui/status-chip/status-chip';
 import { OrderService } from '../../../storefront/services/order.service';
+import {
+  CashierHandover,
+  HandoverShift,
+} from '../../../cash-registers/ui/cashier-handover/cashier-handover';
 import { ARQUEO_DENOMINATIONS, arqueoTotal, denominationLabel } from '../../pos-logic';
 import { registerLabel } from '../../register-utils';
 import { CashRegisterStore } from '../../services/cash-register.store';
@@ -15,7 +19,7 @@ import { valueOr } from '../../../../core/http/resource-value';
 /** HU-38: cierre del turno con arqueo; el servidor calcula esperado y diferencia. */
 @Component({
   selector: 'app-pos-caja',
-  imports: [DatePipe, MoneyPipe, StatusChip, ConfirmDialog],
+  imports: [DatePipe, MoneyPipe, StatusChip, ConfirmDialog, CashierHandover],
   templateUrl: './pos-caja.html',
   host: { class: 'flex min-h-0 flex-1 flex-col overflow-y-auto bg-base-200' },
 })
@@ -40,6 +44,13 @@ export class PosCaja {
   /** Contado menos esperado, como lo calcula el servidor. */
   protected readonly difference = computed(() => this.counted() - (this.turno()?.esperado ?? 0));
 
+  /** HU-68: pasar el turno abierto a otro cajero sin cerrarlo. */
+  protected readonly handoverOpen = signal(false);
+  protected readonly handoverShift = computed<HandoverShift | null>(() => {
+    const shift = this.turno();
+    return shift ? { id: shift.id, caja: shift.lugar?.caja ?? 'Caja', usuario: shift.cajero } : null;
+  });
+
   protected readonly cut = httpResource<CashCut>(() => this.orders.cashCutUrl(this.cutDate()));
   protected readonly cutValue = computed(() => valueOr(this.cut, undefined));
 
@@ -60,6 +71,13 @@ export class PosCaja {
 
   protected isCancelled(estado: string): boolean {
     return estado === 'CANCELADO';
+  }
+
+  /** El turno ya es de otro: este cajero queda sin caja y la pantalla vuelve a la apertura. */
+  protected handedOver(): void {
+    this.handoverOpen.set(false);
+    this.register.refrescar();
+    this.closed.emit();
   }
 
   protected closeRegister(): void {

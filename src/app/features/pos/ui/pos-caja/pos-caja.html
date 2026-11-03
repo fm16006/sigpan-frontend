@@ -19,7 +19,14 @@
 </header>
 
 <main class="flex flex-col gap-4 p-3 sm:p-4 lg:p-6">
-  <h1 class="font-serif text-2xl font-semibold">Cierre de caja</h1>
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <h1 class="font-serif text-2xl font-semibold">Cierre de caja</h1>
+    @if (handoverShift()) {
+      <button type="button" class="btn btn-sm" (click)="handoverOpen.set(true)">
+        Pasar la caja a otro cajero
+      </button>
+    }
+  </div>
 
   <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
     <div class="rounded-box border border-base-300 bg-base-100 p-4">
@@ -250,6 +257,13 @@
     </section>
   </div>
 </main>
+
+<app-cashier-handover
+  [open]="handoverOpen()"
+  [shift]="handoverShift()"
+  (closed)="handoverOpen.set(false)"
+  (handedOver)="handedOver()"
+/>
 
 <app-confirm-dialog
   [open]="confirmOpen()"
