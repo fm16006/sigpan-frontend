@@ -55,7 +55,7 @@ import { MoneyPipe } from '../../../../shared/pipes/money.pipe';
       }
       @if (orderValue(); as o) {
         <div class="mt-3 text-sm">
-          <p><strong>#{{ o.id }}</strong> · {{ o.tipo === 'EN_LINEA' ? 'En línea' : 'Mostrador' }} · {{ statusLabel(o.estado) }}
+          <p><strong>#{{ o.id }}</strong> · {{ channelLabel(o.tipo) }} · {{ statusLabel(o.estado) }}
             @if (o.encargo) { <span class="badge badge-info badge-sm">encargo</span> }
           </p>
           <p class="text-base-content/60">{{ o.fecha | date: 'd MMM y, HH:mm' }} · {{ o.total | money }}</p>
@@ -150,6 +150,10 @@ export class PosConsultas {
     { defaultValue: [] },
   );
   protected readonly historyItems = computed(() => valueOr(this.history, []));
+
+  protected channelLabel(tipo: string): string {
+    return tipo === 'EN_LINEA' ? 'En línea' : tipo === 'ENCARGO' ? 'Encargo' : 'Mostrador';
+  }
 
   protected statusLabel(estado: string): string {
     return ORDER_STATUS_LABELS[estado] ?? (estado === 'ANULADA' ? 'Anulada' : estado === 'COMPLETADA' ? 'Completada' : estado);

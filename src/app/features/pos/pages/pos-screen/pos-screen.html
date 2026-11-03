@@ -100,6 +100,14 @@
               Cobrar
               <kbd class="kbd kbd-sm text-base-content">F12</kbd>
             </button>
+            <button
+              type="button"
+              class="btn btn-outline btn-sm"
+              [disabled]="lines().length === 0 || quotePending() || !!quote.error()"
+              (click)="openEncargo()"
+            >
+              Registrar como encargo
+            </button>
           </div>
         </aside>
       }
@@ -229,7 +237,7 @@
                     [class.ring-2]="selectedId() === product.id"
                     [class.ring-primary]="selectedId() === product.id"
                     [class.opacity-50]="soldOut(product)"
-                    [disabled]="soldOut(product)"
+                    [disabled]="soldOut(product) && !isMadeToOrder(product)"
                     [attr.aria-label]="'Agregar ' + product.nombre"
                     (click)="pick(product)"
                   >
@@ -634,6 +642,14 @@
             Ver todos los pedidos
             <app-icon name="chevron" [size]="16" />
           </button>
+          <button
+            type="button"
+            class="btn btn-ghost btn-sm mt-1 w-full justify-start"
+            [disabled]="lines().length === 0 || quotePending() || !!quote.error()"
+            (click)="openEncargo()"
+          >
+            Registrar como encargo
+          </button>
         </section>
 
         @if (onlineOrdersLink() || panelLink()) {
@@ -682,6 +698,16 @@
     [quote]="tax()"
     [cashier]="auth.user()?.name ?? ''"
     (cancelled)="checkoutOpen.set(false)"
+    (staleTotal)="quote.reload()"
+    (completed)="finishSale()"
+  />
+}
+
+@if (encargoOpen()) {
+  <app-pos-encargo
+    [lines]="lines()"
+    [total]="total()"
+    (cancelled)="encargoOpen.set(false)"
     (staleTotal)="quote.reload()"
     (completed)="finishSale()"
   />

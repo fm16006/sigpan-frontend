@@ -128,7 +128,7 @@
         <label class="form-control">
           <span class="label-text mb-1">Contraseña</span>
           <input type="password" formControlName="password" class="input input-bordered w-full" autocomplete="new-password" />
-          <span class="mt-1 text-xs text-base-content/55">Al menos 8 caracteres.</span>
+          <span class="mt-1 text-xs text-base-content/55">{{ passwordHint }}</span>
           @if (fieldError('password'); as message) {
             <span class="mt-1 text-sm text-error">{{ message }}</span>
           }

@@ -4,6 +4,7 @@ import { API_ENDPOINTS } from '../../../core/constants/api-endpoints';
 import { ApiClient } from '../../../core/http/api-client';
 import { Id } from '../../../core/models/api.model';
 import { OrderStatus, Sale, SaleRequest } from '../../../core/models/order.model';
+import { ApiUser } from '../../../core/models/user.model';
 
 @Injectable({ providedIn: 'root' })
 export class OrderService {
@@ -15,6 +16,14 @@ export class OrderService {
 
   counterSale(request: SaleRequest): Observable<Sale> {
     return this.api.post<Sale>(API_ENDPOINTS.orders.counter, request);
+  }
+
+  counterEncargo(clienteId: Id, request: SaleRequest): Observable<Sale> {
+    return this.api.post<Sale>(API_ENDPOINTS.orders.encargo(clienteId), request);
+  }
+
+  findClient(correo: string): Observable<ApiUser> {
+    return this.api.get<ApiUser>(API_ENDPOINTS.orders.findClient, { correo });
   }
 
   myOrdersUrl(): string {

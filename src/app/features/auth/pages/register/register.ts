@@ -1,5 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { PASSWORD_HINT, passwordPolicy } from '../../../../core/utils/password-policy';
 import { Router, RouterLink } from '@angular/router';
 import { AppError } from '../../../../core/http/app-error';
 import { applyFieldErrors, firstErrorMessage } from '../../../../core/http/form-errors';
@@ -24,13 +25,13 @@ export class Register {
   protected readonly form = inject(FormBuilder).nonNullable.group({
     nombre: ['', [Validators.required, Validators.minLength(3)]],
     email: ['', [Validators.required, Validators.email]],
-    password: ['', [Validators.required, Validators.minLength(MIN_PASSWORD_LENGTH)]],
+    password: ['', [Validators.required, Validators.minLength(MIN_PASSWORD_LENGTH), passwordPolicy]],
   });
 
   protected readonly googleEnabled = inject(GoogleIdentity).enabled;
   protected readonly submitting = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
-  protected readonly minLength = MIN_PASSWORD_LENGTH;
+  protected readonly passwordHint = PASSWORD_HINT;
   protected readonly registeredEmail = signal<string | null>(null);
   protected readonly resendStatus = signal<'idle' | 'sending' | 'sent' | 'error'>('idle');
 

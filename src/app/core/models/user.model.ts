@@ -6,6 +6,7 @@ export const USER_ROLES = [
   'BODEGUERO',
   'CAJERO',
   'DESPACHADOR',
+  'AUDITOR',
   'CLIENTE',
 ] as const;
 
@@ -72,6 +73,7 @@ export const STAFF_ROLES: readonly UserRole[] = [
   'BODEGUERO',
   'CAJERO',
   'DESPACHADOR',
+  'AUDITOR',
 ];
 
 export const ROLE_LABELS: Readonly<Record<UserRole, string>> = {
@@ -80,6 +82,7 @@ export const ROLE_LABELS: Readonly<Record<UserRole, string>> = {
   BODEGUERO: 'Bodega',
   CAJERO: 'Caja',
   DESPACHADOR: 'Despacho',
+  AUDITOR: 'Auditoría',
   CLIENTE: 'Cliente',
 };
 
@@ -90,6 +93,7 @@ export const ROLE_HOME: Readonly<Record<UserRole, string>> = {
   BODEGUERO: '/backoffice/inventory',
   CAJERO: '/backoffice/pos',
   DESPACHADOR: '/backoffice/orders',
+  AUDITOR: '/backoffice/reports',
   CLIENTE: '/',
 };
 
