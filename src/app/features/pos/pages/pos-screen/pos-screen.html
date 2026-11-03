@@ -247,9 +247,11 @@
                       </span>
                       @if (soldOut(product)) {
                         <span class="badge badge-error badge-xs shrink-0">Agotado</span>
-                      } @else if (offerBadge(product); as offer) {
+                      } @else if (offersOf(product); as offers) {
+                        <app-offer-badge class="shrink-0 justify-end" size="xs" [offers]="offers" />
+                      } @else if (ticketBadge(product); as rule) {
                         <span class="badge badge-warning badge-soft badge-xs shrink-0 font-bold">
-                          {{ offer }}
+                          {{ rule }}
                         </span>
                       }
                     </span>
@@ -266,9 +268,14 @@
                           }
                         </span>
                       </span>
-                      <span class="font-serif text-base font-semibold tabular-nums">{{
-                        product.precio | money
-                      }}</span>
+                      <span class="grid justify-items-end font-serif text-base font-semibold tabular-nums">
+                        @if (offersOf(product)?.precioOferta; as oferta) {
+                          <s class="text-xs font-normal text-base-content/50">{{ product.precio | money }}</s>
+                          <span class="text-success">{{ oferta | money }}</span>
+                        } @else {
+                          {{ product.precio | money }}
+                        }
+                      </span>
                     </span>
                   </button>
                 </li>
