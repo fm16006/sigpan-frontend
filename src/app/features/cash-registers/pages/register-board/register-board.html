@@ -1,0 +1,179 @@
+<app-page-header
+  title="Cajas"
+  subtitle="Quién tiene cada caja ahora mismo. Se actualiza solo cada 30 segundos."
+  [crumbs]="crumbs"
+>
+  <button type="button" class="btn" [disabled]="source.isLoading()" (click)="source.reload()">
+    Actualizar
+  </button>
+</app-page-header>
+
+<div class="mb-5 grid grid-cols-2 gap-3 sm:max-w-md">
+  <app-stat-card label="Ocupadas" [value]="counts().busy" />
+  <app-stat-card label="Libres" [value]="counts().free" />
+</div>
+
+<app-resource-state
+  [loading]="source.isLoading() && registers().length === 0"
+  [failed]="!!source.error()"
+  [empty]="registers().length === 0"
+  emptyTitle="No hay cajas activas"
+  emptyDescription="Las cajas se configuran en Administración."
+  (retry)="source.reload()"
+>
+  <ul class="grid gap-4 md:grid-cols-2 xl:grid-cols-3" aria-label="Cajas">
+    @for (status of registers(); track status.cajaId) {
+      <li class="panel flex flex-col gap-3">
+        <div class="flex items-start justify-between gap-2">
+          <div>
+            <h2 class="font-serif text-xl font-semibold">{{ status.caja }}</h2>
+            @if (status.codigo) {
+              <p class="font-mono text-xs text-base-content/60">{{ status.codigo }}</p>
+            }
+          </div>
+          <app-status-chip
+            [label]="status.ocupada ? 'Ocupada' : 'Libre'"
+            [tone]="status.ocupada ? 'warn' : 'ok'"
+          />
+        </div>
+
+        @if (status.ocupada) {
+          @let since = sinceOf(status);
+          <p class="text-sm">
+            <span class="font-semibold">{{ status.usuario }}</span>
+            tiene el turno #{{ status.turnoId }}
+            @if (since) {
+              desde <span class="font-semibold">{{ since.label }}</span>
+            }
+          </p>
+          @if (since?.stale) {
+            <p role="alert" class="rounded-box bg-warning/15 px-3 py-2 text-sm">
+              El turno viene de otro día: seguramente quedó sin cerrar.
+            </p>
+          }
+
+          @if (status.turno; as shift) {
+            <dl class="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
+              <dt class="text-base-content/60">Fondo inicial</dt>
+              <dd class="text-end tabular-nums">{{ shift.fondoInicial | money }}</dd>
+              <dt class="text-base-content/60">Ventas</dt>
+              <dd class="text-end tabular-nums">
+                {{ shift.cantidadVentas }} · {{ shift.totalVentas | money }}
+              </dd>
+              <dt class="text-base-content/60">En efectivo</dt>
+              <dd class="text-end tabular-nums">{{ shift.efectivoVentas | money }}</dd>
+              <dt class="text-base-content/60">Con tarjeta</dt>
+              <dd class="text-end tabular-nums">{{ shift.tarjetaVentas | money }}</dd>
+              <dt class="font-semibold">Efectivo esperado</dt>
+              <dd class="text-end font-semibold tabular-nums">{{ shift.efectivoEsperado | money }}</dd>
+            </dl>
+            @if (shift.cambios?.length) {
+              <ul class="grid gap-1 border-t border-base-300 pt-2 text-xs text-base-content/70" aria-label="Cambios de cajero">
+                @for (change of shift.cambios; track change.fecha) {
+                  <li>
+                    {{ change.anterior }} → <span class="font-semibold">{{ change.nuevo }}</span>
+                    · {{ change.fecha | date: 'd MMM, h:mm a' }}
+                    @if (change.realizadoPor !== change.anterior) {
+                      (lo hizo {{ change.realizadoPor }})
+                    }
+                  </li>
+                }
+              </ul>
+            }
+            @if (canClose) {
+              <div class="mt-auto flex flex-wrap gap-2">
+                <button type="button" class="btn btn-outline btn-sm" (click)="handover.set(shift)">
+                  Cambiar cajero
+                </button>
+                <button type="button" class="btn btn-outline btn-sm" (click)="askClose(shift)">
+                  Cerrar este turno
+                </button>
+              </div>
+            }
+          }
+        } @else {
+          <p class="text-sm text-base-content/60">Sin turno abierto. Un cajero puede abrirla desde el punto de venta.</p>
+        }
+      </li>
+    }
+  </ul>
+</app-resource-state>
+
+<app-cashier-handover
+  [open]="!!handover()"
+  [shift]="handover()"
+  (closed)="handover.set(null)"
+  (handedOver)="handover.set(null); source.reload()"
+/>
+
+<app-form-drawer
+  [open]="!!closing()"
+  title="Cerrar turno"
+  [subtitle]="closing() ? 'Turno #' + closing()!.id + ' de ' + closing()!.usuario + ' en ' + closing()!.caja : ''"
+  (closed)="dismissClose()"
+>
+  @if (closing(); as shift) {
+    @if (formError(); as message) {
+      <div role="alert" class="alert alert-error mb-4 py-2 text-sm">{{ message }}</div>
+    }
+    <p class="mb-4 text-sm text-base-content/70">
+      Contá el efectivo de la gaveta. El cierre queda a tu nombre y en la bitácora, con la diferencia
+      contra lo esperado.
+    </p>
+    <form id="close-shift-form" class="flex flex-col gap-4" [formGroup]="form" (ngSubmit)="confirmClose()">
+      <div class="flex items-center justify-between rounded-box bg-base-200 px-4 py-3">
+        <span class="text-sm">Efectivo esperado</span>
+        <span class="font-semibold tabular-nums">{{ shift.efectivoEsperado | money }}</span>
+      </div>
+      <div>
+        <label class="mb-1.5 block text-sm font-semibold" for="close-contado">Efectivo contado</label>
+        <input
+          id="close-contado"
+          type="number"
+          min="0"
+          step="0.01"
+          inputmode="decimal"
+          formControlName="contado"
+          class="input input-bordered w-full tabular-nums"
+          [class.input-error]="form.controls.contado.invalid && form.controls.contado.touched"
+        />
+        @if (form.controls.contado.invalid && form.controls.contado.touched) {
+          <p class="mt-1 text-xs text-error">Ingresá un monto de cero o más.</p>
+        }
+      </div>
+      <p class="text-sm" aria-live="polite">
+        Diferencia:
+        <span
+          class="font-semibold tabular-nums"
+          [class.text-error]="difference() < 0"
+          [class.text-success]="difference() > 0"
+        >
+          {{ difference() | money }}
+        </span>
+        {{ difference() < 0 ? '(faltante)' : difference() > 0 ? '(sobrante)' : '(cuadra)' }}
+      </p>
+      <div>
+        <label class="mb-1.5 block text-sm font-semibold" for="close-observacion">
+          Observación (opcional)
+        </label>
+        <textarea
+          id="close-observacion"
+          rows="3"
+          maxlength="255"
+          placeholder="Por ejemplo, por qué lo cerró la administración"
+          formControlName="observacion"
+          class="textarea textarea-bordered w-full"
+        ></textarea>
+      </div>
+    </form>
+  }
+  <div footer class="contents">
+    <button type="button" class="btn btn-ghost" (click)="dismissClose()">Cancelar</button>
+    <button type="submit" form="close-shift-form" class="btn btn-primary" [disabled]="saving()">
+      @if (saving()) {
+        <span class="loading loading-spinner loading-sm"></span>
+      }
+      Cerrar turno
+    </button>
+  </div>
+</app-form-drawer>

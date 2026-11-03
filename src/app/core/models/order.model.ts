@@ -141,6 +141,40 @@ export interface CashShift {
   readonly efectivoContado: number | null;
   readonly diferencia: number | null;
   readonly observacion: string | null;
+  /** HU-68: quién cerró el turno; nulo si sigue abierto o se cerró antes de registrarlo. */
+  readonly cerradoPorId?: Id | null;
+  readonly cerradoPor?: string | null;
+  /** HU-68: cambios de cajero del turno, del más antiguo al más reciente. */
+  readonly cambios?: readonly ShiftHandover[];
+}
+
+/** HU-68: el turno pasó de un cajero a otro sin cerrarse. */
+export interface ShiftHandover {
+  readonly anterior: string;
+  readonly nuevo: string;
+  readonly realizadoPor: string;
+  readonly fecha: string;
+  readonly nota: string | null;
+}
+
+/** HU-68: GET /turnos/cajeros */
+export interface CashierOption {
+  readonly id: number;
+  readonly nombre: string;
+  readonly rol: string;
+}
+
+/** HU-68: GET /turnos/cajas. `turno` trae los montos solo para administración y auditoría. */
+export interface RegisterStatus {
+  readonly cajaId: Id;
+  readonly caja: string;
+  readonly codigo: string | null;
+  readonly ocupada: boolean;
+  readonly turnoId: Id | null;
+  readonly usuarioId: Id | null;
+  readonly usuario: string | null;
+  readonly apertura: string | null;
+  readonly turno: CashShift | null;
 }
 
 export interface BestSeller {
