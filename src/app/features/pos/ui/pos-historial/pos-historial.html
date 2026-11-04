@@ -253,6 +253,9 @@
             <input class="input input-sm w-full" type="password" placeholder="Contraseña" autocomplete="off"
                    [value]="authPassword()" (input)="authPassword.set($any($event.target).value)" />
           }
+          @if (voidError()) {
+            <p role="alert" class="text-xs text-error">{{ voidError() }}</p>
+          }
           <div class="flex gap-2">
             <button class="btn btn-sm btn-error" [disabled]="voiding() || voidReason().trim().length < 3">Confirmar anulación</button>
             <button type="button" class="btn btn-sm btn-ghost" (click)="voidOpen.set(false)">Cancelar</button>
