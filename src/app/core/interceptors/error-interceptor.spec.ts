@@ -5,6 +5,7 @@ import { Router, provideRouter } from '@angular/router';
 import { API_CONFIG, ApiConfig } from '../config/api.config';
 import { AppError } from '../http/app-error';
 import { errorInterceptor } from './error-interceptor';
+import { SessionStore } from '../services/session-store';
 
 const CONFIG: ApiConfig = {
   baseUrl: 'https://api.sigpan.test/api/v1',
@@ -50,9 +51,23 @@ describe('errorInterceptor · 403 (DEF-20)', () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 
-  it('cualquier otro 403 sigue llevando a «sin permisos»', () => {
+  it('sin sesión, cualquier otro 403 lleva a «sin permisos»', () => {
     forbidden(`${API}/productos`);
 
     expect(navigate).toHaveBeenCalledWith(['/sin-permisos']);
+  });
+
+  it('con sesión, un 403 lleva al inicio de su rol en lugar de «sin permisos»', () => {
+    const byUrl = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+    TestBed.inject(SessionStore).set({
+      accessToken: 'token',
+      expiresIn: 1800,
+      user: { id: 1, name: 'Caja', email: 'caja@sigpan.test', role: 'CAJERO' },
+    });
+
+    forbidden(`${API}/productos`);
+
+    expect(byUrl).toHaveBeenCalledWith('/backoffice/pos');
+    expect(navigate).not.toHaveBeenCalled();
   });
 });

@@ -61,9 +61,18 @@ describe('guards por rol', () => {
     expect(run(roleHomeGuard)).toBe('/backoffice/inventory');
   });
 
-  it('roleGuard deja pasar los roles permitidos y manda al resto a sin-permisos', () => {
+  it('roleGuard deja pasar los roles permitidos y manda al resto a su inicio', () => {
     loginAs('CAJERO');
     expect(run(roleGuard(['ADMINISTRADOR', 'CAJERO']))).toBe(true);
-    expect(run(roleGuard(['ADMINISTRADOR']))).toBe('/sin-permisos');
+    expect(run(roleGuard(['ADMINISTRADOR']))).toBe('/backoffice/pos');
+    loginAs('BODEGUERO');
+    expect(run(roleGuard(['ADMINISTRADOR']))).toBe('/backoffice/inventory');
+  });
+
+  it('roleGuard manda a sin-permisos si el propio inicio le es ajeno (sin bucle)', () => {
+    loginAs('CAJERO');
+    const atHome = { url: '/backoffice/pos' } as RouterStateSnapshot;
+    const result = TestBed.runInInjectionContext(() => roleGuard(['ADMINISTRADOR'])(route, atHome));
+    expect(router.serializeUrl(result as UrlTree)).toBe('/sin-permisos');
   });
 });
