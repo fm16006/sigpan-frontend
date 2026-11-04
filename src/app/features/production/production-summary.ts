@@ -36,13 +36,26 @@ export function orderCode(id: number): string {
   return `ORD-${String(id).padStart(4, '0')}`;
 }
 
-/** Unidades que rinde la orden: lotes × cantidad que produce un lote de la receta. */
+/**
+ * Unidades planificadas de la orden. El backend las calcula con la versión de la receta con que se confirmó
+ * (DEF-23); si no las informa, lotes × lo que rinde hoy un lote de la receta.
+ */
 export function orderUnits(
-  production: Pick<Production, 'cantidad' | 'formulaId'>,
+  production: Pick<Production, 'cantidad' | 'formulaId' | 'cantidadPlanificada'>,
   formulas: readonly Pick<Formula, 'id' | 'cantidadProduccion'>[],
 ): number | null {
+  if (production.cantidadPlanificada != null) return Number(production.cantidadPlanificada);
   const formula = formulas.find((item) => item.id === production.formulaId);
   return formula ? Number(formula.cantidadProduccion) * Number(production.cantidad) : null;
+}
+
+/** HU-21: unidades que entraron al inventario. Solo en una orden terminada: las obtenidas, no las planificadas. */
+export function producedUnits(
+  production: Pick<Production, 'estado' | 'cantidadObtenida'>,
+  planned: number | null,
+): number | null {
+  if (production.estado !== 'TERMINADO') return null;
+  return production.cantidadObtenida != null ? Number(production.cantidadObtenida) : planned;
 }
 
 /** Segmento al que pertenece un estado: todo lo que no está cerrado es activo. */

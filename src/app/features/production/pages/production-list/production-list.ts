@@ -20,6 +20,7 @@ import {
   matchesSegment,
   orderCode,
   orderUnits,
+  producedUnits,
   progressSteps,
   segmentOf,
   stepClass,
@@ -101,7 +102,9 @@ export class ProductionList {
       .map((production) => ({
         production,
         code: orderCode(production.id),
-        units: orderUnits(production, formulas),
+        // Terminada: lo que entró al inventario (HU-21); abierta: lo planificado.
+        units:
+          producedUnits(production, orderUnits(production, formulas)) ?? orderUnits(production, formulas),
         steps: progressSteps(production.estado),
       }));
   });

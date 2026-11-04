@@ -5,6 +5,7 @@ import {
   matchesSegment,
   orderCode,
   orderUnits,
+  producedUnits,
   progressSteps,
   segmentOf,
 } from './production-summary';
@@ -38,6 +39,26 @@ describe('orderUnits', () => {
 
   it('es null si la receta no está cargada', () => {
     expect(orderUnits(order(), [{ id: 9, cantidadProduccion: 12 }])).toBeNull();
+  });
+
+  it('DEF-23: usa lo planificado con la versión confirmada aunque la receta de hoy rinda otra cosa', () => {
+    expect(orderUnits(order({ cantidad: 2, cantidadPlanificada: 200 }), [{ id: 7, cantidadProduccion: 120 }])).toBe(
+      200,
+    );
+  });
+});
+
+describe('producedUnits', () => {
+  it('HU-21: en una orden terminada son las obtenidas, no las planificadas', () => {
+    expect(producedUnits(order({ estado: 'TERMINADO', cantidadObtenida: 190 }), 200)).toBe(190);
+  });
+
+  it('una terminada sin dato de lo obtenido toma lo planificado', () => {
+    expect(producedUnits(order({ estado: 'TERMINADO', cantidadObtenida: null }), 200)).toBe(200);
+  });
+
+  it('una orden abierta todavía no produjo nada', () => {
+    expect(producedUnits(order({ estado: 'PRODUCION', cantidadObtenida: null }), 200)).toBeNull();
   });
 });
 
