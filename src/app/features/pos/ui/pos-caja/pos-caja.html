@@ -39,21 +39,18 @@
     </div>
     <div class="rounded-box border border-base-300 bg-base-100 p-4">
       <p class="text-xs text-base-content/60">En efectivo</p>
-      <p class="font-serif text-2xl font-semibold text-base-content/40">—</p>
-      <!-- Pendiente backend (HU-38): guardar el método de pago por venta -->
-      <p class="text-xs text-base-content/60">Próximamente</p>
+      <p class="font-serif text-2xl font-semibold tabular-nums">{{ (cutValue()?.efectivo ?? 0) | money }}</p>
+      <p class="text-xs text-base-content/60">Recibido menos cambio</p>
     </div>
     <div class="rounded-box border border-base-300 bg-base-100 p-4">
       <p class="text-xs text-base-content/60">Con tarjeta</p>
-      <p class="font-serif text-2xl font-semibold text-base-content/40">—</p>
-      <!-- Pendiente backend (HU-38): guardar el método de pago por venta -->
-      <p class="text-xs text-base-content/60">Próximamente</p>
+      <p class="font-serif text-2xl font-semibold tabular-nums">{{ (cutValue()?.tarjeta ?? 0) | money }}</p>
+      <p class="text-xs text-base-content/60">Cobrado con tarjeta</p>
     </div>
     <div class="rounded-box border border-base-300 bg-base-100 p-4">
       <p class="text-xs text-base-content/60">Anuladas</p>
-      <p class="font-serif text-2xl font-semibold text-base-content/40">—</p>
-      <!-- Pendiente backend (HU-37): anulación de tickets -->
-      <p class="text-xs text-base-content/60">Próximamente</p>
+      <p class="font-serif text-2xl font-semibold tabular-nums">{{ voidedCount() }}</p>
+      <p class="text-xs text-base-content/60">No suman al total</p>
     </div>
   </div>
 
@@ -207,12 +204,12 @@
               <span>Hora</span>
               <span>Detalle</span>
               <span class="text-end">Total</span>
-              <span class="text-end">Anular</span>
+              <span class="text-end">Estado</span>
             </div>
             @for (venta of corte.ventas; track venta.id) {
               <div
                 class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 border-t border-base-300 py-2.5 text-sm md:grid-cols-[3.5rem_3rem_minmax(0,1fr)_4.5rem_5.5rem]"
-                [class.opacity-60]="isCancelled(venta.estado)"
+                [class.opacity-60]="isCancelled(venta)"
               >
                 <span class="font-mono">#{{ venta.id }}</span>
                 <span class="tabular-nums max-md:order-last">{{ venta.fecha | date: 'HH:mm' }}</span>
@@ -224,35 +221,19 @@
                     {{ linea.cantidad }} × {{ linea.producto }}{{ last ? '' : ', ' }}
                   }
                 </span>
-                <span class="text-end font-semibold tabular-nums">{{ venta.total | money }}</span>
+                <span class="text-end font-semibold tabular-nums" [class.line-through]="isCancelled(venta)">{{ venta.total | money }}</span>
                 <span class="text-end">
-                  @if (isCancelled(venta.estado)) {
+                  @if (isCancelled(venta)) {
                     <app-status-chip label="Anulada" tone="bad" />
-                  } @else {
-                    <!-- Pendiente backend (HU-37): anular tickets -->
-                    <button
-                      type="button"
-                      class="btn btn-xs btn-ghost text-error"
-                      disabled
-                      title="Próximamente"
-                      [attr.aria-label]="'Anular ticket ' + venta.id + ' (próximamente)'"
-                    >
-                      Anular
-                    </button>
                   }
                 </span>
               </div>
             }
           </div>
         }
-        <!-- Pendiente backend (HU-37, HU-38): anulación con motivo y autorización, y método de pago por venta -->
-        <div class="flex items-center gap-2 border-t border-base-300 pt-3">
-          <app-status-chip label="Próximamente" tone="neutral" />
-          <span class="text-xs text-base-content/60">
-            Próximamente podrás anular tickets (con motivo y autorización) y ver el método de pago de
-            cada venta.
-          </span>
-        </div>
+        <p class="border-t border-base-300 pt-3 text-xs text-base-content/60">
+          Las anuladas se listan pero no suman. Para anular un ticket, buscalo en Pedidos › Anteriores.
+        </p>
       }
     </section>
   </div>
