@@ -1,4 +1,5 @@
-import { Component, computed, inject, input, linkedSignal, output, signal } from '@angular/core';
+import { Component, DestroyRef, PLATFORM_ID, computed, inject, input, linkedSignal, output, signal } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { httpResource } from '@angular/common/http';
 import { API_ENDPOINTS } from '../../../../core/constants/api-endpoints';
 import { ApiClient } from '../../../../core/http/api-client';
@@ -60,13 +61,22 @@ export class PosApertura {
     return error?.status === 404;
   });
 
-  /** Con una sola caja queda elegida; con varias se parte de la última que usó el cajero. */
-  protected readonly selectedId = linkedSignal<readonly Register[], Id | null>({
-    source: this.registers,
-    computation: (list, previous) => {
+  /**
+   * Con una sola caja queda elegida; con varias se parte de la que ya se eligió o de la última que
+   * usó el cajero, y si esa está en uso por otro, de la primera libre.
+   */
+  protected readonly selectedId = linkedSignal<
+    { list: readonly Register[]; busy: ReadonlySet<Id> },
+    Id | null
+  >({
+    source: () => ({ list: this.registers(), busy: this.busyIds() }),
+    computation: ({ list, busy }, previous) => {
       if (list.length === 1) return list[0].id;
-      const keep = previous?.value ?? this.previous()?.lugar?.cajaId ?? null;
-      return keep !== null && list.some((item) => item.id === keep) ? keep : null;
+      const chosen = previous?.value ?? null;
+      if (chosen !== null && list.some((item) => item.id === chosen)) return chosen;
+      const last = this.previous()?.lugar?.cajaId ?? null;
+      if (last !== null && list.some((item) => item.id === last) && !busy.has(last)) return last;
+      return list.find((item) => !busy.has(item.id))?.id ?? null;
     },
   });
   protected readonly selected = computed(
@@ -81,6 +91,16 @@ export class PosApertura {
   protected readonly statuses = httpResource<RegisterStatus[]>(() => this.api.url(API_ENDPOINTS.turnos.cajas), {
     defaultValue: [],
   });
+  /** Cajas con el turno abierto de alguien (el propio ya habría pasado el POS a vender). */
+  protected readonly busyIds = computed<ReadonlySet<Id>>(
+    () => new Set(valueOr(this.statuses, []).filter((status) => status.ocupada).map((status) => status.cajaId)),
+  );
+  /** Quién tiene una caja ocupada, para marcarla en la lista. */
+  protected busyBy(id: Id): string | null {
+    return valueOr(this.statuses, []).find((status) => status.cajaId === id && status.ocupada)?.usuario ?? null;
+  }
+  /** Hay alguna caja libre a la cual cambiarse. */
+  protected readonly anyFree = computed(() => this.registers().some((item) => !this.busyIds().has(item.id)));
   protected readonly occupied = computed(() => {
     const id = this.selectedId();
     return valueOr(this.statuses, []).find((status) => status.cajaId === id && status.ocupada) ?? null;
@@ -100,6 +120,14 @@ export class PosApertura {
   protected readonly fondo = computed(() => aperturaTotal(this.counts()));
   protected readonly when = WHEN_FORMAT.format(new Date());
   protected readonly opening = signal(false);
+
+  constructor() {
+    // Otro cajero puede abrir o cerrar una caja mientras esta pantalla está abierta.
+    if (isPlatformBrowser(inject(PLATFORM_ID))) {
+      const timer = setInterval(() => this.statuses.reload(), 20_000);
+      inject(DestroyRef).onDestroy(() => clearInterval(timer));
+    }
+  }
 
   protected count(value: number): number {
     return this.counts()[value] ?? 0;

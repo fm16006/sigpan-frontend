@@ -16,7 +16,7 @@
   [failed]="!!source.error()"
   [empty]="registers().length === 0"
   emptyTitle="No hay cajas activas"
-  emptyDescription="Las cajas se configuran en Administración."
+  [emptyDescription]="canManage ? 'Agregá una caja abajo.' : 'Pedile a la administración que agregue una caja.'"
   (retry)="source.reload()"
 >
   <ul class="grid gap-4 md:grid-cols-2 xl:grid-cols-3" aria-label="Cajas">
@@ -33,6 +33,10 @@
     }
   </ul>
 </app-resource-state>
+
+@if (canManage) {
+  <app-register-admin class="mt-6 block" (changed)="source.reload()" />
+}
 
 <app-cashier-handover
   [open]="!!handover()"

@@ -184,6 +184,13 @@ export const API_ENDPOINTS = {
     direcciones: '/mi-cuenta/direcciones',
     direccion: (id: Id) => `/mi-cuenta/direcciones/${id}`,
   },
+  /** Administración de las cajas: agregar, renombrar, quitar (desactivar) y volver a activar. */
+  cajas: {
+    root: '/cajas',
+    byId: (id: Id) => `/cajas/${id}`,
+    desactivar: (id: Id) => `/cajas/${id}/desactivar`,
+    activar: (id: Id) => `/cajas/${id}/activar`,
+  },
   turnos: {
     root: '/turnos',
     actual: '/turnos/actual',

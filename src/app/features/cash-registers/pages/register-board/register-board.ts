@@ -11,6 +11,7 @@ import { StatCard } from '../../../../shared/ui/stat-card/stat-card';
 import { registerCounts } from '../../register-status';
 import { CashierHandover } from '../../ui/cashier-handover/cashier-handover';
 import { CloseShiftDrawer } from '../../ui/close-shift-drawer/close-shift-drawer';
+import { RegisterAdmin } from '../../ui/register-admin/register-admin';
 import { RegisterCard } from '../../ui/register-card/register-card';
 
 /** Mismo ritmo que la cola de despacho: el estado se ve al día sin recargar. */
@@ -19,11 +20,11 @@ const REFRESH_MS = 30_000;
 /**
  * HU-68, pestaña Cajas del punto de venta: cada caja libre u ocupada, quién tiene el turno y desde
  * cuándo (aunque lo haya abierto otro día). El administrador puede pasar el turno a otro cajero o
- * cerrarlo declarando el efectivo contado.
+ * cerrarlo declarando el efectivo contado, y agregar, renombrar, quitar o activar cajas.
  */
 @Component({
   selector: 'app-register-board',
-  imports: [ResourceState, StatCard, RegisterCard, CashierHandover, CloseShiftDrawer],
+  imports: [ResourceState, StatCard, RegisterCard, RegisterAdmin, CashierHandover, CloseShiftDrawer],
   templateUrl: './register-board.html',
 })
 export class RegisterBoard {

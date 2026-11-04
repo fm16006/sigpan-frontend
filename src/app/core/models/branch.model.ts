@@ -18,3 +18,14 @@ export interface RegisterBranch {
   readonly codigo: string;
   readonly cajas: readonly Register[];
 }
+
+/** Respuesta de `GET /cajas`: toda caja, activa o no, y quién la tiene abierta. Solo administración. */
+export interface RegisterAdmin {
+  readonly id: Id;
+  readonly nombre: string;
+  readonly codigo: string;
+  readonly activo: boolean;
+  readonly ocupada: boolean;
+  readonly turnoId: Id | null;
+  readonly usuario: string | null;
+}

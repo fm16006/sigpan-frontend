@@ -3,6 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { API_CONFIG, ApiConfig } from '../../../../core/config/api.config';
+import { RegisterAdmin } from '../../../../core/models/branch.model';
 import { CashShift, RegisterStatus } from '../../../../core/models/order.model';
 import { Auth } from '../../../../core/services/auth';
 import { RegisterBoard } from './register-board';
@@ -13,6 +14,12 @@ const CONFIG: ApiConfig = {
   timeoutMs: 5000,
 };
 const CAJAS = 'https://api.sigpan.test/api/v1/turnos/cajas';
+const ADMIN_CAJAS = 'https://api.sigpan.test/api/v1/cajas';
+const ADMIN_LIST: RegisterAdmin[] = [
+  { id: 10, nombre: 'Caja 01', codigo: 'C01', activo: true, ocupada: true, turnoId: 3, usuario: 'Ana' },
+  { id: 11, nombre: 'Caja 02', codigo: 'C02', activo: true, ocupada: false, turnoId: null, usuario: null },
+  { id: 12, nombre: 'Caja 03', codigo: 'C03', activo: false, ocupada: false, turnoId: null, usuario: null },
+];
 
 const SHIFT: CashShift = {
   id: 3,
@@ -77,6 +84,7 @@ describe('Punto de venta · pestaña Cajas (HU-68)', () => {
     fixture = TestBed.createComponent(RegisterBoard);
     fixture.detectChanges();
     httpMock.expectOne(CAJAS).flush(STATUSES);
+    if (isAdmin) httpMock.expectOne(ADMIN_CAJAS).flush(ADMIN_LIST);
     await fixture.whenStable();
     fixture.detectChanges();
     return fixture.nativeElement as HTMLElement;
@@ -99,6 +107,34 @@ describe('Punto de venta · pestaña Cajas (HU-68)', () => {
   it('solo el administrador ve el botón para cerrar el turno', async () => {
     const root = await render(false);
     expect(root.textContent).not.toContain('Cerrar este turno');
+    expect(root.querySelector('app-register-admin')).toBeNull();
+  });
+
+  it('el administrador ve todas las cajas y no puede quitar la que está en uso', async () => {
+    const root = await render(true);
+    const rows = [...root.querySelectorAll('app-register-admin li')];
+
+    expect(rows).toHaveLength(3);
+    expect(rows[0].textContent).toContain('En uso · Ana');
+    expect(rows[1].textContent).toContain('Libre');
+    expect(rows[2].textContent).toContain('Quitada');
+    const quitar = (row: Element) =>
+      [...row.querySelectorAll('button')].find((b) => b.textContent?.includes('Quitar')) as HTMLButtonElement;
+    expect(quitar(rows[0]).disabled).toBe(true);
+    expect(quitar(rows[1]).disabled).toBe(false);
+  });
+
+  it('el administrador agrega una caja con el nombre sugerido', async () => {
+    const root = await render(true);
+    root.querySelector<HTMLFormElement>('app-register-admin form')!.dispatchEvent(new Event('submit'));
+
+    const request = httpMock.expectOne((r) => r.method === 'POST' && r.url === ADMIN_CAJAS);
+    expect(request.request.body).toEqual({ nombre: 'Caja 04' });
+    request.flush({ id: 13, nombre: 'Caja 04', codigo: 'C04', activo: true, ocupada: false, turnoId: null, usuario: null });
+    // Tras agregar, el panel y el tablero vuelven a leer las cajas.
+    fixture.detectChanges();
+    httpMock.expectOne((r) => r.method === 'GET' && r.url === ADMIN_CAJAS).flush(ADMIN_LIST);
+    httpMock.expectOne(CAJAS).flush(STATUSES);
   });
 
   it('el administrador cierra el turno de otro cajero con el efectivo contado', async () => {

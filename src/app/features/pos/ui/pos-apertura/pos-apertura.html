@@ -65,8 +65,12 @@
     @if (occupied(); as status) {
       <div role="alert" class="alert alert-error text-sm">
         <span>
-          No podés abrir la {{ status.caja }}: tiene el turno abierto de
-          <strong>{{ status.usuario }}</strong>.
+          La {{ status.caja }} está en uso por <strong>{{ status.usuario }}</strong>.
+          @if (anyFree()) {
+            Elegí otra caja para poder vender.
+          } @else {
+            No hay otra caja libre: pedile a la administración que la libere o que agregue otra.
+          }
         </span>
         <button type="button" class="btn btn-sm" (click)="statuses.reload()">Volver a revisar</button>
       </div>
@@ -112,6 +116,11 @@
               (click)="selectedId.set(item.id)"
             >
               {{ item.nombre }}
+              @if (busyBy(item.id); as usuario) {
+                <span class="text-xs font-normal opacity-70">· En uso por {{ usuario }}</span>
+              } @else {
+                <span class="text-xs font-normal opacity-70">· Libre</span>
+              }
             </button>
           }
         </div>
@@ -233,7 +242,8 @@
     <section class="panel flex flex-col gap-2" aria-labelledby="apertura-reglas">
       <h2 id="apertura-reglas" class="font-serif text-lg font-semibold">Reglas del turno</h2>
       <ul class="list-disc space-y-1.5 ps-5 text-sm leading-relaxed text-base-content/75">
-        <li>Un cajero tiene un solo turno abierto a la vez.</li>
+        <li>Un cajero tiene un solo turno abierto a la vez. Si ya abriste una caja en otro equipo, al entrar seguís en esa misma caja.</li>
+        <li>Una caja en uso por otra persona no se puede abrir: elegí otra libre.</li>
         <li>Retiros y anulaciones quedan en la bitácora con quién autorizó.</li>
         <li>Al cerrar se cuenta la gaveta y se compara con el efectivo esperado.</li>
       </ul>
