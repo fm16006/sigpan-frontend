@@ -64,6 +64,8 @@ export function ruleLabel(regla: string | null | undefined): string {
       return `Promoción #${id}`;
     case 'COMBO':
       return `Combo #${id}`;
+    case 'LIQUIDACION':
+      return `Liquidación #${id}`;
     case 'ESCALA':
       return 'Precio por mayoreo';
     default:

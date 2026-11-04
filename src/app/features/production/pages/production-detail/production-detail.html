@@ -44,14 +44,22 @@
 
     <div class="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
       <app-stat-card label="Lotes" [value]="o.cantidad" />
-      <app-stat-card
-        [label]="o.estado === 'TERMINADO' ? 'Unidades producidas' : 'Unidades a producir'"
-        [value]="units() !== null ? (units() | number: '1.0-3') + ' u' : '—'"
-      />
+      @if (o.estado === 'TERMINADO') {
+        <app-stat-card
+          label="Unidades obtenidas"
+          [value]="produced() !== null ? (produced() | number: '1.0-3') + ' u' : '—'"
+          [hint]="units() !== null ? 'De ' + (units() | number: '1.0-3') + ' u planificadas' : ''"
+        />
+      } @else {
+        <app-stat-card
+          label="Unidades a producir"
+          [value]="units() !== null ? (units() | number: '1.0-3') + ' u' : '—'"
+        />
+      }
       <app-stat-card
         label="Costo estimado"
         [value]="estimatedCost() !== null ? (estimatedCost() | money) : '—'"
-        hint="Con el costo actual de la receta"
+        [hint]="o.formulaVersion ? 'Receta versión ' + o.formulaVersion + ', costo actual de los insumos' : 'Con el costo actual de la receta'"
       />
       <app-stat-card
         label="Costo por unidad"
@@ -107,7 +115,9 @@
         } @else {
           <div>
             <h2 id="h-insumos" class="text-xl font-semibold">Insumos que se descargarán</h2>
-            <p class="text-xs text-base-content/55">Vista previa con la existencia de hoy, merma incluida</p>
+            <p class="text-xs text-base-content/55">
+              Vista previa con la existencia de hoy, merma incluida{{ o.formulaVersion ? ' · receta versión ' + o.formulaVersion : '' }}
+            </p>
           </div>
           <app-explosion-table
             [explosion]="previewValue()"
@@ -162,7 +172,7 @@
               <span class="text-xs text-base-content/60">{{ o.producto }}</span>
               <span class="font-semibold tabular-nums">
                 @if (o.estado === 'TERMINADO') {
-                  +{{ units() | number: '1.0-3' }} u entraron
+                  +{{ produced() | number: '1.0-3' }} u entraron
                 } @else if (o.estado === 'CANCELADO') {
                   Sin movimiento
                 } @else {
@@ -182,9 +192,12 @@
           }
           @if (o.cantidadObtenida != null) {
             <p class="text-sm">
-              Obtenidas: <strong>{{ o.cantidadObtenida }}</strong> de {{ o.cantidadPlanificada ?? '—' }}
-              @if (o.mermaProceso) {
-                <span class="text-warning"> · merma de proceso {{ o.mermaProceso }}</span>
+              Obtenidas: <strong>{{ o.cantidadObtenida | number: '1.0-3' }}</strong> de
+              {{ units() !== null ? (units() | number: '1.0-3') : '—' }} planificadas
+              @if (o.mermaProceso && +o.mermaProceso > 0) {
+                <span class="text-warning"> · merma de proceso {{ o.mermaProceso | number: '1.0-3' }} u</span>
+              } @else if (o.mermaProceso && +o.mermaProceso < 0) {
+                <span> · salieron {{ -o.mermaProceso | number: '1.0-3' }} u de más</span>
               }
             </p>
           }

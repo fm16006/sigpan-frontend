@@ -7,7 +7,7 @@ import { ApiClient } from '../../../../core/http/api-client';
 import { valueOr } from '../../../../core/http/resource-value';
 import { CatalogProduct } from '../../../../core/models/catalog.model';
 import { ORDER_STATUS_LABELS, Sale } from '../../../../core/models/order.model';
-import { Quote } from '../../../../core/models/quote.model';
+import { Quote, ruleLabel } from '../../../../core/models/quote.model';
 import { MaterialAvailability } from '../../../../core/models/stock-control.model';
 import { MoneyPipe } from '../../../../shared/pipes/money.pipe';
 
@@ -38,7 +38,7 @@ import { MoneyPipe } from '../../../../shared/pipes/money.pipe';
           <p>{{ qty() }} u: <strong>{{ q.total | money }}</strong>
             @if (q.ahorro > 0) { <span class="text-success">· ahorra {{ q.ahorro | money }}</span> }
           </p>
-          @if (q.reglaAplicada) { <p class="text-xs text-base-content/60">Regla: {{ q.reglaAplicada }}</p> }
+          @if (q.reglaAplicada) { <p class="text-xs text-base-content/60">Regla: {{ ruleLabel(q.reglaAplicada) }}</p> }
           @for (s of q.sugerencias ?? []; track s.regla) { <p class="text-xs text-success">{{ s.mensaje }}</p> }
         </div>
       }
@@ -110,6 +110,8 @@ import { MoneyPipe } from '../../../../shared/pipes/money.pipe';
 })
 export class PosConsultas {
   private readonly api = inject(ApiClient);
+  /** «Promoción #1», no la regla cruda «PROMOCION:1». */
+  protected readonly ruleLabel = ruleLabel;
 
   private readonly products = httpResource<CatalogProduct[]>(
     () => this.api.url(API_ENDPOINTS.productos.activos, { canal: 'POS' }),

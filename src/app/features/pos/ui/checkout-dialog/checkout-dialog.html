@@ -121,6 +121,40 @@
                   />
                 }
               </div>
+              @if (document() === 'CCF') {
+                <details class="text-xs" [open]="!!(receptorActividad() || receptorDireccion() || receptorTelefono())">
+                  <summary class="cursor-pointer text-base-content/70">Más datos del receptor (opcional)</summary>
+                  <div class="mt-2 grid gap-2">
+                    <input
+                      class="input input-sm w-full"
+                      placeholder="Actividad económica"
+                      aria-label="Actividad económica del receptor"
+                      maxlength="150"
+                      [value]="receptorActividad()"
+                      (input)="receptorActividad.set($any($event.target).value)"
+                    />
+                    <div class="grid grid-cols-2 gap-2">
+                      <input
+                        class="input input-sm w-full"
+                        placeholder="Dirección"
+                        aria-label="Dirección del receptor"
+                        maxlength="200"
+                        [value]="receptorDireccion()"
+                        (input)="receptorDireccion.set($any($event.target).value)"
+                      />
+                      <input
+                        class="input input-sm w-full"
+                        placeholder="Teléfono"
+                        aria-label="Teléfono del receptor"
+                        maxlength="30"
+                        inputmode="tel"
+                        [value]="receptorTelefono()"
+                        (input)="receptorTelefono.set($any($event.target).value)"
+                      />
+                    </div>
+                  </div>
+                </details>
+              }
               @if (!receptorValid()) {
                 <p class="text-xs text-error">El crédito fiscal necesita nombre, NIT y NRC.</p>
               }

@@ -1,6 +1,6 @@
 import { Sale } from '../../core/models/order.model';
 import { todayIso } from '../../core/utils/dates';
-import { Receipt } from './models/checkout.model';
+import { DocumentKind, Receipt } from './models/checkout.model';
 import { receiptLines, receiptTax } from './receipt/receipt-sale';
 import { PosOrder } from './pos-orders';
 
@@ -109,8 +109,8 @@ export function summarizeSales(sales: readonly Sale[]): DaySummary {
 }
 
 /**
- * Arma el ticket de una venta ya registrada. El backend no guarda el pago, así que el
- * ticket no trae "recibido" ni "cambio" (`sinDetallePago`).
+ * Arma el ticket de una venta ya registrada. El ticket no trae "recibido" ni "cambio"
+ * (`sinDetallePago`), pero sí el documento y los datos DTE guardados, igual que el original (HU-36).
  */
 export function saleToReceipt(sale: Sale): Receipt {
   // Desglose del IVA siempre el guardado con la venta, nunca la configuración vigente de la empresa.
@@ -121,7 +121,7 @@ export function saleToReceipt(sale: Sale): Receipt {
     fecha: new Date(sale.fecha),
     cajero: sale.usuario ?? '—',
     caja: sale.caja ?? '',
-    documento: 'TICKET',
+    documento: saleDocument(sale),
     metodo: 'EFECTIVO',
     lineas,
     subtotal: Number(sale.subtotal),
@@ -131,7 +131,17 @@ export function saleToReceipt(sale: Sale): Receipt {
     recibido: 0,
     cambio: 0,
     tarjeta: null,
+    numeroControl: sale.numeroControl,
+    codigoGeneracion: sale.codigoGeneracion,
+    receptor: sale.receptorNombre,
+    totalLetras: sale.totalLetras,
     sinDetallePago: true,
     anulada: isCancelled(sale),
   };
+}
+
+/** 03 es crédito fiscal; 01 a nombre de alguien es factura y sin receptor, ticket (como al cobrar). */
+export function saleDocument(sale: Sale): DocumentKind {
+  if (sale.tipoDte === '03') return 'CCF';
+  return sale.receptorNombre?.trim() ? 'FACTURA' : 'TICKET';
 }

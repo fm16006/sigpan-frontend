@@ -98,6 +98,8 @@ export interface Receipt {
   readonly numeroControl?: string | null;
   readonly codigoGeneracion?: string | null;
   readonly receptor?: string | null;
+  /** Total en letras que guardó el servidor ("DOCE 50/100 DÓLARES"). */
+  readonly totalLetras?: string | null;
   /** Venta ya registrada de la que no se guardó el pago: el ticket omite recibido y cambio. */
   readonly sinDetallePago?: boolean;
   /** Venta anulada: el ticket lo dice. */

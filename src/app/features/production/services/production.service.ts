@@ -52,6 +52,16 @@ export class ProductionService {
     return this.api.url(API_ENDPOINTS.formulas.explosion(productoId), { cantidad });
   }
 
+  /** Vista previa de una orden ya confirmada: la versión de su receta, no la de hoy (DEF-23). */
+  orderExplosionUrl(productionId: Id): string {
+    return this.api.url(API_ENDPOINTS.producciones.explosion(productionId));
+  }
+
+  /** Costo de una orden con la versión de su receta (solo administración y jefe de producción). */
+  orderCostUrl(productionId: Id): string {
+    return this.api.url(API_ENDPOINTS.producciones.costo(productionId));
+  }
+
   feasibilityUrl(formulaId: Id, cantidad: number): string {
     return this.api.url(API_ENDPOINTS.producciones.factibilidad, { formulaId, cantidad });
   }
