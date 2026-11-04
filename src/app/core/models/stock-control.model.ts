@@ -99,6 +99,7 @@ export const MOVEMENT_CLASS_LABEL: Readonly<Record<string, string>> = {
   COMPRA: 'Compra',
   PRODUCCION: 'Producción',
   MERMA: 'Merma',
+  MERMA_PROCESO: 'Merma de proceso',
   AJUSTE: 'Ajuste',
   TOMA_FISICA: 'Toma física',
   VENTA: 'Venta',
