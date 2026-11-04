@@ -23,6 +23,7 @@ export class PointOfSaleHub {
   protected readonly crumbs = [{ label: 'Ventas' }, { label: 'Punto de venta' }];
   protected readonly tabs: readonly DetailTab[] = [
     { label: 'Cajas', path: '' },
+    { label: 'Ventas y pedidos', path: 'ventas' },
     { label: 'Cortes', path: 'cortes' },
   ];
   /** El auditor consulta; solo quien cobra entra a la caja. */

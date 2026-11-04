@@ -172,6 +172,8 @@ export const API_ENDPOINTS = {
     quote: '/ventas/cotizar',
     anular: (id: Id) => `/ventas/${id}/anular`,
     consulta: (id: Id) => `/ventas/${id}/consulta`,
+    /** HU-69: historial paginado de ventas y pedidos (desde, hasta, tipo, estado, cajeroId, cajaId, cliente, numero). */
+    history: '/ventas/historial',
     byClient: '/ventas/cliente',
     findClient: '/ventas/cliente/buscar',
     productionSuggestion: '/ventas/sugerencia-produccion',

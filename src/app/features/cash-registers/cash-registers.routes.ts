@@ -13,6 +13,12 @@ export const CASH_REGISTERS_ROUTES: Routes = [
         title: 'Punto de venta · Cajas',
       },
       {
+        path: 'ventas',
+        loadComponent: () =>
+          import('./pages/sales-history/sales-history').then((m) => m.SalesHistory),
+        title: 'Punto de venta · Ventas y pedidos',
+      },
+      {
         path: 'cortes',
         loadComponent: () =>
           import('./pages/shift-history/shift-history').then((m) => m.ShiftHistory),

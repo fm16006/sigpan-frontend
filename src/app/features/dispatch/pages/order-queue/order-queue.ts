@@ -57,7 +57,8 @@ export class OrderQueue {
   protected readonly showClosed = signal(false);
   protected readonly busyId = signal<Id | null>(null);
 
-  protected readonly queue = httpResource<Sale[]>(() => this.orders.queueUrl(), {
+  // DEF-19: la cola trae solo lo que está en curso; los cerrados se piden al activar el interruptor.
+  protected readonly queue = httpResource<Sale[]>(() => this.orders.queueUrl(!this.showClosed()), {
     defaultValue: [],
   });
 
