@@ -260,6 +260,8 @@ export function ruleBadge(regla: string | null | undefined): string {
       return 'Combo';
     case 'ESCALA':
       return 'Mayoreo';
+    case 'LIQUIDACION':
+      return 'Liquidación';
     default:
       return regla ? 'Oferta' : '';
   }

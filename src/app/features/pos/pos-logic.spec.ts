@@ -145,6 +145,7 @@ describe('ruleBadge', () => {
     expect(ruleBadge('PROMOCION:3')).toBe('Promo');
     expect(ruleBadge('COMBO:1')).toBe('Combo');
     expect(ruleBadge('ESCALA:7')).toBe('Mayoreo');
+    expect(ruleBadge('LIQUIDACION:1')).toBe('Liquidación');
     expect(ruleBadge(null)).toBe('');
   });
 });
