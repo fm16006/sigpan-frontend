@@ -94,7 +94,7 @@
             <button
               type="button"
               class="btn btn-primary btn-lg mt-1 h-16 justify-between text-xl"
-              [disabled]="lines().length === 0 || quotePending() || !!quote.error()"
+              [disabled]="!canCharge()"
               (click)="charge()"
             >
               Cobrar
@@ -103,7 +103,7 @@
             <button
               type="button"
               class="btn btn-outline btn-sm"
-              [disabled]="lines().length === 0 || quotePending() || !!quote.error()"
+              [disabled]="!canCharge()"
               (click)="openEncargo()"
             >
               Registrar como encargo
@@ -326,7 +326,7 @@
           <app-icon name="chevron" [size]="18" class="-rotate-90 text-base-content/60" />
           <span
             class="truncate font-semibold tabular-nums"
-            [class.opacity-50]="quotePending()"
+            [class.opacity-50]="quoteStale()"
           >
             {{ itemCount() }} {{ itemCount() === 1 ? 'artículo' : 'artículos' }} ·
             {{ total() | money }}
@@ -335,7 +335,7 @@
         <button
           type="button"
           class="btn btn-primary h-12 px-7 text-base"
-          [disabled]="lines().length === 0 || quotePending() || !!quote.error()"
+          [disabled]="!canCharge()"
           (click)="charge()"
         >
           Cobrar
@@ -398,7 +398,7 @@
               <button
                 type="button"
                 class="btn btn-primary btn-lg mt-1 h-14 text-lg"
-                [disabled]="lines().length === 0 || quotePending() || !!quote.error()"
+                [disabled]="!canCharge()"
                 (click)="charge()"
               >
                 Cobrar
@@ -504,7 +504,7 @@
     <span class="tabular-nums">−{{ descuento() | money }}</span>
   </div>
   <app-iva-line [tax]="tax()" />
-  <div class="flex items-baseline justify-between pt-1" [class.opacity-50]="quotePending()">
+  <div class="flex items-baseline justify-between pt-1" [class.opacity-50]="quoteStale()">
     <span class="font-semibold">Total</span>
     <span class="font-serif text-4xl font-semibold tabular-nums">{{ total() | money }}</span>
   </div>
@@ -659,7 +659,7 @@
           <button
             type="button"
             class="btn btn-ghost btn-sm mt-1 w-full justify-start"
-            [disabled]="lines().length === 0 || quotePending() || !!quote.error()"
+            [disabled]="!canCharge()"
             (click)="openEncargo()"
           >
             Registrar como encargo

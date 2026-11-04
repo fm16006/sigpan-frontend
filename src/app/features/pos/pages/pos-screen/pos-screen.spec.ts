@@ -228,4 +228,25 @@ describe('Pantalla del punto de venta', () => {
     expect(badges).toEqual(['Agotado', 'Combo', 'Mayoreo']);
     expect(card.textContent).toContain('En combo Desayuno a $1.50 · Desde 12 u. a $0.40 c/u');
   });
+
+  it('HU-32: mientras se recotiza conserva el último total (en gris), no $0.00', async () => {
+    const host = await render();
+    tile(host, 'Pan francés').click();
+    await afterDebounce();
+    expect(totalText(host).textContent).toMatch(/0[.,]50/);
+
+    tile(host, 'Pan francés').click();
+    const held = await afterDebounce(false);
+
+    // A los 170 ms ya salió la cotización nueva (debounce de 150 ms) y todavía no llega.
+    expect(held).toHaveLength(1);
+    expect(totalText(host).textContent).toMatch(/0[.,]50/);
+    expect(totalText(host).textContent).not.toMatch(/0[.,]00/);
+    expect(totalText(host).classList).toContain('opacity-50');
+
+    held[0].flush(quoteFor(held[0].request.body));
+    await settle();
+    expect(totalText(host).textContent).toMatch(/1[.,]00/);
+    expect(totalText(host).classList).not.toContain('opacity-50');
+  });
 });

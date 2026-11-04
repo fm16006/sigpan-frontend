@@ -8,6 +8,7 @@ import {
   computed,
   effect,
   inject,
+  linkedSignal,
   signal,
   untracked,
   viewChild,
@@ -73,8 +74,10 @@ type PosMode = 'apertura' | 'venta' | 'cierre' | 'pedidos';
 const POS_PATH = '/backoffice/pos';
 const PANEL_PATH = '/backoffice';
 const ONLINE_ORDERS_PATH = '/backoffice/orders';
-/** Existencias al día sin recargar la página, igual que la cola de despacho. */
+/** Existencias y ofertas al día sin recargar la página, igual que la cola de despacho. */
 const CATALOG_REFRESH_MS = 30_000;
+/** Pausa del ticket antes de cotizar: la misma que el carrito de la tienda (HU-32). */
+const QUOTE_DEBOUNCE_MS = 150;
 const TIME_FORMAT = new Intl.DateTimeFormat('es-SV', { hour: 'numeric', minute: '2-digit' });
 const SHIFT_TIME_FORMAT = new Intl.DateTimeFormat('es-SV', {
   hour: '2-digit',
@@ -233,7 +236,7 @@ export class PosScreen {
   private readonly quoteLines = computed(() =>
     this.ticket().map((line) => ({ productoId: line.product.id, cantidad: line.quantity })),
   );
-  private readonly debouncedLines = debouncedSignal(this.quoteLines, 250);
+  private readonly debouncedLines = debouncedSignal(this.quoteLines, QUOTE_DEBOUNCE_MS);
 
   protected readonly quote = httpResource<Quote>((): HttpResourceRequest | undefined => {
     const lineas = this.debouncedLines();
@@ -241,7 +244,29 @@ export class PosScreen {
   });
   /** El ticket cambió y la cotización todavía no lo refleja: no se cobra en ese lapso. */
   protected readonly quotePending = computed(() => this.quoteLines() !== this.debouncedLines());
-  private readonly quoteValue = computed(() => valueOr(this.quote, undefined));
+  /** Los importes a la vista todavía no son los de este ticket (se muestran en gris y no se cobra). */
+  protected readonly quoteStale = computed(() => this.quotePending() || this.quote.isLoading());
+  protected readonly canCharge = computed(
+    () => this.ticket().length > 0 && !this.quoteStale() && !this.quote.error(),
+  );
+  /**
+   * Última cotización del pedido activo. Mientras llega la del ticket nuevo se conserva la anterior
+   * (en gris) en vez de caer a $0.00 (HU-32). Sin líneas, con error o al cambiar de pedido no se conserva.
+   */
+  private readonly quoteValue = linkedSignal({
+    source: () => ({
+      value: valueOr(this.quote, undefined),
+      order: this.orders.activoId(),
+      keep: this.ticket().length > 0 && !this.quote.error(),
+    }),
+    computation: (now, previous): Quote | undefined => {
+      if (!now.keep) {
+        return undefined;
+      }
+      const sameOrder = previous?.source.order === now.order;
+      return now.value ?? (sameOrder ? previous?.value : undefined);
+    },
+  });
   protected readonly quoteByProduct = computed(
     () => new Map((this.quoteValue()?.lineas ?? []).map((line) => [line.productoId, line] as const)),
   );
@@ -673,14 +698,14 @@ export class PosScreen {
   }
 
   protected charge(): void {
-    if (this.ticket().length > 0 && !this.quotePending() && !this.quote.error()) {
+    if (this.canCharge()) {
       this.sheetOpen.set(false);
       this.checkoutOpen.set(true);
     }
   }
 
   protected openEncargo(): void {
-    if (this.ticket().length > 0 && !this.quotePending() && !this.quote.error()) {
+    if (this.canCharge()) {
       this.sheetOpen.set(false);
       this.menuOpen.set(false);
       this.encargoOpen.set(true);
