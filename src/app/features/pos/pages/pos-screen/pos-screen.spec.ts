@@ -249,4 +249,31 @@ describe('Pantalla del punto de venta', () => {
     expect(totalText(host).textContent).toMatch(/1[.,]00/);
     expect(totalText(host).classList).not.toContain('opacity-50');
   });
+
+  it('HU-33: muestra la sugerencia de combo en el ticket y su botón agrega lo que falta', async () => {
+    suggestions = [
+      {
+        tipo: 'COMBO',
+        regla: 'COMBO:4',
+        productoId: 2,
+        producto: 'Café',
+        faltan: 1,
+        precio: 1.5,
+        mensaje: 'Agregá 1 Café y completás el combo Desayuno ($1.50).',
+      },
+    ];
+    const host = await render();
+    tile(host, 'Pan francés').click();
+    await afterDebounce();
+
+    const list = host.querySelector('ul[aria-label="Sugerencias de ahorro"]')!;
+    expect(list.textContent).toContain('Agregá 1 Café y completás el combo Desayuno ($1.50).');
+
+    suggestions = [];
+    list.querySelector<HTMLButtonElement>('button[aria-label="Agregar 1 Café"]')!.click();
+    await afterDebounce();
+
+    expect(ticketNames(host)).toEqual(['Pan francés', 'Café']);
+    expect(host.querySelector('ul[aria-label="Sugerencias de ahorro"]')).toBeNull();
+  });
 });

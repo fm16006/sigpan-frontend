@@ -489,6 +489,25 @@
           </li>
         }
       </ul>
+      <!-- HU-33: lo que falta para completar un combo, con el botón para agregarlo (como en el carrito). -->
+      @if (comboSuggestions().length > 0) {
+        <ul class="mb-2 grid gap-1.5" aria-label="Sugerencias de ahorro">
+          @for (s of comboSuggestions(); track s.regla) {
+            <li class="flex items-center justify-between gap-2 rounded-field bg-success/10 px-2.5 py-1.5 text-xs">
+              <span>{{ s.mensaje }}</span>
+              <button
+                type="button"
+                class="btn btn-xs shrink-0"
+                [disabled]="quoteStale()"
+                [attr.aria-label]="'Agregar ' + s.faltan + ' ' + s.producto"
+                (click)="applySuggestion(s)"
+              >
+                Agregar
+              </button>
+            </li>
+          }
+        </ul>
+      }
     }
   </div>
 </ng-template>

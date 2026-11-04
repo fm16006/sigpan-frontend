@@ -26,7 +26,7 @@ import { OfferBadge } from '../../../../shared/ui/offer-badge/offer-badge';
 import { OrderService } from '../../../storefront/services/order.service';
 import { PosCombo } from '../../../../core/models/combo.model';
 import { PriceScale } from '../../../../core/models/price-scale.model';
-import { Quote, QuoteLine, ruleLabel } from '../../../../core/models/quote.model';
+import { Quote, QuoteLine, QuoteSuggestion, ruleLabel } from '../../../../core/models/quote.model';
 import { QuoteService } from '../../../../core/services/quote.service';
 import { debouncedSignal } from '../../../../core/utils/debounced-signal';
 import { Auth } from '../../../../core/services/auth';
@@ -278,6 +278,10 @@ export class PosScreen {
   /** Desglose del IVA de la cotización vigente, tal como lo calculó el servidor. */
   protected readonly tax = computed(() => this.quoteValue() ?? null);
   protected readonly ruleLabel = ruleLabel;
+  /** HU-33: combos a los que les falta un producto, como en el carrito. Los tramos los avisa cada línea. */
+  protected readonly comboSuggestions = computed(() =>
+    (this.quoteValue()?.sugerencias ?? []).filter((suggestion) => suggestion.tipo === 'COMBO'),
+  );
   protected readonly itemCount = computed(() =>
     this.ticket().reduce((sum, line) => sum + line.quantity, 0),
   );
@@ -495,6 +499,16 @@ export class PosScreen {
     }
     this.search.set('');
     this.focusSearch();
+  }
+
+  /** "Agregar" de una sugerencia de combo: suma lo que falta, con los mismos controles de existencia. */
+  protected applySuggestion(suggestion: QuoteSuggestion): void {
+    const product = this.catalogItems().find((item) => item.id === suggestion.productoId);
+    if (!product) {
+      this.notifications.error(`${suggestion.producto} no está habilitado en el punto de venta.`);
+      return;
+    }
+    this.add(product, suggestion.faltan);
   }
 
   protected focusSearch(): void {
