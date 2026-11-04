@@ -381,6 +381,14 @@ export class PosScreen {
     return offers?.ofertas.length ? offers : undefined;
   }
 
+  /** Texto de los combos y tramos del producto, visible en la tarjeta como en la tienda (HU-30). */
+  protected offerNotes(product: CatalogProduct): string {
+    return (this.offersOf(product)?.ofertas ?? [])
+      .filter((offer) => offer.tipo === 'COMBO' || offer.tipo === 'ESCALA')
+      .map((offer) => offer.etiqueta)
+      .join(' · ');
+  }
+
   /** Regla que la última cotización aplicó al producto, si no tiene una oferta de catálogo. */
   protected ticketBadge(product: CatalogProduct): string {
     return ruleBadge(this.quoteByProduct().get(product.id)?.regla);

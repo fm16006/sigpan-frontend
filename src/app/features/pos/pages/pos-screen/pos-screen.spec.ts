@@ -208,4 +208,24 @@ describe('Pantalla del punto de venta', () => {
 
     expect(tile(host, 'Pan francés').textContent).toContain('Liquidación');
   });
+
+  it('HU-30: un producto agotado muestra «Agotado» y su oferta, con el texto del combo a la vista', async () => {
+    offers = [
+      {
+        productoId: 3,
+        precioOriginal: 0.5,
+        precioOferta: null,
+        ofertas: [
+          { tipo: 'COMBO', regla: 'COMBO:4', etiqueta: 'En combo Desayuno a $1.50', precio: 1.5 },
+          { tipo: 'ESCALA', regla: 'ESCALA:9', etiqueta: 'Desde 12 u. a $0.40 c/u', precio: 0.4 },
+        ],
+      },
+    ];
+    const host = await render();
+
+    const card = tile(host, 'Concha');
+    const badges = [...card.querySelectorAll('.badge')].map((b) => b.textContent?.trim());
+    expect(badges).toEqual(['Agotado', 'Combo', 'Mayoreo']);
+    expect(card.textContent).toContain('En combo Desayuno a $1.50 · Desde 12 u. a $0.40 c/u');
+  });
 });
