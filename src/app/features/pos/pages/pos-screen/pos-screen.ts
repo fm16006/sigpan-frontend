@@ -334,6 +334,8 @@ export class PosScreen {
       const refresh = setInterval(() => {
         this.catalog.reload();
         this.comboCatalog.reload();
+        // HU-28: una liquidación nueva (o que empezó su horario) aparece sin recargar la página.
+        this.offers.load();
       }, CATALOG_REFRESH_MS);
       this.destroyRef.onDestroy(() => {
         clearInterval(clock);
@@ -683,6 +685,7 @@ export class PosScreen {
     // La venta descontó inventario: se recarga para que el POS vea la existencia nueva.
     this.catalog.reload();
     this.comboCatalog.reload();
+    this.offers.load();
     // Pedido cobrado: sale de la lista y el siguiente queda activo (o uno vacío si era el único).
     this.orders.quitar(this.activeOrderId());
     this.selectedId.set(null);
