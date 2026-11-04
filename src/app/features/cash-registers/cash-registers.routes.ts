@@ -4,7 +4,14 @@ export const CASH_REGISTERS_ROUTES: Routes = [
   {
     path: '',
     loadComponent: () =>
-      import('./pages/register-board/register-board').then((m) => m.RegisterBoard),
-    title: 'Cajas',
+      import('./pages/point-of-sale-hub/point-of-sale-hub').then((m) => m.PointOfSaleHub),
+    children: [
+      {
+        path: '',
+        loadComponent: () =>
+          import('./pages/register-board/register-board').then((m) => m.RegisterBoard),
+        title: 'Punto de venta · Cajas',
+      },
+    ],
   },
 ];
