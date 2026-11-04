@@ -71,6 +71,11 @@ export interface Sale {
   /** HU-37 */
   readonly motivoAnulacion?: string | null;
   readonly fechaAnulacion?: string | null;
+  /** HU-69: quién anuló y quién autorizó; solo en la consulta de una venta. */
+  readonly anuladaPor?: string | null;
+  readonly autorizadaPor?: string | null;
+  /** HU-68: turno de caja de la venta de mostrador. */
+  readonly turnoId?: Id | null;
 }
 
 export type PaymentMethod = 'EFECTIVO' | 'TARJETA' | 'MIXTO';
@@ -157,6 +162,26 @@ export interface ShiftHandover {
   readonly nota: string | null;
 }
 
+/** HU-69: una fila de GET /ventas/historial (sin líneas; el detalle sale de /ventas/{id}/consulta). */
+export interface SaleSummary {
+  readonly id: Id;
+  readonly tipo: 'MOSTRADOR' | 'EN_LINEA' | 'ENCARGO';
+  readonly estado: string;
+  readonly fecha: string;
+  readonly total: number;
+  readonly metodoPago: PaymentMethod | null;
+  readonly cajaId: Id | null;
+  readonly caja: string | null;
+  readonly turnoId: Id | null;
+  /** Quien cobró: solo en mostrador. */
+  readonly cajero: string | null;
+  /** A nombre de quien: solo en pedidos y encargos. */
+  readonly cliente: string | null;
+  readonly modalidad: DeliveryMode | null;
+  readonly encargo: boolean | null;
+  readonly numeroControl: string | null;
+}
+
 /** HU-68: GET /turnos/cajeros */
 export interface CashierOption {
   readonly id: number;
@@ -193,6 +218,7 @@ export const ORDER_STATUS_LABELS: Readonly<Partial<Record<string, string>>> = {
   ENTREGADO: 'Entregado',
   CANCELADO: 'Cancelado',
   COMPLETADA: 'Completada',
+  ANULADA: 'Anulada',
 };
 
 export const ORDER_STATUS_BADGE: Readonly<Partial<Record<string, string>>> = {

@@ -65,15 +65,18 @@
     @if (occupied(); as status) {
       <div role="alert" class="alert alert-error text-sm">
         <span>
-          La {{ status.caja }} está ocupada por <strong>{{ status.usuario }}</strong>
-          @if (occupiedSince(); as since) {
-            desde {{ since }}
-          }
-          (turno #{{ status.turnoId }}). Tiene que cerrarlo esa persona, o la administración desde
-          Ventas → Cajas.
+          No podés abrir la {{ status.caja }}: tiene el turno abierto de
+          <strong>{{ status.usuario }}</strong>.
         </span>
         <button type="button" class="btn btn-sm" (click)="statuses.reload()">Volver a revisar</button>
       </div>
+      <app-register-card
+        class="shadow-none"
+        [status]="status"
+        [canManage]="canManage"
+        (handover)="handover.set($event)"
+        (close)="closingShift.set($event)"
+      />
     }
 
     <div class="grid grid-cols-3 gap-3">
@@ -115,6 +118,8 @@
       </fieldset>
     }
 
+    <!-- Con la caja ocupada no hay fondo que contar: primero se destraba. -->
+    @if (!occupied()) {
     <fieldset class="grid gap-2">
       <legend
         class="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.09em] text-base-content/55"
@@ -183,6 +188,7 @@
     <button type="button" class="btn btn-primary btn-lg" [disabled]="!canOpen() || opening()" (click)="open()">
       Abrir turno con {{ fondo() | money }}
     </button>
+    }
   </section>
 
   <aside class="flex min-w-0 flex-col gap-4">
@@ -234,3 +240,11 @@
     </section>
   </aside>
 </main>
+
+<app-cashier-handover
+  [open]="!!handover()"
+  [shift]="handover()"
+  (closed)="handover.set(null)"
+  (handedOver)="registerChanged()"
+/>
+<app-close-shift-drawer [shift]="closingShift()" (closed)="closingShift.set(null)" (done)="registerChanged()" />

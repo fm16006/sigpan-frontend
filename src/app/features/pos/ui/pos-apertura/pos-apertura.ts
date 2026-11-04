@@ -5,8 +5,11 @@ import { ApiClient } from '../../../../core/http/api-client';
 import { valueOr } from '../../../../core/http/resource-value';
 import { Id } from '../../../../core/models/api.model';
 import { Register, RegisterBranch } from '../../../../core/models/branch.model';
-import { RegisterStatus } from '../../../../core/models/order.model';
-import { occupiedSince } from '../../../cash-registers/register-status';
+import { CashShift, RegisterStatus } from '../../../../core/models/order.model';
+import { Auth } from '../../../../core/services/auth';
+import { CashierHandover } from '../../../cash-registers/ui/cashier-handover/cashier-handover';
+import { CloseShiftDrawer } from '../../../cash-registers/ui/close-shift-drawer/close-shift-drawer';
+import { RegisterCard } from '../../../cash-registers/ui/register-card/register-card';
 import { MoneyPipe } from '../../../../shared/pipes/money.pipe';
 import { StatusChip } from '../../../../shared/ui/status-chip/status-chip';
 import { APERTURA_DENOMINATIONS, aperturaTotal, denominationLabel } from '../../pos-logic';
@@ -29,7 +32,7 @@ const WHEN_FORMAT = new Intl.DateTimeFormat('es-SV', {
  */
 @Component({
   selector: 'app-pos-apertura',
-  imports: [MoneyPipe, StatusChip],
+  imports: [MoneyPipe, StatusChip, RegisterCard, CashierHandover, CloseShiftDrawer],
   templateUrl: './pos-apertura.html',
   host: { class: 'flex min-h-0 flex-1 flex-col overflow-y-auto bg-base-200' },
 })
@@ -37,6 +40,7 @@ export class PosApertura {
   private readonly register = inject(CashRegisterStore);
   private readonly registerService = inject(RegisterService);
   private readonly api = inject(ApiClient);
+  private readonly auth = inject(Auth);
 
   readonly cashier = input('');
   /** El usuario tiene enlaces del panel: se muestra "Ir al panel". */
@@ -81,10 +85,10 @@ export class PosApertura {
     const id = this.selectedId();
     return valueOr(this.statuses, []).find((status) => status.cajaId === id && status.ocupada) ?? null;
   });
-  protected readonly occupiedSince = computed(() => {
-    const status = this.occupied();
-    return status?.apertura ? occupiedSince(status.apertura).label : null;
-  });
+  /** Administración destraba la caja desde aquí: la pasa a otro cajero (o a sí misma) o la cierra. */
+  protected readonly canManage = this.auth.hasAnyRole(['ADMINISTRADOR']);
+  protected readonly handover = signal<CashShift | null>(null);
+  protected readonly closingShift = signal<CashShift | null>(null);
   protected readonly canOpen = computed(
     () => this.sourceValue() !== undefined && this.selected() !== null && this.occupied() === null,
   );
@@ -107,6 +111,17 @@ export class PosApertura {
 
   protected whenOf(iso: string): string {
     return WHEN_FORMAT.format(new Date(iso));
+  }
+
+  /**
+   * La caja cambió de manos o se cerró: se vuelve a leer quién la tiene y el turno propio (si la
+   * administración se la pasó a sí misma, el punto de venta pasa a vender).
+   */
+  protected registerChanged(): void {
+    this.handover.set(null);
+    this.closingShift.set(null);
+    this.statuses.reload();
+    this.register.refrescar();
   }
 
   protected open(): void {

@@ -55,7 +55,7 @@ export const routes: Routes = [
           import('./features/dispatch/dispatch.routes').then((m) => m.DISPATCH_ROUTES),
       },
       {
-        path: 'cash-registers',
+        path: 'point-of-sale',
         canActivate: [roleGuard(['ADMINISTRADOR', 'AUDITOR'])],
         loadChildren: () =>
           import('./features/cash-registers/cash-registers.routes').then((m) => m.CASH_REGISTERS_ROUTES),

@@ -31,6 +31,23 @@ export function cashDifference(counted: number, expected: number): number {
   return Math.round((counted - expected) * 100) / 100;
 }
 
+/** Fecha local (AAAA-MM-DD) de hace `days` días, para el rango por defecto de los cortes. */
+export function isoDaysAgo(days: number, now: Date = new Date()): string {
+  const date = new Date(now);
+  date.setDate(now.getDate() - days);
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
+/** Cómo se lee la diferencia de un corte: faltante, sobrante o cuadra. */
+export function differenceLabel(difference: number | null): { text: string; tone: 'bad' | 'warn' | 'ok' } {
+  const value = Number(difference ?? 0);
+  if (value < 0) return { text: 'Faltante', tone: 'bad' };
+  if (value > 0) return { text: 'Sobrante', tone: 'warn' };
+  return { text: 'Cuadra', tone: 'ok' };
+}
+
 /** Cuántas cajas están ocupadas y cuántas libres. */
 export function registerCounts(list: readonly RegisterStatus[]): { busy: number; free: number } {
   const busy = list.filter((item) => item.ocupada).length;
