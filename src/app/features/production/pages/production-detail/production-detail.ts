@@ -26,6 +26,7 @@ import {
   canTransition,
   orderCode,
   orderUnits,
+  producedUnits,
   ProductionDetailLine,
   progressSteps,
   stepClass,
@@ -112,9 +113,10 @@ export class ProductionDetail {
     const order = this.current();
     return order ? this.service.formulaUrl(order.formulaId) : undefined;
   });
+  /** DEF-23: el costo con la versión de la receta con que se confirmó la orden. */
   private readonly cost = httpResource<FormulaCost>(() => {
     const order = this.current();
-    return order && this.canManage ? this.service.costUrl(order.formulaId) : undefined;
+    return order && this.canManage ? this.service.orderCostUrl(order.id) : undefined;
   });
   private readonly details = httpResource<ProductionDetailLine[]>(
     () => this.service.detailsUrl(Number(this.id())),
@@ -129,17 +131,24 @@ export class ProductionDetail {
     return !!order && order.estado !== 'TERMINADO' && order.estado !== 'CANCELADO';
   });
 
+  /** Unidades planificadas, con la versión de la receta con que se confirmó (DEF-23). */
   protected readonly units = computed(() => {
     const order = this.current();
+    if (!order) return null;
     const formula = this.formula.hasValue() ? this.formula.value() : undefined;
-    return order && formula ? orderUnits(order, [formula]) : null;
+    return orderUnits(order, formula ? [formula] : []);
   });
 
-  /** Vista previa de insumos mientras la orden sigue abierta. */
+  /** HU-21: lo que entró al inventario en una orden terminada. */
+  protected readonly produced = computed(() => {
+    const order = this.current();
+    return order ? producedUnits(order, this.units()) : null;
+  });
+
+  /** Vista previa de insumos mientras la orden sigue abierta, con la versión de su receta (DEF-23). */
   protected readonly preview = httpResource<MaterialExplosion>(() => {
     const order = this.current();
-    const units = this.units();
-    return order && this.isOpen() && units ? this.service.explosionUrl(order.productoId, units) : undefined;
+    return order && this.isOpen() ? this.service.orderExplosionUrl(order.id) : undefined;
   });
   protected readonly previewValue = computed(() =>
     this.preview.hasValue() ? this.preview.value() : null,
@@ -160,7 +169,7 @@ export class ProductionDetail {
   });
 
   protected readonly costValue = computed(() => (this.cost.hasValue() ? this.cost.value() : null));
-  /** Costo estimado con el costo actual de la receta: el backend no guarda el costo real de la orden. */
+  /** Costo estimado con la receta de la orden y el costo actual de los insumos: el backend no guarda el real. */
   protected readonly estimatedCost = computed(() => {
     const order = this.current();
     const cost = this.costValue();
@@ -209,12 +218,12 @@ export class ProductionDetail {
     if (!action || !order) return null;
     const config = ACTIONS[action];
     const subject = `la orden ${this.code()} de ${order.producto}`;
-    const units = this.units();
+    const units = this.obtained() ?? this.units();
     const message =
       action === 'PRODUCION'
         ? `Vas a iniciar ${subject}. Pasa a En producción y todavía no se mueve el inventario.`
         : action === 'TERMINADO'
-          ? `Vas a terminar ${subject}. Se descargan los insumos de la receta${units ? ` y entran ${units} unidades al inventario` : ' y entra el producto al inventario'}. No se puede deshacer.`
+          ? `Vas a terminar ${subject}. Se descargan los insumos de la receta${order.formulaVersion ? ` (versión ${order.formulaVersion})` : ''}${units != null ? ` y entran ${units} unidades al inventario` : ' y entra el producto al inventario'}. No se puede deshacer.`
           : `Vas a cancelar ${subject}. No se mueve el inventario y la orden no se puede reabrir.`;
     return { ...config, message };
   });

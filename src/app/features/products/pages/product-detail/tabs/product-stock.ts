@@ -4,6 +4,7 @@ import { httpResource } from '@angular/common/http';
 import { API_ENDPOINTS } from '../../../../../core/constants/api-endpoints';
 import { ApiClient } from '../../../../../core/http/api-client';
 import { Id } from '../../../../../core/models/api.model';
+import { MOVEMENT_CLASS_LABEL } from '../../../../../core/models/stock-control.model';
 import { MoneyPipe } from '../../../../../shared/pipes/money.pipe';
 import { Icon } from '../../../../../shared/ui/icon/icon';
 import { StatCard } from '../../../../../shared/ui/stat-card/stat-card';
@@ -64,7 +65,10 @@ export class ProductStock {
     return movement.tipo === 'ENTRADA' ? 'ok' : 'warn';
   }
 
+  /** La clase del movimiento si la tiene (Producción, Merma de proceso...); si no, entrada o salida. */
   protected label(movement: ProductMovement): string {
-    return movement.tipo === 'ENTRADA' ? 'Entrada' : 'Salida';
+    return (
+      (movement.clase && MOVEMENT_CLASS_LABEL[movement.clase]) || (movement.tipo === 'ENTRADA' ? 'Entrada' : 'Salida')
+    );
   }
 }

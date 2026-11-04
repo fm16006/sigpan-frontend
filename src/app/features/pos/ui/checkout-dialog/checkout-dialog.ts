@@ -128,6 +128,10 @@ export class CheckoutDialog {
   protected readonly receptorNombre = signal('');
   protected readonly receptorNit = signal('');
   protected readonly receptorNrc = signal('');
+  /** Opcionales del crédito fiscal (esquema DTE): dirección, teléfono y actividad económica. */
+  protected readonly receptorDireccion = signal('');
+  protected readonly receptorTelefono = signal('');
+  protected readonly receptorActividad = signal('');
   protected readonly error = signal<string | null>(null);
   protected readonly receipt = signal<Receipt | null>(null);
   protected readonly printed = signal<readonly string[]>([]);
@@ -403,6 +407,9 @@ export class CheckoutDialog {
         receptorNombre: nombre,
         receptorNumDocumento: this.receptorNit().trim(),
         receptorNrc: this.receptorNrc().trim(),
+        receptorDireccion: this.receptorDireccion().trim() || undefined,
+        receptorTelefono: this.receptorTelefono().trim() || undefined,
+        receptorDescActividad: this.receptorActividad().trim() || undefined,
       };
     }
     if (this.document() === 'FACTURA') {
@@ -467,6 +474,7 @@ export class CheckoutDialog {
       numeroControl: sale.numeroControl,
       codigoGeneracion: sale.codigoGeneracion,
       receptor: sale.receptorNombre,
+      totalLetras: sale.totalLetras,
     };
   }
 }

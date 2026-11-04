@@ -74,6 +74,7 @@ export function formatReceipt(
     ),
     rule,
     ...(creditNote ? creditNoteTotals(receipt, row) : consumerTotals(receipt, row)),
+    ...(receipt.totalLetras ? wrapWords(`SON: ${receipt.totalLetras}`, width) : []),
     rule,
     ...withRule(paymentRows(receipt, row), rule),
     ...(receipt.anulada ? [...center('*** VENTA ANULADA ***'), rule] : []),

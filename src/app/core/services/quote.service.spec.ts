@@ -72,6 +72,7 @@ describe('QuoteService', () => {
     expect(ruleLabel('PROMOCION:5')).toBe('Promoción #5');
     expect(ruleLabel('COMBO:2')).toBe('Combo #2');
     expect(ruleLabel('ESCALA:9')).toBe('Precio por mayoreo');
+    expect(ruleLabel('LIQUIDACION:1')).toBe('Liquidación #1');
     expect(ruleLabel(null)).toBe('');
   });
 });

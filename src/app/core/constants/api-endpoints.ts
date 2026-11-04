@@ -94,6 +94,10 @@ export const API_ENDPOINTS = {
     byId: (id: Id) => `/producciones/${id}`,
     status: (id: Id) => `/producciones/${id}/estado`,
     factibilidad: '/producciones/factibilidad',
+    /** Insumos de la orden con la versión de la receta con que se confirmó (DEF-23). */
+    explosion: (id: Id) => `/producciones/${id}/explosion`,
+    /** Costo de la orden con esa misma versión y el costo actual de los insumos (DEF-23). */
+    costo: (id: Id) => `/producciones/${id}/costo`,
   },
   produccionDetalle: {
     byProduccion: (id: Id) => `/produccion-detalle/produccion/${id}`,

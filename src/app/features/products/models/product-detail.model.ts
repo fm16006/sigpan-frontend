@@ -24,4 +24,6 @@ export interface ProductMovement {
   readonly motivo: string | null;
   readonly costoInicial: number | null;
   readonly costoFinal: number | null;
+  /** HU-21: PRODUCCION o MERMA_PROCESO si lo movió una orden; MERMA o AJUSTE si fue manual. */
+  readonly clase?: string | null;
 }

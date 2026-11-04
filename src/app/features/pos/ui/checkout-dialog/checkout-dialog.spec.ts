@@ -8,6 +8,9 @@ import { CatalogProduct } from '../../../../core/models/catalog.model';
 import { Sale } from '../../../../core/models/order.model';
 import { Quote } from '../../../../core/models/quote.model';
 import { errorInterceptor } from '../../../../core/interceptors/error-interceptor';
+import { CompanyStore } from '../../../../core/services/company-store';
+import { saleToReceipt } from '../../pos-pedidos-logic';
+import { formatReceipt, RECEIPT_WIDTH } from '../../receipt/receipt-format';
 import { PosLine } from '../../models/checkout.model';
 import { CardTerminal } from '../../services/card-terminal';
 import { TicketPrinter } from '../../services/ticket-printer';
@@ -185,6 +188,71 @@ describe('Cobro con IVA no incluido (HU-36)', () => {
     expect(ticket).toContain('IVA (13%)');
     expect(ticket).toMatch(/TOTAL A PAGAR\s+\$2\.55/);
     expect(ticket).toMatch(/VENTAS GRAVADAS\s+2\.26/);
+  });
+
+  it('el crédito fiscal envía los datos opcionales del receptor y la reimpresión repite los datos DTE del ticket', () => {
+    vi.useFakeTimers();
+    const button = (label: string) =>
+      [...html().querySelectorAll('button')].find((b) => b.textContent?.trim() === label)!;
+    const type = (label: string, value: string) => {
+      const input = html().querySelector<HTMLInputElement>(`[aria-label="${label}"]`)!;
+      input.value = value;
+      input.dispatchEvent(new Event('input'));
+    };
+    button('Crédito fiscal').click();
+    fixture.detectChanges();
+    type('Nombre del receptor', 'Distribuidora, S.A. de C.V.');
+    type('Documento del receptor', '0614-010190-101-3');
+    type('NRC del receptor', '123456-7');
+    type('Dirección del receptor', ' Calle Arce 123 ');
+    type('Teléfono del receptor', '2222-3333');
+    fixture.detectChanges();
+    typeCash('5');
+    confirmButton().click();
+    fixture.detectChanges();
+
+    const request = httpMock.expectOne(SALE_URL);
+    expect(request.request.body).toMatchObject({
+      tipoDte: '03',
+      receptorNrc: '123456-7',
+      receptorDireccion: 'Calle Arce 123',
+      receptorTelefono: '2222-3333',
+    });
+    expect(request.request.body.receptorDescActividad).toBeUndefined();
+    const ccf: Sale = {
+      ...SALE,
+      tipoDte: '03',
+      numeroControl: 'DTE-03-M001P001-000000000000007',
+      codigoGeneracion: '0F1E2D3C-4B5A-4978-8695-A4B3C2D1E0F9',
+      receptorNombre: 'Distribuidora, S.A. de C.V.',
+      totalLetras: 'DOS 55/100 DÓLARES',
+    };
+    request.flush(ccf);
+    vi.advanceTimersByTime(3_000);
+    fixture.detectChanges();
+
+    const print = vi.spyOn(window, 'print').mockImplementation(() => {});
+    [...html().querySelectorAll('button')].find((b) => b.textContent?.includes('Imprimir'))!.click();
+    const root = document.getElementById('receipt-print-root')!;
+    const original = root.textContent!.split('\n');
+    root.remove();
+    print.mockRestore();
+
+    // Encabezado del documento: entre la primera y la segunda línea divisoria.
+    const rule = '-'.repeat(RECEIPT_WIDTH);
+    const header = (lines: readonly string[]) => {
+      const first = lines.indexOf(rule);
+      return lines.slice(first + 1, lines.indexOf(rule, first + 1));
+    };
+    const reprint = formatReceipt(saleToReceipt(ccf), TestBed.inject(CompanyStore).info());
+    const originalHeader = header(original).join(' ');
+    expect(originalHeader).toContain('COMPROBANTE DE CREDITO FISCAL');
+    expect(originalHeader).toContain('No. control: DTE-03-M001P001-000000000000007');
+    expect(originalHeader).toContain('Cod. gen.: 0F1E2D3C-4B5A-4978-8695-A4B3C2D1E0F9');
+    expect(originalHeader).toContain('Cliente: Distribuidora, S.A. de C.V.');
+    expect(header(reprint)).toEqual(header(original));
+    expect(original).toContain('SON: DOS 55/100 DÓLARES');
+    expect(reprint).toContain('SON: DOS 55/100 DÓLARES');
   });
 
   it('si el servidor recalculó otro total (409 TOTAL_CAMBIO) avisa para volver a cotizar y no registra la venta', () => {

@@ -8,6 +8,7 @@ import {
   computed,
   effect,
   inject,
+  linkedSignal,
   signal,
   untracked,
   viewChild,
@@ -25,7 +26,7 @@ import { OfferBadge } from '../../../../shared/ui/offer-badge/offer-badge';
 import { OrderService } from '../../../storefront/services/order.service';
 import { PosCombo } from '../../../../core/models/combo.model';
 import { PriceScale } from '../../../../core/models/price-scale.model';
-import { Quote, QuoteLine, ruleLabel } from '../../../../core/models/quote.model';
+import { Quote, QuoteLine, QuoteSuggestion, ruleLabel } from '../../../../core/models/quote.model';
 import { QuoteService } from '../../../../core/services/quote.service';
 import { debouncedSignal } from '../../../../core/utils/debounced-signal';
 import { Auth } from '../../../../core/services/auth';
@@ -42,6 +43,7 @@ import { PriceScaleService } from '../../../wholesale/services/price-scale.servi
 import { ComboService } from '../../../combos/services/combo.service';
 import { ProductService } from '../../../storefront/services/product.service';
 import { PosLine } from '../../models/checkout.model';
+import { BarcodeBurst } from '../../barcode-burst';
 import {
   PosTile,
   comboContents,
@@ -73,8 +75,10 @@ type PosMode = 'apertura' | 'venta' | 'cierre' | 'pedidos';
 const POS_PATH = '/backoffice/pos';
 const PANEL_PATH = '/backoffice';
 const ONLINE_ORDERS_PATH = '/backoffice/orders';
-/** Existencias al día sin recargar la página, igual que la cola de despacho. */
+/** Existencias y ofertas al día sin recargar la página, igual que la cola de despacho. */
 const CATALOG_REFRESH_MS = 30_000;
+/** Pausa del ticket antes de cotizar: la misma que el carrito de la tienda (HU-32). */
+const QUOTE_DEBOUNCE_MS = 150;
 const TIME_FORMAT = new Intl.DateTimeFormat('es-SV', { hour: 'numeric', minute: '2-digit' });
 const SHIFT_TIME_FORMAT = new Intl.DateTimeFormat('es-SV', {
   hour: '2-digit',
@@ -199,6 +203,9 @@ export class PosScreen {
   /** Pedido que el cajero quiere descartar y está pendiente de confirmar. */
   protected readonly discardTarget = signal<PosOrder | null>(null);
 
+  /** Teclas del lector de código de barras que llegan con el foco fuera del buscador (HU-34). */
+  private readonly burst = new BarcodeBurst();
+
   private readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
   private readonly menuClose = viewChild<ElementRef<HTMLButtonElement>>('menuClose');
   private readonly menuTrigger = viewChild<ElementRef<HTMLButtonElement>>('menuTrigger');
@@ -233,7 +240,7 @@ export class PosScreen {
   private readonly quoteLines = computed(() =>
     this.ticket().map((line) => ({ productoId: line.product.id, cantidad: line.quantity })),
   );
-  private readonly debouncedLines = debouncedSignal(this.quoteLines, 250);
+  private readonly debouncedLines = debouncedSignal(this.quoteLines, QUOTE_DEBOUNCE_MS);
 
   protected readonly quote = httpResource<Quote>((): HttpResourceRequest | undefined => {
     const lineas = this.debouncedLines();
@@ -241,7 +248,29 @@ export class PosScreen {
   });
   /** El ticket cambió y la cotización todavía no lo refleja: no se cobra en ese lapso. */
   protected readonly quotePending = computed(() => this.quoteLines() !== this.debouncedLines());
-  private readonly quoteValue = computed(() => valueOr(this.quote, undefined));
+  /** Los importes a la vista todavía no son los de este ticket (se muestran en gris y no se cobra). */
+  protected readonly quoteStale = computed(() => this.quotePending() || this.quote.isLoading());
+  protected readonly canCharge = computed(
+    () => this.ticket().length > 0 && !this.quoteStale() && !this.quote.error(),
+  );
+  /**
+   * Última cotización del pedido activo. Mientras llega la del ticket nuevo se conserva la anterior
+   * (en gris) en vez de caer a $0.00 (HU-32). Sin líneas, con error o al cambiar de pedido no se conserva.
+   */
+  private readonly quoteValue = linkedSignal({
+    source: () => ({
+      value: valueOr(this.quote, undefined),
+      order: this.orders.activoId(),
+      keep: this.ticket().length > 0 && !this.quote.error(),
+    }),
+    computation: (now, previous): Quote | undefined => {
+      if (!now.keep) {
+        return undefined;
+      }
+      const sameOrder = previous?.source.order === now.order;
+      return now.value ?? (sameOrder ? previous?.value : undefined);
+    },
+  });
   protected readonly quoteByProduct = computed(
     () => new Map((this.quoteValue()?.lineas ?? []).map((line) => [line.productoId, line] as const)),
   );
@@ -253,6 +282,10 @@ export class PosScreen {
   /** Desglose del IVA de la cotización vigente, tal como lo calculó el servidor. */
   protected readonly tax = computed(() => this.quoteValue() ?? null);
   protected readonly ruleLabel = ruleLabel;
+  /** HU-33: combos a los que les falta un producto, como en el carrito. Los tramos los avisa cada línea. */
+  protected readonly comboSuggestions = computed(() =>
+    (this.quoteValue()?.sugerencias ?? []).filter((suggestion) => suggestion.tipo === 'COMBO'),
+  );
   protected readonly itemCount = computed(() =>
     this.ticket().reduce((sum, line) => sum + line.quantity, 0),
   );
@@ -334,6 +367,8 @@ export class PosScreen {
       const refresh = setInterval(() => {
         this.catalog.reload();
         this.comboCatalog.reload();
+        // HU-28: una liquidación nueva (o que empezó su horario) aparece sin recargar la página.
+        this.offers.load();
       }, CATALOG_REFRESH_MS);
       this.destroyRef.onDestroy(() => {
         clearInterval(clock);
@@ -377,6 +412,14 @@ export class PosScreen {
   protected offersOf(product: CatalogProduct): ProductOffers | undefined {
     const offers = this.offers.of(product.id);
     return offers?.ofertas.length ? offers : undefined;
+  }
+
+  /** Texto de los combos y tramos del producto, visible en la tarjeta como en la tienda (HU-30). */
+  protected offerNotes(product: CatalogProduct): string {
+    return (this.offersOf(product)?.ofertas ?? [])
+      .filter((offer) => offer.tipo === 'COMBO' || offer.tipo === 'ESCALA')
+      .map((offer) => offer.etiqueta)
+      .join(' · ');
   }
 
   /** Regla que la última cotización aplicó al producto, si no tiene una oferta de catálogo. */
@@ -460,6 +503,16 @@ export class PosScreen {
     }
     this.search.set('');
     this.focusSearch();
+  }
+
+  /** "Agregar" de una sugerencia de combo: suma lo que falta, con los mismos controles de existencia. */
+  protected applySuggestion(suggestion: QuoteSuggestion): void {
+    const product = this.catalogItems().find((item) => item.id === suggestion.productoId);
+    if (!product) {
+      this.notifications.error(`${suggestion.producto} no está habilitado en el punto de venta.`);
+      return;
+    }
+    this.add(product, suggestion.faltan);
   }
 
   protected focusSearch(): void {
@@ -663,14 +716,14 @@ export class PosScreen {
   }
 
   protected charge(): void {
-    if (this.ticket().length > 0 && !this.quotePending() && !this.quote.error()) {
+    if (this.canCharge()) {
       this.sheetOpen.set(false);
       this.checkoutOpen.set(true);
     }
   }
 
   protected openEncargo(): void {
-    if (this.ticket().length > 0 && !this.quotePending() && !this.quote.error()) {
+    if (this.canCharge()) {
       this.sheetOpen.set(false);
       this.menuOpen.set(false);
       this.encargoOpen.set(true);
@@ -683,6 +736,7 @@ export class PosScreen {
     // La venta descontó inventario: se recarga para que el POS vea la existencia nueva.
     this.catalog.reload();
     this.comboCatalog.reload();
+    this.offers.load();
     // Pedido cobrado: sale de la lista y el siguiente queda activo (o uno vacío si era el único).
     this.orders.quitar(this.activeOrderId());
     this.selectedId.set(null);
@@ -717,10 +771,11 @@ export class PosScreen {
     }
     const target = event.target as HTMLElement | null;
     const typing = !!target?.closest('input, textarea, select, [contenteditable="true"]');
-    const action = posShortcut(event.key, typing, {
-      ctrl: event.ctrlKey || event.metaKey,
-      shift: event.shiftKey,
-    });
+    const ctrl = event.ctrlKey || event.metaKey;
+    if (this.handleScanner(event, typing, ctrl)) {
+      return;
+    }
+    const action = posShortcut(event.key, typing, { ctrl, shift: event.shiftKey });
     if (!action) {
       return;
     }
@@ -752,6 +807,34 @@ export class PosScreen {
         this.cycleOrders(-1);
         break;
     }
+  }
+
+  /**
+   * HU-34: con el foco fuera del buscador, la ráfaga del lector se toma como código y se da de alta,
+   * sin que sus «-» o «+» disparen los atajos. Devuelve true si la tecla ya se atendió.
+   */
+  private handleScanner(event: KeyboardEvent, typing: boolean, ctrl: boolean): boolean {
+    if (typing) {
+      // En el buscador el lector escribe directo y su Enter ya llama a scan().
+      this.burst.reset();
+      return false;
+    }
+    const result = this.burst.feed({
+      key: event.key,
+      time: event.timeStamp,
+      repeat: event.repeat,
+      modified: ctrl || event.altKey,
+    });
+    if (result.kind === 'pass') {
+      return false;
+    }
+    event.preventDefault();
+    if (result.kind === 'code') {
+      this.search.set(result.code);
+      this.focusSearch();
+      this.scan();
+    }
+    return true;
   }
 
   /** Lo dice el backend (agotado). Si el detalle recién consultado es del mismo producto, manda ese. */
