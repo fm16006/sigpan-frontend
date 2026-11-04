@@ -192,6 +192,9 @@ export const API_ENDPOINTS = {
     /** HU-68: personal de caja activo y sin otro turno abierto. */
     cajeros: '/turnos/cajeros',
     cambiarCajero: (id: Id) => `/turnos/${id}/cambiar-cajero`,
+    /** HU-68: cortes anteriores paginados (desde, hasta, cajaId, cajeroId, soloConDiferencia, pagina, tamano). */
+    historial: '/turnos/historial',
+    ventas: (id: Id) => `/turnos/${id}/ventas`,
   },
   liquidaciones: {
     root: '/liquidaciones',
