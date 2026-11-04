@@ -64,6 +64,14 @@ export interface Sale {
   readonly receptorNombre?: string | null;
   readonly receptorNumDocumento?: string | null;
   readonly receptorNrc?: string | null;
+  /** HU-36 (V43): resto del esquema DTE. */
+  readonly receptorDireccion?: string | null;
+  readonly receptorTelefono?: string | null;
+  readonly receptorDescActividad?: string | null;
+  /** "DOCE 50/100 DÓLARES", calculado por el servidor. */
+  readonly totalLetras?: string | null;
+  /** Nulo: el DTE no se transmite a Hacienda. */
+  readonly selloRecepcion?: string | null;
   readonly detalles: readonly SaleLine[] | null;
   readonly historial?: readonly OrderStatusChange[] | null;
   /** HU-55: lleva productos por encargo. */
@@ -115,6 +123,10 @@ export interface SaleRequest {
   readonly receptorNombre?: string;
   readonly receptorNumDocumento?: string;
   readonly receptorNrc?: string;
+  /** Opcionales (V43): dirección, teléfono y actividad económica del receptor. */
+  readonly receptorDireccion?: string;
+  readonly receptorTelefono?: string;
+  readonly receptorDescActividad?: string;
 }
 
 
