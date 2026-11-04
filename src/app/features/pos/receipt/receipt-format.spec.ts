@@ -150,6 +150,14 @@ describe('formatReceipt', () => {
     expect(dte.every((text) => text.length <= RECEIPT_WIDTH)).toBe(true);
   });
 
+  it('imprime el total en letras debajo de los totales cuando la venta lo trae (HU-36)', () => {
+    const withWords = formatReceipt({ ...receipt, totalLetras: 'DOCE 50/100 DÓLARES' }, BUSINESS_INFO);
+    const total = withWords.findIndex((text) => text.startsWith('TOTAL A PAGAR'));
+
+    expect(withWords.slice(total).some((text) => text === 'SON: DOCE 50/100 DÓLARES')).toBe(true);
+    expect(formatReceipt(receipt, BUSINESS_INFO).some((text) => text.startsWith('SON:'))).toBe(false);
+  });
+
   it('sin detalle de pago omite recibido y cambio, sin dejar líneas dobles', () => {
     const past = formatReceipt({ ...receipt, sinDetallePago: true }, BUSINESS_INFO);
 

@@ -7,6 +7,7 @@ import {
   isQueryableDay,
   orderPreview,
   parseDay,
+  saleDocument,
   saleItemCount,
   saleToReceipt,
   shiftDay,
@@ -166,5 +167,39 @@ describe('pedidos: ventas anteriores', () => {
 
   it('una venta sin detalle da un ticket sin líneas', () => {
     expect(saleToReceipt(sale(5, 1, { detalles: null })).lineas).toEqual([]);
+  });
+
+  it('HU-36: la reimpresión trae el tipo de documento, No. control, Cód. generación, cliente y total en letras', () => {
+    const ccf = sale(6, 2.5, {
+      tipoDte: '03',
+      numeroControl: 'DTE-03-M001P001-000000000000004',
+      codigoGeneracion: '0F1E2D3C-4B5A-4978-8695-A4B3C2D1E0F9',
+      receptorNombre: 'Distribuidora, S.A. de C.V.',
+      totalLetras: 'DOS 50/100 DÓLARES',
+    });
+    const receipt = saleToReceipt(ccf);
+    expect(receipt).toMatchObject({
+      documento: 'CCF',
+      numeroControl: 'DTE-03-M001P001-000000000000004',
+      codigoGeneracion: '0F1E2D3C-4B5A-4978-8695-A4B3C2D1E0F9',
+      receptor: 'Distribuidora, S.A. de C.V.',
+      totalLetras: 'DOS 50/100 DÓLARES',
+    });
+
+    const text = formatReceipt(receipt, BUSINESS_INFO);
+    expect(text.some((row) => row.startsWith('COMPROBANTE DE CREDITO FISCAL No. 000006'))).toBe(true);
+    // Las líneas largas siguen abajo: se revisa el texto corrido.
+    const joined = text.join(' ');
+    expect(joined).toContain('No. control: DTE-03-M001P001-000000000000004');
+    expect(joined).toContain('Cod. gen.: 0F1E2D3C-4B5A-4978-8695-A4B3C2D1E0F9');
+    expect(joined).toContain('Cliente: Distribuidora, S.A. de C.V.');
+    expect(joined).toContain('SON: DOS 50/100 DÓLARES');
+  });
+
+  it('HU-36: el documento sale del tipo DTE guardado, como al cobrar', () => {
+    expect(saleDocument(sale(1, 1, { tipoDte: '03', receptorNombre: 'Empresa' }))).toBe('CCF');
+    expect(saleDocument(sale(1, 1, { tipoDte: '01', receptorNombre: 'Juan Pérez' }))).toBe('FACTURA');
+    expect(saleDocument(sale(1, 1, { tipoDte: '01', receptorNombre: '  ' }))).toBe('TICKET');
+    expect(saleDocument(sale(1, 1))).toBe('TICKET');
   });
 });
