@@ -12,6 +12,7 @@ import {
   HandoverShift,
 } from '../../../cash-registers/ui/cashier-handover/cashier-handover';
 import { ARQUEO_DENOMINATIONS, arqueoTotal, denominationLabel } from '../../pos-logic';
+import { isCancelled, summarizeSales } from '../../pos-pedidos-logic';
 import { registerLabel } from '../../register-utils';
 import { CashRegisterStore } from '../../services/cash-register.store';
 import { valueOr } from '../../../../core/http/resource-value';
@@ -53,6 +54,8 @@ export class PosCaja {
 
   protected readonly cut = httpResource<CashCut>(() => this.orders.cashCutUrl(this.cutDate()));
   protected readonly cutValue = computed(() => valueOr(this.cut, undefined));
+  /** DEF-18: el corte lista las anuladas (HU-37) aunque no sumen; acá se cuentan aparte. */
+  protected readonly voidedCount = computed(() => summarizeSales(this.cutValue()?.ventas ?? []).anuladas);
 
   protected count(value: number): number {
     return this.counts()[value] ?? 0;
@@ -69,9 +72,7 @@ export class PosCaja {
     this.cut.reload();
   }
 
-  protected isCancelled(estado: string): boolean {
-    return estado === 'CANCELADO';
-  }
+  protected readonly isCancelled = isCancelled;
 
   /** El turno ya es de otro: este cajero queda sin caja y la pantalla vuelve a la apertura. */
   protected handedOver(): void {
