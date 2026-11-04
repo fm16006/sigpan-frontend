@@ -276,4 +276,21 @@ describe('Pantalla del punto de venta', () => {
     expect(ticketNames(host)).toEqual(['Pan francés', 'Café']);
     expect(host.querySelector('ul[aria-label="Sugerencias de ahorro"]')).toBeNull();
   });
+
+  it('HU-34: un escaneo con el foco fuera del buscador agrega el producto y su «-» no quita líneas', async () => {
+    const host = await render();
+    tile(host, 'Pan francés').click();
+    await afterDebounce();
+    (document.activeElement as HTMLElement | null)?.blur();
+
+    [...'E2E-007', 'Enter'].forEach(press);
+    await afterDebounce();
+
+    expect(ticketNames(host)).toEqual(['Pan francés', 'Café']);
+    // El «-» tecleado a mano sigue siendo el atajo: baja la línea activa (el café recién escaneado).
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    press('-');
+    await afterDebounce();
+    expect(ticketNames(host)).toEqual(['Pan francés']);
+  });
 });

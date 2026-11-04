@@ -43,6 +43,7 @@ import { PriceScaleService } from '../../../wholesale/services/price-scale.servi
 import { ComboService } from '../../../combos/services/combo.service';
 import { ProductService } from '../../../storefront/services/product.service';
 import { PosLine } from '../../models/checkout.model';
+import { BarcodeBurst } from '../../barcode-burst';
 import {
   PosTile,
   comboContents,
@@ -201,6 +202,9 @@ export class PosScreen {
   protected readonly panelOpen = signal(false);
   /** Pedido que el cajero quiere descartar y está pendiente de confirmar. */
   protected readonly discardTarget = signal<PosOrder | null>(null);
+
+  /** Teclas del lector de código de barras que llegan con el foco fuera del buscador (HU-34). */
+  private readonly burst = new BarcodeBurst();
 
   private readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
   private readonly menuClose = viewChild<ElementRef<HTMLButtonElement>>('menuClose');
@@ -767,10 +771,11 @@ export class PosScreen {
     }
     const target = event.target as HTMLElement | null;
     const typing = !!target?.closest('input, textarea, select, [contenteditable="true"]');
-    const action = posShortcut(event.key, typing, {
-      ctrl: event.ctrlKey || event.metaKey,
-      shift: event.shiftKey,
-    });
+    const ctrl = event.ctrlKey || event.metaKey;
+    if (this.handleScanner(event, typing, ctrl)) {
+      return;
+    }
+    const action = posShortcut(event.key, typing, { ctrl, shift: event.shiftKey });
     if (!action) {
       return;
     }
@@ -802,6 +807,34 @@ export class PosScreen {
         this.cycleOrders(-1);
         break;
     }
+  }
+
+  /**
+   * HU-34: con el foco fuera del buscador, la ráfaga del lector se toma como código y se da de alta,
+   * sin que sus «-» o «+» disparen los atajos. Devuelve true si la tecla ya se atendió.
+   */
+  private handleScanner(event: KeyboardEvent, typing: boolean, ctrl: boolean): boolean {
+    if (typing) {
+      // En el buscador el lector escribe directo y su Enter ya llama a scan().
+      this.burst.reset();
+      return false;
+    }
+    const result = this.burst.feed({
+      key: event.key,
+      time: event.timeStamp,
+      repeat: event.repeat,
+      modified: ctrl || event.altKey,
+    });
+    if (result.kind === 'pass') {
+      return false;
+    }
+    event.preventDefault();
+    if (result.kind === 'code') {
+      this.search.set(result.code);
+      this.focusSearch();
+      this.scan();
+    }
+    return true;
   }
 
   /** Lo dice el backend (agotado). Si el detalle recién consultado es del mismo producto, manda ese. */
