@@ -22,6 +22,26 @@ describe('Lector de código de barras (HU-34)', () => {
     expect(results.slice(1, -1).every((r) => r.kind === 'swallow')).toBe(true);
   });
 
+  it('con el equipo cargado (teclas a 14–41 ms) la ráfaga no se corta y el «-» no llega a los atajos', () => {
+    const burst = new BarcodeBurst();
+    const gaps = [14, 41, 22, 38, 17, 33, 29];
+    let time = 1000;
+    const results = [...'E2E-007', 'Enter'].map((key, i) => {
+      time += i === 0 ? 0 : gaps[i - 1];
+      return burst.feed({ key, time });
+    });
+
+    expect(results[3]).toEqual({ kind: 'swallow' });
+    expect(results.at(-1)).toEqual({ kind: 'code', code: 'E2E-007' });
+  });
+
+  it('dos teclas a 60 ms no arrancan una ráfaga: el «-» sigue siendo el atajo', () => {
+    const burst = new BarcodeBurst();
+    burst.feed({ key: '2', time: 0 });
+
+    expect(burst.feed({ key: '-', time: 60 })).toEqual({ kind: 'pass' });
+  });
+
   it('a velocidad de persona no es un escaneo: el «-» sigue siendo el atajo', () => {
     const results = type(new BarcodeBurst(), 'E2-', 180);
 
