@@ -3,6 +3,7 @@ import { httpResource } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
 import { API_ENDPOINTS } from '../../../../core/constants/api-endpoints';
 import { ApiClient } from '../../../../core/http/api-client';
+import { AppError } from '../../../../core/http/app-error';
 import { Notifications } from '../../../../core/services/notifications';
 import { CompanyStore } from '../../../../core/services/company-store';
 import { valueOr } from '../../../../core/http/resource-value';
@@ -117,9 +118,12 @@ export class PosHistorial {
   protected readonly voidReason = signal('');
   protected readonly authEmail = signal('');
   protected readonly authPassword = signal('');
+  /** DEF-20: el rechazo del servidor se muestra en el formulario, sin salir del POS. */
+  protected readonly voidError = signal('');
 
   protected voidSale(sale: Sale): void {
     this.voiding.set(true);
+    this.voidError.set('');
     this.api
       .post<Sale>(API_ENDPOINTS.orders.anular(sale.id), {
         motivo: this.voidReason().trim(),
@@ -131,9 +135,10 @@ export class PosHistorial {
           this.resetVoid();
           this.cut.reload();
         },
-        error: () => {
+        error: (error: AppError) => {
           this.voiding.set(false);
           this.authPassword.set('');
+          this.voidError.set(error.message);
         },
       });
   }
@@ -144,6 +149,7 @@ export class PosHistorial {
     this.voidReason.set('');
     this.authEmail.set('');
     this.authPassword.set('');
+    this.voidError.set('');
   }
 
   /** Abre la impresión del navegador solo con el ticket (ver ReceiptPrint). */

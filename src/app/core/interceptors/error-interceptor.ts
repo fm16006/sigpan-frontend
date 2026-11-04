@@ -18,6 +18,12 @@ const AUTH_PATHS: readonly string[] = [
 ];
 
 /**
+ * DEF-20: aquí un 403 es una regla de negocio (autorización inválida, venta ajena o de otro día),
+ * no falta de permisos; el formulario muestra el mensaje y el usuario sigue en la pantalla.
+ */
+const BUSINESS_FORBIDDEN: readonly RegExp[] = [/\/ventas\/\d+\/anular$/];
+
+/**
  * Normaliza los errores HTTP y renueva el token cuando expira.
  * Va primero en la lista para que el reintento pase de nuevo por authInterceptor.
  */
@@ -56,7 +62,7 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
         return throwError(() => error);
       }
 
-      if (error.kind === 'forbidden') {
+      if (error.kind === 'forbidden' && !BUSINESS_FORBIDDEN.some((pattern) => pattern.test(path))) {
         void router.navigate(['/sin-permisos']);
       }
 
