@@ -36,15 +36,19 @@ export const BACKOFFICE_NAV_GROUPS: readonly NavGroup[] = [
   {
     label: 'Ventas',
     items: [
-      { label: 'Punto de venta', path: '/backoffice/pos', icon: 'pos', roles: ['ADMINISTRADOR', 'CAJERO'] },
+      // El tablero del punto de venta; la caja de pantalla completa (/backoffice/pos) se abre desde ahí.
+      {
+        label: 'Punto de venta',
+        path: '/backoffice/point-of-sale',
+        icon: 'pos',
+        roles: ['ADMINISTRADOR', 'AUDITOR'],
+      },
       {
         label: 'Pedidos en línea',
         path: '/backoffice/orders',
         icon: 'bag',
         roles: ['ADMINISTRADOR', 'DESPACHADOR'],
-      },
-      { label: 'Cajas', path: '/backoffice/cash-registers', icon: 'clock', roles: ['ADMINISTRADOR', 'AUDITOR'] },
-    ],
+      },    ],
   },
   {
     label: 'Inventario',

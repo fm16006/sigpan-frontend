@@ -59,7 +59,7 @@ const STATUSES: RegisterStatus[] = [
   },
 ];
 
-describe('Panel de cajas (HU-68)', () => {
+describe('Punto de venta · pestaña Cajas (HU-68)', () => {
   let httpMock: HttpTestingController;
   let fixture: ComponentFixture<RegisterBoard>;
 
@@ -86,7 +86,7 @@ describe('Panel de cajas (HU-68)', () => {
 
   it('muestra quién ocupa cada caja, desde cuándo y avisa si el turno viene de otro día', async () => {
     const root = await render(true);
-    const cards = [...root.querySelectorAll('li.panel')];
+    const cards = [...root.querySelectorAll('app-register-card')];
 
     expect(cards).toHaveLength(2);
     expect(cards[0].textContent).toContain('Ocupada');

@@ -30,8 +30,9 @@ export class OrderService {
     return this.api.url(API_ENDPOINTS.orders.mine);
   }
 
-  queueUrl(): string {
-    return this.api.url(API_ENDPOINTS.orders.queue);
+  /** Con `enCurso` no vienen los entregados ni cancelados (DEF-19): el histórico está en HU-69. */
+  queueUrl(enCurso = false): string {
+    return this.api.url(API_ENDPOINTS.orders.queue, enCurso ? { enCurso: true } : undefined);
   }
 
   cashCutUrl(fecha: string): string {
