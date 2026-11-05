@@ -1,0 +1,81 @@
+<app-form-drawer
+  [open]="open()"
+  title="Agregar producto"
+  [subtitle]="combo().nombre"
+  (closed)="closed.emit()"
+>
+  <form id="comboLineForm" class="flex flex-col gap-5" [formGroup]="form" (ngSubmit)="save()">
+    @if (formError(); as message) {
+      <div role="alert" class="alert alert-error text-sm">{{ message }}</div>
+    }
+
+    <fieldset class="flex flex-col gap-3">
+      <legend class="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.09em] text-base-content/55">
+        Producto
+      </legend>
+
+      <div>
+        <label class="label" for="lineaProducto"><span class="label-text">Producto</span></label>
+        <select id="lineaProducto" formControlName="productoId" class="select select-bordered w-full">
+          <option [ngValue]="0" disabled>Elegí un producto</option>
+          @for (product of available(); track product.id) {
+            <option [ngValue]="product.id">{{ product.nombre }} · {{ product.precio | money }}</option>
+          }
+        </select>
+        @if (available().length === 0) {
+          <p class="mt-1 text-xs text-base-content/55">Todos los productos ya están en este combo.</p>
+        }
+      </div>
+
+      <div>
+        <label class="label" for="lineaCantidad"><span class="label-text">Cantidad por combo</span></label>
+        <input
+          id="lineaCantidad"
+          type="number"
+          min="1"
+          step="1"
+          formControlName="cantidad"
+          class="input input-bordered w-full"
+        />
+      </div>
+    </fieldset>
+
+    <div class="flex flex-col gap-2 rounded-box bg-base-200/60 p-4 text-sm" aria-live="polite">
+      <p class="text-base-content/75">
+        El precio del combo ({{ combo().precio | money }}) debe ser menor que la suma de sus
+        productos. El sistema lo valida con cada producto que agregás.
+      </p>
+      <dl class="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1">
+        <dt class="text-base-content/65">Suma actual</dt>
+        <dd class="text-end tabular-nums">{{ sum() | money }}</dd>
+        @if (selected(); as product) {
+          <dt class="text-base-content/65">+ {{ product.nombre }}</dt>
+          <dd class="text-end tabular-nums">{{ lineSubtotal() | money }}</dd>
+          <dt class="font-semibold">Suma con este producto</dt>
+          <dd class="text-end font-semibold tabular-nums">{{ newSum() | money }}</dd>
+        }
+      </dl>
+      @if (selected()) {
+        @if (priceTooHigh()) {
+          <app-status-chip tone="bad" label="El precio no quedaría por debajo de la suma" />
+          <p class="text-xs text-base-content/65">
+            Si lo agregás así, el sistema lo va a rechazar. Bajá el precio del combo desde Editar o
+            elegí una cantidad mayor.
+          </p>
+        } @else {
+          <app-status-chip tone="ok" label="El precio sigue por debajo de la suma" />
+        }
+      }
+    </div>
+  </form>
+
+  <div footer class="contents">
+    <button type="button" class="btn btn-ghost" (click)="closed.emit()">Cancelar</button>
+    <button type="submit" form="comboLineForm" class="btn btn-primary" [disabled]="saving()">
+      @if (saving()) {
+        <span class="loading loading-spinner loading-sm"></span>
+      }
+      Agregar
+    </button>
+  </div>
+</app-form-drawer>

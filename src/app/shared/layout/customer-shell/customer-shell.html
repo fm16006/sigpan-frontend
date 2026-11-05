@@ -1,0 +1,16 @@
+<div class="flex min-h-full flex-col bg-base-100">
+  <a
+    href="#contenido"
+    class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:btn focus:btn-sm focus:btn-primary"
+  >
+    Saltar al contenido
+  </a>
+
+  <app-navbar />
+
+  <main id="contenido" class="flex-1">
+    <router-outlet />
+  </main>
+
+  <app-footer />
+</div>

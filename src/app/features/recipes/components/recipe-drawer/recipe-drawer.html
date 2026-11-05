@@ -1,0 +1,263 @@
+<app-form-drawer
+  [open]="open()"
+  [title]="isEdit() ? 'Editar receta' : 'Nueva receta'"
+  [subtitle]="isEdit() ? current()?.producto : 'Datos de la receta; los insumos se agregan al guardar'"
+  (closed)="closed.emit()"
+>
+  <form id="recipeForm" class="flex flex-col gap-5" [formGroup]="formulaForm" (ngSubmit)="saveFormula()">
+    @if (formulaError(); as message) {
+      <div role="alert" class="alert alert-error text-sm">{{ message }}</div>
+    }
+
+    <fieldset class="flex flex-col gap-3">
+      <legend class="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.09em] text-base-content/55">
+        Receta
+      </legend>
+
+      <div>
+        <label class="label" for="recetaProducto"><span class="label-text">Producto</span></label>
+        <select
+          id="recetaProducto"
+          formControlName="productoId"
+          class="select select-bordered w-full"
+          [class.select-error]="!!errorFor('formula', 'productoId')"
+        >
+          <option [ngValue]="0" disabled>Elegí un producto</option>
+          @for (product of products(); track product.id) {
+            <option [ngValue]="product.id">{{ product.nombre }}</option>
+          }
+        </select>
+        @if (errorFor('formula', 'productoId'); as message) {
+          <p class="mt-1 text-xs text-error">{{ message }}</p>
+        }
+      </div>
+
+      <div>
+        <label class="label" for="recetaNombre"><span class="label-text">Nombre de la receta</span></label>
+        <input
+          id="recetaNombre"
+          type="text"
+          formControlName="nombre"
+          class="input input-bordered w-full"
+          [class.input-error]="!!errorFor('formula', 'nombre')"
+        />
+        @if (errorFor('formula', 'nombre'); as message) {
+          <p class="mt-1 text-xs text-error">{{ message }}</p>
+        }
+      </div>
+
+      <div>
+        <label class="label" for="recetaDescripcion"><span class="label-text">Descripción</span></label>
+        <textarea
+          id="recetaDescripcion"
+          rows="2"
+          formControlName="descripcion"
+          class="textarea textarea-bordered w-full"
+          [class.textarea-error]="!!errorFor('formula', 'descripcion')"
+        ></textarea>
+        @if (errorFor('formula', 'descripcion'); as message) {
+          <p class="mt-1 text-xs text-error">{{ message }}</p>
+        }
+      </div>
+    </fieldset>
+
+    <fieldset class="grid grid-cols-2 gap-3">
+      <legend class="col-span-2 mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.09em] text-base-content/55">
+        Rendimiento
+      </legend>
+
+      <div>
+        <label class="label" for="recetaCantidad"><span class="label-text">Rinde por lote</span></label>
+        <input
+          id="recetaCantidad"
+          type="number"
+          step="0.01"
+          min="0.01"
+          formControlName="cantidadProduccion"
+          class="input input-bordered w-full"
+          [class.input-error]="!!errorFor('formula', 'cantidadProduccion')"
+        />
+        @if (errorFor('formula', 'cantidadProduccion'); as message) {
+          <p class="mt-1 text-xs text-error">{{ message }}</p>
+        }
+      </div>
+
+      <div>
+        <label class="label" for="recetaMerma"><span class="label-text">Merma esperada (%)</span></label>
+        <input
+          id="recetaMerma"
+          type="number"
+          step="0.01"
+          min="0"
+          max="100"
+          formControlName="porcentajeMerma"
+          class="input input-bordered w-full"
+          [class.input-error]="!!errorFor('formula', 'porcentajeMerma')"
+        />
+        @if (errorFor('formula', 'porcentajeMerma'); as message) {
+          <p class="mt-1 text-xs text-error">{{ message }}</p>
+        } @else {
+          <p class="mt-1 text-xs text-base-content/55">Pérdida del proceso, de 0 a 100.</p>
+        }
+      </div>
+    </fieldset>
+  </form>
+
+  <section class="mt-6 flex flex-col gap-3" aria-labelledby="h-insumos-receta">
+    <div class="flex items-center justify-between gap-3">
+      <h3
+        id="h-insumos-receta"
+        class="text-[0.68rem] font-semibold uppercase tracking-[0.09em] text-base-content/55"
+      >
+        Insumos por lote
+      </h3>
+      @if (isEdit() && !lineFormOpen()) {
+        <button type="button" class="btn btn-sm" (click)="openNewLine()">
+          <app-icon name="plus" [size]="16" /> Agregar insumo
+        </button>
+      }
+    </div>
+
+    @if (!isEdit()) {
+      <p class="text-sm text-base-content/60">
+        Guardá la receta para poder agregarle insumos.
+      </p>
+    } @else {
+      @if (lines.isLoading() && lineItems().length === 0) {
+        <span class="loading loading-spinner loading-sm"></span>
+      } @else if (lines.error()) {
+        <p class="text-sm text-error">No pudimos cargar los insumos.</p>
+      } @else if (lineItems().length === 0) {
+        <p class="text-sm text-base-content/60">Esta receta aún no tiene insumos.</p>
+      } @else {
+        <ul class="divide-y divide-base-300 rounded-box border border-base-300">
+          @for (line of lineItems(); track line.id) {
+            <li class="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
+              <span class="min-w-0">
+                <span class="block truncate font-medium">{{ line.materiaPrima }}</span>
+                <span class="text-xs tabular-nums text-base-content/60">
+                  {{ line.cantidad | number: '1.0-3' }} {{ line.unidadMedida }}
+                </span>
+              </span>
+              <span class="flex shrink-0 gap-1">
+                <button
+                  type="button"
+                  class="btn btn-ghost btn-xs btn-square"
+                  [attr.aria-label]="'Editar ' + line.materiaPrima"
+                  (click)="openEditLine(line)"
+                >
+                  <app-icon name="edit" [size]="16" />
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-ghost btn-xs btn-square text-error"
+                  [attr.aria-label]="'Quitar ' + line.materiaPrima + ' de la receta'"
+                  (click)="removeTarget.set(line)"
+                >
+                  <app-icon name="trash" [size]="16" />
+                </button>
+              </span>
+            </li>
+          }
+        </ul>
+      }
+
+      @if (lineFormOpen()) {
+        <form
+          id="recipeLineForm"
+          class="flex flex-col gap-3 rounded-box bg-base-200/60 p-4"
+          [formGroup]="lineForm"
+          (ngSubmit)="saveLine()"
+          aria-label="Insumo de la receta"
+        >
+          @if (lineError(); as message) {
+            <div role="alert" class="alert alert-error py-2 text-sm">{{ message }}</div>
+          }
+
+          <div>
+            <label class="label" for="lineaInsumo"><span class="label-text">Insumo</span></label>
+            <select
+              id="lineaInsumo"
+              formControlName="materiaPrimaId"
+              class="select select-bordered select-sm w-full"
+              [class.select-error]="!!errorFor('line', 'materiaPrimaId')"
+            >
+              <option [ngValue]="0" disabled>Elegí un insumo</option>
+              @for (material of materials(); track material.id) {
+                <option [ngValue]="material.id">{{ material.nombre }} ({{ material.unidadMedida }})</option>
+              }
+            </select>
+            @if (errorFor('line', 'materiaPrimaId'); as message) {
+              <p class="mt-1 text-xs text-error">{{ message }}</p>
+            }
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="label" for="lineaCantidad"><span class="label-text">Cantidad</span></label>
+              <input
+                id="lineaCantidad"
+                type="number"
+                step="0.001"
+                min="0.001"
+                formControlName="cantidad"
+                class="input input-bordered input-sm w-full"
+                [class.input-error]="!!errorFor('line', 'cantidad')"
+              />
+              @if (errorFor('line', 'cantidad'); as message) {
+                <p class="mt-1 text-xs text-error">{{ message }}</p>
+              }
+            </div>
+
+            <div>
+              <label class="label" for="lineaUnidad"><span class="label-text">Unidad</span></label>
+              <input
+                id="lineaUnidad"
+                type="text"
+                maxlength="30"
+                formControlName="unidadMedida"
+                class="input input-bordered input-sm w-full"
+                [class.input-error]="!!errorFor('line', 'unidadMedida')"
+              />
+              @if (errorFor('line', 'unidadMedida'); as message) {
+                <p class="mt-1 text-xs text-error">{{ message }}</p>
+              } @else {
+                <p class="mt-1 text-xs text-base-content/55">Debe ser la unidad base del insumo.</p>
+              }
+            </div>
+          </div>
+
+          <div class="flex justify-end gap-2">
+            <button type="button" class="btn btn-sm btn-ghost" (click)="closeLineForm()">Cancelar</button>
+            <button type="submit" class="btn btn-sm btn-primary" [disabled]="savingLine()">
+              @if (savingLine()) {
+                <span class="loading loading-spinner loading-xs"></span>
+              }
+              {{ editingLineId() === null ? 'Agregar' : 'Guardar insumo' }}
+            </button>
+          </div>
+        </form>
+      }
+    }
+  </section>
+
+  <div footer class="contents">
+    <button type="button" class="btn btn-ghost" (click)="closed.emit()">Cancelar</button>
+    <button type="submit" form="recipeForm" class="btn btn-primary" [disabled]="savingFormula()">
+      @if (savingFormula()) {
+        <span class="loading loading-spinner loading-sm"></span>
+      }
+      Guardar
+    </button>
+  </div>
+</app-form-drawer>
+
+<app-confirm-dialog
+  [open]="removeTarget() !== null"
+  title="Quitar insumo"
+  [message]="'Vas a quitar «' + (removeTarget()?.materiaPrima ?? '') + '» de la receta «' + (current()?.nombre ?? '') + '». Las próximas órdenes ya no lo descuentan.'"
+  confirmLabel="Quitar"
+  [busy]="removing()"
+  (confirmed)="confirmRemoveLine()"
+  (cancelled)="removeTarget.set(null)"
+/>

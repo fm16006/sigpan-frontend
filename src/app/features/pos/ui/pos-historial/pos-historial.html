@@ -1,0 +1,280 @@
+<div class="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(24rem,30rem)]">
+  <section class="flex min-h-0 min-w-0 flex-col gap-3" aria-label="Ventas anteriores">
+    <div class="flex flex-wrap items-end gap-x-3 gap-y-2">
+      <label class="grid gap-1 text-xs text-base-content/60">
+        Fecha
+        <input
+          #dateInput
+          type="date"
+          class="input input-sm"
+          [value]="date()"
+          [max]="today"
+          (change)="setDate(dateInput.value)"
+        />
+      </label>
+      <div class="flex items-center gap-1.5" role="group" aria-label="Atajos de fecha">
+        <button
+          type="button"
+          class="btn btn-sm"
+          [class.btn-neutral]="isToday()"
+          [attr.aria-pressed]="isToday()"
+          (click)="setDate(today)"
+        >
+          Hoy
+        </button>
+        <button
+          type="button"
+          class="btn btn-sm"
+          [class.btn-neutral]="isYesterday()"
+          [attr.aria-pressed]="isYesterday()"
+          (click)="setDate(yesterday)"
+        >
+          Ayer
+        </button>
+      </div>
+      <button type="button" class="btn btn-sm btn-ghost ms-auto" (click)="cut.reload()">
+        Actualizar
+      </button>
+    </div>
+
+    <label
+      class="flex h-11 shrink-0 items-center gap-2.5 rounded-box border border-base-300 bg-base-100 px-3.5 focus-within:border-primary"
+    >
+      <app-icon name="search" [size]="18" class="text-base-content/60" />
+      <input
+        #searchInput
+        type="search"
+        autocomplete="off"
+        class="min-w-0 flex-1 bg-transparent text-base outline-none"
+        placeholder="Buscá por # de venta o producto…"
+        aria-label="Buscar por número de venta o producto"
+        [value]="query()"
+        (input)="query.set(searchInput.value)"
+      />
+    </label>
+
+    <div class="grid shrink-0 grid-cols-2 gap-2" aria-live="polite">
+      <div class="rounded-box border border-base-300 bg-base-100 px-3.5 py-2.5">
+        <p class="truncate text-xs text-base-content/60">
+          Ventas del día
+        </p>
+        <p class="font-serif text-2xl font-semibold tabular-nums">{{ summary().ventas }}</p>
+        <p class="truncate text-xs text-base-content/60">
+          {{ summary().anuladas > 0 ? summary().anuladas + ' anulada(s)' : dayLabel() }}
+        </p>
+      </div>
+      <div class="rounded-box border border-base-300 bg-base-100 px-3.5 py-2.5">
+        <p class="text-xs text-base-content/60">Total vendido</p>
+        <p class="font-serif text-2xl font-semibold tabular-nums">{{ summary().total | money }}</p>
+        <p class="text-xs text-base-content/60">{{ summary().articulos }} artículo(s)</p>
+      </div>
+    </div>
+
+    <div class="min-h-0 flex-1 overflow-y-auto">
+      <app-resource-state
+        [loading]="cut.isLoading()"
+        [failed]="!!cut.error()"
+        [empty]="visible().length === 0"
+        [emptyTitle]="sales().length === 0 ? 'Sin ventas' : 'Sin resultados'"
+        [emptyDescription]="
+          !validDate()
+            ? 'Elegí una fecha que no sea futura.'
+            : sales().length === 0
+              ? 'No hay ventas registradas en esta fecha.'
+              : 'Ninguna venta coincide con la búsqueda.'
+        "
+        [skeletonCount]="5"
+        (retry)="cut.reload()"
+      >
+        <ul class="grid gap-2 pb-2">
+          @for (sale of visible(); track sale.id) {
+            <li>
+              <button
+                type="button"
+                class="grid w-full gap-1 rounded-box border bg-base-100 px-3.5 py-3 text-start transition active:scale-[0.99]"
+                [class]="
+                  sale.id === selectedId()
+                    ? 'border-primary ring-2 ring-primary/30'
+                    : 'border-base-300 hover:border-primary/50'
+                "
+                [attr.aria-pressed]="sale.id === selectedId()"
+                [attr.aria-label]="'Ver la venta ' + sale.id"
+                (click)="open(sale)"
+              >
+                <span class="flex items-baseline justify-between gap-3">
+                  <span class="flex items-baseline gap-2">
+                    <span class="font-mono font-semibold">#{{ sale.id }}</span>
+                    <span class="text-sm tabular-nums text-base-content/70">{{
+                      sale.fecha | date: 'HH:mm'
+                    }}</span>
+                  </span>
+                  <span
+                    class="font-serif text-lg font-semibold tabular-nums"
+                    [class.line-through]="isCancelled(sale)"
+                    [class.opacity-50]="isCancelled(sale)"
+                    >{{ sale.total | money }}</span
+                  >
+                </span>
+                <span class="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-base-content/60">
+                  @if (isAdmin) {
+                    <span class="truncate">{{ sale.usuario ?? 'Sin cajero' }}</span>
+                    <span aria-hidden="true">·</span>
+                  }
+                  <span>{{ itemCount(sale) }} artículo(s)</span>
+                  @if (isCancelled(sale)) {
+                    <app-status-chip label="Anulada" tone="bad" />
+                  }
+                </span>
+              </button>
+            </li>
+          }
+        </ul>
+      </app-resource-state>
+    </div>
+  </section>
+
+  @if (selected(); as sale) {
+    <!-- Teléfono: hoja a pantalla completa. Escritorio: panel junto a la lista. -->
+    <section
+      class="fixed inset-x-0 top-0 z-40 flex h-dvh max-h-dvh min-h-0 flex-col bg-base-100 lg:static lg:z-auto lg:h-auto lg:max-h-none lg:rounded-box lg:border lg:border-base-300"
+      role="dialog"
+      aria-modal="false"
+      [attr.aria-label]="'Detalle de la venta ' + sale.id"
+    >
+      <div
+        class="flex shrink-0 items-center gap-2 border-b border-base-300 py-2 ps-2 pe-3 pt-[max(0.5rem,env(safe-area-inset-top))] lg:ps-4 lg:pt-2"
+      >
+        <button type="button" class="btn btn-ghost btn-sm lg:hidden" (click)="closeDetail()">
+          ← Volver a la lista
+        </button>
+        <h2 class="font-serif text-xl font-semibold max-lg:hidden">Venta #{{ sale.id }}</h2>
+        <span class="ms-auto font-mono text-sm font-semibold lg:hidden">#{{ sale.id }}</span>
+        <button
+          type="button"
+          class="btn btn-ghost btn-sm btn-square max-lg:hidden"
+          aria-label="Cerrar el detalle"
+          (click)="closeDetail()"
+        >
+          <app-icon name="close" />
+        </button>
+      </div>
+
+      <div class="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <p class="text-sm text-base-content/70 first-letter:uppercase">
+            {{ sale.fecha | date: "EEEE d 'de' MMMM, HH:mm" }}
+          </p>
+          @if (isCancelled(sale)) {
+            <app-status-chip label="Anulada" tone="bad" />
+          }
+        </div>
+        @if (sale.usuario) {
+          <p class="text-sm text-base-content/70">Cajero: {{ sale.usuario }}</p>
+        }
+
+        <div class="mt-4">
+          <div class="list-th grid grid-cols-[minmax(0,1fr)_2.5rem_3.75rem_4.25rem] gap-2 pb-1.5">
+            <span>Producto</span>
+            <span class="text-end">Cant.</span>
+            <span class="text-end">P. unit.</span>
+            <span class="text-end">Total</span>
+          </div>
+          @for (line of sale.detalles ?? []; track line.id) {
+            <div
+              class="grid grid-cols-[minmax(0,1fr)_2.5rem_3.75rem_4.25rem] items-baseline gap-2 border-t border-base-300 py-2 text-sm tabular-nums"
+            >
+              <span class="min-w-0 break-words">{{ line.producto }}</span>
+              <span class="text-end">{{ line.cantidad }}</span>
+              <span class="text-end">{{ line.precio | money }}</span>
+              <span class="text-end font-semibold">{{ line.subtotal | money }}</span>
+            </div>
+          } @empty {
+            <p class="border-t border-base-300 py-4 text-center text-sm text-base-content/60">
+              Esta venta no trae el detalle de productos.
+            </p>
+          }
+          <dl class="grid gap-1 border-t border-base-300 pt-2 text-sm tabular-nums">
+            <div class="flex justify-between text-base-content/75">
+              <dt>Subtotal</dt>
+              <dd>{{ sale.subtotal | money }}</dd>
+            </div>
+            <div class="flex justify-between text-success">
+              <dt>Descuento</dt>
+              <dd>−{{ sale.descuento | money }}</dd>
+            </div>
+            <div class="flex items-baseline justify-between pt-1">
+              <dt class="font-semibold">Total</dt>
+              <dd class="font-serif text-3xl font-semibold">{{ sale.total | money }}</dd>
+            </div>
+          </dl>
+        </div>
+
+        <h3 class="mt-5 mb-2 text-xs font-semibold uppercase tracking-wide text-base-content/60">
+          Ticket
+        </h3>
+        <div class="overflow-x-auto">
+          <pre
+            class="mx-auto w-fit max-w-full bg-white px-3 py-3 font-mono text-[11px] leading-snug text-neutral-900 shadow-md"
+            aria-label="Vista previa del ticket"
+            >{{ receiptText() }}</pre
+          >
+        </div>
+        <p class="mt-2 text-center text-xs text-base-content/60">
+          Recibido y cambio no se guardan en la venta, por eso no aparecen en el ticket.
+        </p>
+      </div>
+
+      <div
+        class="grid shrink-0 grid-cols-2 gap-2 border-t border-base-300 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+      >
+        <button type="button" class="btn btn-primary h-auto min-h-11" (click)="print()">
+          <app-icon name="order" [size]="16" />
+          Imprimir
+        </button>
+        <button
+          type="button"
+          class="btn btn-outline btn-error h-auto min-h-11"
+          [disabled]="isCancelled(sale) || voiding()"
+          (click)="voidOpen.set(true)"
+        >
+          {{ isCancelled(sale) ? 'Anulada' : 'Anular venta' }}
+        </button>
+      </div>
+      @if (voidOpen() && !isCancelled(sale)) {
+        <form class="grid gap-2 border-t border-base-300 px-4 py-3" (submit)="$event.preventDefault(); voidSale(sale)">
+          <label class="grid gap-1 text-sm">
+            <span>Motivo</span>
+            <input class="input input-sm w-full" maxlength="255" required [value]="voidReason()" (input)="voidReason.set($any($event.target).value)" />
+          </label>
+          @if (!isAdmin) {
+            <p class="text-xs text-base-content/60">Autoriza un administrador:</p>
+            <input class="input input-sm w-full" type="email" placeholder="Correo del administrador" autocomplete="off"
+                   [value]="authEmail()" (input)="authEmail.set($any($event.target).value)" />
+            <input class="input input-sm w-full" type="password" placeholder="Contraseña" autocomplete="off"
+                   [value]="authPassword()" (input)="authPassword.set($any($event.target).value)" />
+          }
+          @if (voidError()) {
+            <p role="alert" class="text-xs text-error">{{ voidError() }}</p>
+          }
+          <div class="flex gap-2">
+            <button class="btn btn-sm btn-error" [disabled]="voiding() || voidReason().trim().length < 3">Confirmar anulación</button>
+            <button type="button" class="btn btn-sm btn-ghost" (click)="voidOpen.set(false)">Cancelar</button>
+          </div>
+          <p class="text-xs text-base-content/55">Se devuelve el inventario y queda en la bitácora con el motivo.</p>
+        </form>
+      }
+    </section>
+  } @else {
+    <aside
+      class="hidden min-h-0 flex-col items-center justify-center gap-2 rounded-box border border-dashed border-base-300 p-8 text-center lg:flex"
+    >
+      <app-icon name="order" [size]="28" class="text-base-content/40" />
+      <p class="font-medium">Elegí una venta</p>
+      <p class="max-w-xs text-sm text-base-content/60">
+        Acá ves el detalle, el ticket y podés volver a imprimirlo.
+      </p>
+    </aside>
+  }
+</div>
+
+<!-- Solo para la impresión del navegador: styles.css oculta todo lo demás. -->

@@ -1,0 +1,103 @@
+import { Id } from './api.model';
+
+export const ESPECIALIDADES = [
+  'PAN_FRANCES',
+  'PAN_DULCE',
+  'REPOSTERIA',
+  'PASTELERIA',
+  'BOCADILLOS',
+] as const;
+
+export type Especialidad = (typeof ESPECIALIDADES)[number];
+
+export const ESPECIALIDAD_LABELS: Readonly<Record<Especialidad, string>> = {
+  PAN_FRANCES: 'Pan francés',
+  PAN_DULCE: 'Pan dulce',
+  REPOSTERIA: 'Repostería',
+  PASTELERIA: 'Pastelería',
+  BOCADILLOS: 'Bocadillos',
+};
+
+export const PRODUCT_TYPES = ['ELABORADO', 'REVENTA'] as const;
+
+/** ELABORADO se produce con receta; REVENTA se compra ya hecho a un proveedor. */
+export type ProductType = (typeof PRODUCT_TYPES)[number];
+
+export const PRODUCT_TYPE_LABELS: Readonly<Record<ProductType, string>> = {
+  ELABORADO: 'Elaborado',
+  REVENTA: 'Reventa',
+};
+
+export interface CatalogProduct {
+  readonly id: Id;
+  readonly codigo: string;
+  readonly nombre: string;
+  readonly descripcion: string | null;
+  readonly precio: number;
+  readonly categoriaId: Id;
+  readonly categoria: string;
+  readonly unidadVenta: string;
+  readonly especialidad: Especialidad;
+  readonly alergenos: string | null;
+  readonly activo: boolean;
+  readonly imagenUrl: string | null;
+  /** Interruptor manual del punto de venta. Ausente solo en respuestas viejas: se trata como habilitado. */
+  readonly disponiblePos?: boolean;
+  /** Interruptor manual de la tienda en línea. Ausente solo en respuestas viejas: se trata como habilitado. */
+  readonly disponibleTienda?: boolean;
+  /** Exento de IVA (HU-36). Ausente solo en respuestas viejas: se trata como gravado. */
+  readonly exentoIva?: boolean;
+  /** HU-55: horas mínimas de anticipación; null si no es por encargo. */
+  readonly anticipacionHoras?: number | null;
+  readonly stockMinimo: number | null;
+  readonly disponible?: number | null;
+  /** true cuando disponible <= 0. */
+  readonly agotado: boolean;
+  /** Ausente solo en respuestas viejas: se trata como ELABORADO (ver `isResale`). */
+  readonly tipo?: ProductType;
+  /** Solo REVENTA: promedio ponderado de sus compras. */
+  readonly costoPromedio?: number | null;
+}
+
+/** Los productos de reventa no llevan receta ni orden de producción: se reponen comprando. */
+export function isResale(product: Pick<CatalogProduct, 'tipo'> | null | undefined): boolean {
+  return product?.tipo === 'REVENTA';
+}
+
+export interface CatalogProductDraft {
+  readonly codigo: string;
+  readonly nombre: string;
+  readonly descripcion: string;
+  readonly precio: number;
+  readonly categoriaId: Id;
+  readonly stockMinimo: number;
+  readonly unidadVenta: string;
+  readonly especialidad: Especialidad;
+  readonly alergenos: string | null;
+  readonly tipo: ProductType;
+  readonly disponiblePos: boolean;
+  readonly disponibleTienda: boolean;
+  readonly exentoIva: boolean;
+  readonly anticipacionHoras?: number | null;
+}
+
+export interface Category {
+  readonly id: Id;
+  readonly nombre: string;
+  /** El backend lo informa siempre; ausente se trata como activa. */
+  readonly activo?: boolean;
+}
+
+export const IMAGE_TYPES: readonly string[] = ['image/jpeg', 'image/png', 'image/webp'];
+
+export const MAX_IMAGE_MB = 3;
+
+/** HU-06: GET /productos/:id/precios */
+export interface PriceRecord {
+  readonly id: Id;
+  readonly precio: number;
+  readonly vigenteDesde: string;
+  readonly vigenteHasta: string | null;
+  readonly vigente: boolean;
+  readonly usuario: string | null;
+}

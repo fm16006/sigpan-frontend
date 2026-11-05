@@ -1,0 +1,297 @@
+<app-form-drawer
+  [open]="open()"
+  [title]="editing ? 'Editar producto' : 'Nuevo producto'"
+  [subtitle]="editing ? product()!.nombre + ' · ' + product()!.codigo : 'Completá los datos del producto.'"
+  (closed)="cancel()"
+>
+  @if (formError(); as message) {
+    <div role="alert" class="alert alert-error mb-4 py-2 text-sm">{{ message }}</div>
+  }
+  <form id="product-form" class="flex flex-col gap-6" [formGroup]="form" (ngSubmit)="save()">
+    <fieldset class="flex flex-col gap-3">
+      <legend class="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.09em] text-base-content/55">
+        Identificación
+      </legend>
+      <div class="grid gap-3 sm:grid-cols-2">
+        <div>
+          <label class="mb-1.5 block text-sm font-semibold" for="codigo">Código</label>
+          <input
+            id="codigo"
+            type="text"
+            maxlength="30"
+            formControlName="codigo"
+            class="input input-bordered w-full font-mono text-sm"
+            [class.input-error]="!!errorFor('codigo')"
+          />
+          @if (errorFor('codigo'); as message) {
+            <p class="mt-1 text-xs text-error">{{ message }}</p>
+          } @else {
+            <p class="mt-1 text-xs text-base-content/55">Único. Es el que se teclea en caja, p. ej. PF-001.</p>
+          }
+        </div>
+        <div>
+          <label class="mb-1.5 block text-sm font-semibold" for="unidadVenta">Unidad de venta</label>
+          <input
+            id="unidadVenta"
+            type="text"
+            placeholder="Ej. unidad, docena"
+            maxlength="30"
+            formControlName="unidadVenta"
+            class="input input-bordered w-full"
+            [class.input-error]="!!errorFor('unidadVenta')"
+          />
+          @if (errorFor('unidadVenta'); as message) {
+            <p class="mt-1 text-xs text-error">{{ message }}</p>
+          }
+        </div>
+      </div>
+      <div>
+        <label class="mb-1.5 block text-sm font-semibold" for="nombre">Nombre</label>
+        <input
+          id="nombre"
+          type="text"
+          formControlName="nombre"
+          class="input input-bordered w-full"
+          [class.input-error]="!!errorFor('nombre')"
+        />
+        @if (errorFor('nombre'); as message) {
+          <p class="mt-1 text-xs text-error">{{ message }}</p>
+        }
+      </div>
+    </fieldset>
+
+    <fieldset class="flex flex-col gap-3">
+      <legend class="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.09em] text-base-content/55">
+        Clasificación
+      </legend>
+      <div>
+        <span class="mb-1.5 block text-sm font-semibold" id="tipo-label">Tipo de producto</span>
+        <div role="radiogroup" aria-labelledby="tipo-label" class="grid gap-2 sm:grid-cols-2">
+          @for (option of productTypes; track option.value) {
+            <label
+              class="flex cursor-pointer items-start gap-2.5 rounded-box border p-3 transition-colors"
+              [class]="
+                form.controls.tipo.value === option.value
+                  ? 'border-primary bg-primary/5'
+                  : 'border-base-300 hover:bg-base-200/60'
+              "
+            >
+              <input
+                type="radio"
+                class="radio radio-sm radio-primary mt-0.5"
+                formControlName="tipo"
+                [value]="option.value"
+              />
+              <span class="flex flex-col gap-0.5">
+                <span class="text-sm font-semibold">{{ option.label }}</span>
+                <span class="text-xs leading-snug text-base-content/60">{{ option.hint }}</span>
+              </span>
+            </label>
+          }
+        </div>
+        @if (editing && form.controls.tipo.value === 'REVENTA' && product()?.tipo !== 'REVENTA') {
+          <p class="mt-1.5 text-xs text-base-content/60">
+            Un producto con receta u órdenes de producción no puede pasar a reventa.
+          </p>
+        }
+      </div>
+      <div class="grid gap-3 sm:grid-cols-2">
+        <div>
+          <label class="mb-1.5 block text-sm font-semibold" for="especialidad">Especialidad</label>
+          <select
+            id="especialidad"
+            formControlName="especialidad"
+            class="select select-bordered w-full"
+            [class.select-error]="!!errorFor('especialidad')"
+          >
+            <option value="" disabled>Elegí una especialidad</option>
+            @for (option of especialidades; track option.value) {
+              <option [value]="option.value">{{ option.label }}</option>
+            }
+          </select>
+          @if (errorFor('especialidad'); as message) {
+            <p class="mt-1 text-xs text-error">{{ message }}</p>
+          }
+        </div>
+        <div>
+          <label class="mb-1.5 block text-sm font-semibold" for="categoriaId">Categoría</label>
+          <select
+            id="categoriaId"
+            formControlName="categoriaId"
+            class="select select-bordered w-full"
+            [class.select-error]="!!errorFor('categoriaId')"
+          >
+            <option [ngValue]="0" disabled>Elegí una categoría</option>
+            @for (category of categoryList(); track category.id) {
+              <option [ngValue]="category.id">{{ category.nombre }}</option>
+            }
+          </select>
+          @if (errorFor('categoriaId'); as message) {
+            <p class="mt-1 text-xs text-error">{{ message }}</p>
+          }
+        </div>
+      </div>
+      <div>
+        <label class="mb-1.5 block text-sm font-semibold" for="nuevaCategoria">¿No está? Creá una categoría</label>
+        <p class="mb-1.5 text-xs text-base-content/60">
+          Para renombrar, desactivar o ver qué usa cada categoría:
+          <a routerLink="/backoffice/categories" target="_blank" class="link link-primary">
+            Administrar categorías
+          </a>
+          (se abre en otra pestaña y no pierdes lo que llenaste).
+        </p>
+        <div class="join w-full">
+          <input
+            id="nuevaCategoria"
+            type="text"
+            placeholder="Ej. Pan dulce"
+            [formControl]="newCategory"
+            class="input input-bordered join-item w-full"
+          />
+          <button type="button" class="btn join-item" [disabled]="savingCategory()" (click)="createCategory()">
+            Agregar
+          </button>
+        </div>
+      </div>
+    </fieldset>
+
+    <fieldset class="flex flex-col gap-3">
+      <legend class="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.09em] text-base-content/55">
+        Venta e inventario
+      </legend>
+      <div class="grid gap-3 sm:grid-cols-2">
+        <div>
+          <label class="mb-1.5 block text-sm font-semibold" for="precio">Precio</label>
+          <input
+            id="precio"
+            type="number"
+            step="0.01"
+            min="0"
+            formControlName="precio"
+            class="input input-bordered w-full"
+            [class.input-error]="!!errorFor('precio')"
+          />
+          @if (errorFor('precio'); as message) {
+            <p class="mt-1 text-xs text-error">{{ message }}</p>
+          } @else if (!isAdmin) {
+            <p class="mt-1 text-xs text-base-content/55">Solo administración cambia precios.</p>
+          }
+        </div>
+        <div>
+          <label class="mb-1.5 block text-sm font-semibold" for="stockMinimo">Existencia mínima</label>
+          <input
+            id="stockMinimo"
+            type="number"
+            step="1"
+            min="0"
+            formControlName="stockMinimo"
+            class="input input-bordered w-full"
+            [class.input-error]="!!errorFor('stockMinimo')"
+          />
+          @if (errorFor('stockMinimo'); as message) {
+            <p class="mt-1 text-xs text-error">{{ message }}</p>
+          } @else {
+            <p class="mt-1 text-xs text-base-content/55">Por debajo de este nivel se marca «Reabastecer».</p>
+          }
+        </div>
+      </div>
+    </fieldset>
+
+    <fieldset class="flex flex-col gap-3">
+      <legend class="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.09em] text-base-content/55">
+        Canales de venta
+      </legend>
+      <label class="label cursor-pointer justify-start gap-3">
+        <input type="checkbox" class="checkbox checkbox-sm" formControlName="disponiblePos" />
+        <span class="text-sm">Disponible en punto de venta</span>
+      </label>
+      <label class="label cursor-pointer justify-start gap-3">
+        <input type="checkbox" class="checkbox checkbox-sm" formControlName="disponibleTienda" />
+        <span class="text-sm">Disponible en tienda en línea</span>
+      </label>
+      <p class="text-xs text-base-content/55">
+        Es un interruptor manual: no depende de la existencia. También se cambia al instante desde la ficha.
+      </p>
+    </fieldset>
+
+    <fieldset class="flex flex-col gap-3">
+      <legend class="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.09em] text-base-content/55">
+        Impuestos
+      </legend>
+      <label class="label cursor-pointer justify-start gap-3">
+        <input type="checkbox" class="checkbox checkbox-sm" formControlName="exentoIva" />
+        <span class="text-sm">Exento de IVA</span>
+      </label>
+      <p class="text-xs text-base-content/55">
+        Un producto exento se vende sin IVA aunque la empresa lo aplique al resto. Aplica desde la próxima venta.
+      </p>
+    </fieldset>
+
+    <fieldset class="flex flex-col gap-3">
+      <legend class="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.09em] text-base-content/55">
+        Por encargo
+      </legend>
+      <label class="grid gap-1 text-sm">
+        <span>Anticipación mínima en horas (opcional)</span>
+        <input type="number" min="1" max="720" class="input input-bordered w-40" formControlName="anticipacionHoras" />
+      </label>
+      <p class="text-xs text-base-content/55">
+        Si se indica, en la tienda se pide con esa anticipación y se produce para el pedido (no usa existencia).
+      </p>
+    </fieldset>
+
+    <fieldset class="flex flex-col gap-3">
+      <legend class="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.09em] text-base-content/55">
+        Ficha para el cliente
+      </legend>
+      <div>
+        <label class="mb-1.5 block text-sm font-semibold" for="alergenos">Alérgenos (opcional)</label>
+        <input
+          id="alergenos"
+          type="text"
+          placeholder="Ej. gluten, huevo, lácteos"
+          maxlength="255"
+          formControlName="alergenos"
+          class="input input-bordered w-full"
+          [class.input-error]="!!errorFor('alergenos')"
+        />
+        @if (errorFor('alergenos'); as message) {
+          <p class="mt-1 text-xs text-error">{{ message }}</p>
+        }
+      </div>
+      <div>
+        <label class="mb-1.5 block text-sm font-semibold" for="descripcion">Descripción</label>
+        <textarea
+          id="descripcion"
+          rows="3"
+          formControlName="descripcion"
+          class="textarea textarea-bordered w-full"
+        ></textarea>
+      </div>
+      <p class="text-xs text-base-content/55">
+        La foto se cambia desde el menú «Más» de la ficha del producto.
+      </p>
+    </fieldset>
+  </form>
+
+  <div footer class="contents">
+    <button type="button" class="btn btn-ghost" (click)="cancel()">Cancelar</button>
+    <button type="submit" form="product-form" class="btn btn-primary" [disabled]="saving()">
+      @if (saving()) {
+        <span class="loading loading-spinner loading-sm"></span>
+      }
+      Guardar
+    </button>
+  </div>
+</app-form-drawer>
+
+<app-confirm-dialog
+  [open]="exemptNotes() !== null"
+  title="¿Cambiar la exención de IVA?"
+  message="Vas a cambiar cómo se cobra este producto."
+  [details]="exemptNotes() ?? []"
+  confirmLabel="Aplicar cambio"
+  tone="primary"
+  (confirmed)="confirmExempt()"
+  (cancelled)="dismissExempt()"
+/>

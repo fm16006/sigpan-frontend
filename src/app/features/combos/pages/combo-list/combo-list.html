@@ -1,0 +1,117 @@
+<app-page-header
+  title="Combos"
+  subtitle="Productos que se venden juntos a un precio especial. Se arman con lo que hay en existencia."
+  [crumbs]="crumbs"
+>
+  <button type="button" class="btn btn-primary" (click)="drawerOpen.set(true)">
+    <app-icon name="plus" [size]="16" /> Nuevo combo
+  </button>
+</app-page-header>
+
+<div class="mb-4 flex flex-wrap items-center gap-3">
+  <label class="input input-bordered flex w-full items-center gap-2 md:w-80">
+    <app-icon name="search" class="text-base-content/50" />
+    <input
+      type="search"
+      class="grow"
+      placeholder="Buscar combo o producto"
+      aria-label="Buscar combo o producto"
+      [value]="search()"
+      (input)="search.set($any($event.target).value)"
+    />
+  </label>
+
+  <div class="join" role="group" aria-label="Estado del combo">
+    @for (item of filters; track item.value) {
+      <button
+        type="button"
+        class="btn btn-sm join-item"
+        [class.btn-active]="filter() === item.value"
+        [attr.aria-pressed]="filter() === item.value"
+        (click)="filter.set(item.value)"
+      >
+        {{ item.label }}
+        <span class="text-xs tabular-nums text-base-content/60">{{ counts()[item.value] }}</span>
+      </button>
+    }
+  </div>
+</div>
+
+<app-resource-state
+  [loading]="loading()"
+  [failed]="failed()"
+  [empty]="isEmpty()"
+  emptyTitle="Sin combos"
+  emptyDescription="Creá un combo y agregá los productos que lo integran."
+  (retry)="combos.reload()"
+>
+  <section class="overflow-hidden rounded-box border border-base-300 bg-base-100" aria-label="Lista de combos">
+    <div
+      class="grid items-center gap-x-4 px-5 py-3 md:grid-cols-[minmax(0,1.3fr)_minmax(0,2fr)_90px_90px_90px_120px_90px_16px] max-md:hidden"
+    >
+      <span class="list-th">Combo</span>
+      <span class="list-th">Contenido</span>
+      <span class="list-th text-end">Por separado</span>
+      <span class="list-th text-end">Precio</span>
+      <span class="list-th text-end">Ahorro</span>
+      <span class="list-th">Disponibles</span>
+      <span class="list-th">Estado</span>
+      <span></span>
+    </div>
+
+    @for (row of visible(); track row.combo.id) {
+      <a
+        class="list-row grid-cols-2 gap-y-2 md:grid-cols-[minmax(0,1.3fr)_minmax(0,2fr)_90px_90px_90px_120px_90px_16px]"
+        [routerLink]="['/backoffice/combos', row.combo.id]"
+        [attr.aria-label]="'Abrir la ficha del combo ' + row.combo.nombre"
+      >
+        <span class="min-w-0">
+          <span class="block truncate font-semibold">{{ row.combo.nombre }}</span>
+          @if (row.combo.descripcion) {
+            <span class="block truncate text-xs text-base-content/55">{{ row.combo.descripcion }}</span>
+          }
+        </span>
+        <span class="flex min-w-0 flex-wrap gap-1 max-md:col-span-2">
+          @for (content of row.contents; track $index) {
+            <span class="rounded-md border border-base-300 bg-base-200/60 px-2 py-0.5 text-xs">{{ content }}</span>
+          } @empty {
+            <span class="text-xs text-base-content/50">Sin productos</span>
+          }
+        </span>
+        <span class="tabular-nums md:text-end">
+          <span class="text-xs text-base-content/55 md:hidden">Por separado </span>{{ row.sum | money }}
+        </span>
+        <span class="font-semibold tabular-nums md:text-end">{{ row.combo.precio | money }}</span>
+        <span class="tabular-nums md:text-end">
+          @if (row.saving > 0) {
+            −{{ row.saving | money }}
+          } @else {
+            <span class="text-base-content/45">—</span>
+          }
+        </span>
+        <app-status-chip [tone]="tone(row.available)" [label]="label(row.available)" />
+        <app-status-chip
+          [tone]="row.combo.activo ? 'ok' : 'neutral'"
+          [label]="row.combo.activo ? 'Activo' : 'Inactivo'"
+        />
+        <app-icon name="chevron" class="text-base-content/40 max-md:hidden" />
+      </a>
+    } @empty {
+      <p class="border-t border-base-300 px-5 py-8 text-center text-sm text-base-content/55">
+        Ningún combo coincide con la búsqueda.
+      </p>
+    }
+
+    <p class="border-t border-base-300 px-5 py-3 text-xs text-base-content/55">
+      {{ visible().length }} de {{ counts().todos }} combos · la disponibilidad sale del producto que
+      menos alcanza
+    </p>
+  </section>
+</app-resource-state>
+
+<app-combo-form-drawer
+  [open]="drawerOpen()"
+  [combo]="null"
+  (closed)="drawerOpen.set(false)"
+  (saved)="onSaved($event)"
+/>

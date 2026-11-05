@@ -1,0 +1,254 @@
+<!-- Portada -->
+<section class="relative isolate overflow-hidden bg-neutral text-neutral-content">
+  <img
+    ngSrc="images/hero-pan.jpg"
+    fill
+    priority
+    alt=""
+    class="animate-settle -z-10 object-cover opacity-55"
+  />
+  <div
+    class="absolute inset-0 -z-10 bg-linear-to-r from-neutral via-neutral/80 to-neutral/10"
+    aria-hidden="true"
+  ></div>
+
+  <div class="container-page grid min-h-[30rem] items-center py-16 lg:min-h-[36rem]">
+    <div class="animate-rise max-w-xl">
+      <p class="text-xs font-semibold uppercase tracking-[0.25em] text-accent">
+        Panadería artesanal · San Salvador
+      </p>
+      <h1 class="mt-4 text-4xl font-semibold leading-[1.05] sm:text-6xl">
+        El sabor del pan<br />recién salido del horno
+      </h1>
+      <p class="mt-5 max-w-md text-base text-neutral-content/80 sm:text-lg">
+        Pan francés, pan dulce, postres y café para acompañar. Pedí en línea y retiralo en la
+        tienda, calientito.
+      </p>
+      <div class="mt-8 flex flex-wrap gap-3">
+        <a routerLink="/storefront" class="btn btn-accent btn-lg rounded-full px-8">Ver el menú</a>
+        <a
+          routerLink="/auth/register"
+          class="btn btn-lg btn-ghost rounded-full border-neutral-content/40 text-neutral-content hover:bg-neutral-content/10"
+        >
+          Crear cuenta
+        </a>
+      </div>
+      <ul class="mt-10 flex flex-wrap gap-x-6 gap-y-2 text-sm text-neutral-content/75">
+        <li class="flex items-center gap-2">
+          <span class="size-1.5 rounded-full bg-accent"></span> Horneado cada mañana
+        </li>
+        <li class="flex items-center gap-2">
+          <span class="size-1.5 rounded-full bg-accent"></span> Retiro en tienda
+        </li>
+        <li class="flex items-center gap-2">
+          <span class="size-1.5 rounded-full bg-accent"></span> Efectivo o tarjeta
+        </li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- Categorías -->
+@if (categories().length > 0) {
+  <section class="container-page py-14">
+    <div class="flex flex-wrap items-end justify-between gap-2">
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Nuestro menú</p>
+        <h2 class="mt-1 text-3xl font-semibold">¿Qué se te antoja hoy?</h2>
+      </div>
+      <a routerLink="/storefront" class="link link-primary text-sm font-medium">Ver todo →</a>
+    </div>
+
+    <ul class="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      @for (category of categories(); track category.id) {
+        <li>
+          <a
+            routerLink="/storefront"
+            [queryParams]="{ categoria: category.id }"
+            class="group flex h-full flex-col items-center gap-3 rounded-box border border-base-300 bg-base-100 p-5 text-center transition hover:-translate-y-1 hover:border-primary/40 hover:shadow-md"
+          >
+            <span class="grid size-20 place-items-center rounded-full {{ category.tone }}">
+              <app-category-icon
+                [name]="category.nombre"
+                class="size-10 transition duration-300 group-hover:scale-110"
+              />
+            </span>
+            <span class="font-semibold capitalize">{{ category.nombre }}</span>
+            <span class="text-xs text-base-content/55">
+              {{ category.total }} {{ category.total === 1 ? 'producto' : 'productos' }}
+            </span>
+          </a>
+        </li>
+      }
+    </ul>
+  </section>
+}
+
+<!-- Destacados -->
+<section class="bg-base-200 py-14">
+  <div class="container-page">
+    <div class="flex flex-wrap items-end justify-between gap-2">
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Recién horneado</p>
+        <h2 class="mt-1 text-3xl font-semibold">Favoritos de la casa</h2>
+      </div>
+      <a routerLink="/storefront" class="btn btn-outline btn-primary btn-sm rounded-full">
+        Ver catálogo completo
+      </a>
+    </div>
+
+    @if (loading()) {
+      <div class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        @for (slot of [1, 2, 3, 4]; track slot) {
+          <div class="skeleton h-80 rounded-box"></div>
+        }
+      </div>
+    } @else {
+      <ul class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        @for (product of featured(); track product.id) {
+          <li><app-product-card [product]="product" (added)="shop.add($event)" /></li>
+        }
+      </ul>
+    }
+  </div>
+</section>
+
+<!-- Encargos: franja de ancho completo, como la portada -->
+<section class="relative isolate overflow-hidden bg-primary text-primary-content">
+  <div class="container-page relative py-16">
+    <app-category-icon
+      kind="postre"
+      class="absolute end-4 -bottom-10 -z-10 size-64 rotate-12 opacity-15 sm:end-12"
+    />
+    <div class="max-w-xl">
+      <p class="text-xs font-semibold uppercase tracking-[0.2em] opacity-80">Pedidos especiales</p>
+      <h2 class="mt-2 text-3xl font-semibold sm:text-4xl">¿Tenés una celebración?</h2>
+      <p class="mt-3 opacity-85">
+        Pasteles, bandejas de pan dulce y bocadillos para cumpleaños, reuniones y oficina.
+        Encargalos con anticipación y los tenemos listos el día que los necesitás.
+      </p>
+      <a routerLink="/storefront" class="btn btn-accent mt-6 rounded-full px-6">Ver postres</a>
+    </div>
+  </div>
+</section>
+
+<!-- Bebidas -->
+@if (drinks().length > 0) {
+  <section class="container-page py-14">
+    <div class="flex flex-wrap items-end justify-between gap-2">
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-secondary">
+          Para acompañar
+        </p>
+        <h2 class="mt-1 text-3xl font-semibold">Café, chocolate y algo fresco</h2>
+      </div>
+    </div>
+    <ul class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      @for (product of drinks(); track product.id) {
+        <li><app-product-card [product]="product" (added)="shop.add($event)" /></li>
+      }
+    </ul>
+  </section>
+}
+
+<!-- Cómo pedir -->
+<section class="bg-base-200 py-14">
+  <div class="container-page">
+    <div class="text-center">
+      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Así de fácil</p>
+      <h2 class="mt-1 text-3xl font-semibold">Pedí en línea en tres pasos</h2>
+    </div>
+    <ol class="mt-10 grid gap-6 sm:grid-cols-3">
+      @for (step of steps; track step.title; let i = $index) {
+        <li class="flex flex-col items-center text-center">
+          <span
+            class="grid size-14 place-items-center rounded-full bg-primary text-xl font-bold text-primary-content shadow-md"
+          >
+            {{ i + 1 }}
+          </span>
+          <h3 class="mt-4 text-xl font-semibold">{{ step.title }}</h3>
+          <p class="mt-2 max-w-xs text-sm text-base-content/65">{{ step.text }}</p>
+        </li>
+      }
+    </ol>
+  </div>
+</section>
+
+<!-- Nuestra panadería -->
+<section class="container-page grid items-center gap-10 py-16 lg:grid-cols-2">
+  <div class="relative">
+    <div class="overflow-hidden rounded-[2rem] shadow-xl">
+      <img
+        ngSrc="images/hero-pan.jpg"
+        width="1200"
+        height="800"
+        alt="Hogazas de pan de masa madre recién salidas del horno"
+        class="aspect-4/3 w-full object-cover"
+      />
+    </div>
+    <div
+      class="absolute -bottom-6 start-6 rounded-box bg-accent px-5 py-3 text-accent-content shadow-lg"
+    >
+      <p class="text-2xl font-bold">Desde el horno</p>
+      <p class="text-xs uppercase tracking-widest opacity-80">a tu mesa</p>
+    </div>
+  </div>
+
+  <div>
+    <p class="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Nuestra panadería</p>
+    <h2 class="mt-1 text-3xl font-semibold sm:text-4xl">Hecho a mano, como en casa</h2>
+    <p class="mt-4 text-base-content/70">
+      Cada día empieza de madrugada: amasamos, dejamos reposar y horneamos en pequeñas tandas para
+      que el pan llegue a tus manos con su mejor aroma.
+    </p>
+    <ul class="mt-8 grid gap-5">
+      @for (promise of promises; track promise.title) {
+        <li class="flex gap-4">
+          <span
+            class="mt-1 grid size-8 shrink-0 place-items-center rounded-full bg-success/15 text-success"
+          >
+            <svg
+              class="size-4"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              aria-hidden="true"
+            >
+              <path
+                d="m5 12.5 4.5 4.5L19 7.5"
+                stroke-width="2.2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </span>
+          <div>
+            <h3 class="font-semibold">{{ promise.title }}</h3>
+            <p class="text-sm text-base-content/65">{{ promise.text }}</p>
+          </div>
+        </li>
+      }
+    </ul>
+  </div>
+</section>
+
+<!-- Visitanos -->
+<section class="container-page pb-16">
+  <div
+    class="grid gap-6 rounded-[2rem] border border-base-300 bg-base-100 p-8 sm:p-10 md:grid-cols-3"
+  >
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Visitanos</p>
+      <h2 class="mt-1 text-2xl font-semibold">Te esperamos con pan calientito</h2>
+      <p class="mt-2 text-sm text-base-content/65">{{ business().direccion }}</p>
+    </div>
+    <dl class="grid gap-2 text-sm md:col-span-2 sm:grid-cols-3">
+      @for (slot of business().horario; track slot.dias) {
+        <div class="rounded-box bg-base-200 p-4">
+          <dt class="font-semibold">{{ slot.dias }}</dt>
+          <dd class="mt-1 text-base-content/65">{{ slot.horas }}</dd>
+        </div>
+      }
+    </dl>
+  </div>
+</section>

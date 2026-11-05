@@ -1,0 +1,140 @@
+<div class="bg-primary text-primary-content">
+  <p
+    class="container-page flex h-8 items-center justify-center gap-3 text-center text-xs font-medium tracking-wide"
+  >
+    <span>Horneado cada mañana</span>
+    <span class="hidden opacity-50 min-[26rem]:inline" aria-hidden="true">•</span>
+    <span class="hidden min-[26rem]:inline">Pedí en línea y retirá en tienda</span>
+    <span class="hidden opacity-50 sm:inline" aria-hidden="true">•</span>
+    <span class="hidden sm:inline">Pagá en efectivo o con tarjeta</span>
+  </p>
+</div>
+<header class="sticky top-0 z-30 border-b border-base-300 bg-base-100/90 backdrop-blur">
+  <nav class="container-page flex h-16 items-center gap-2 sm:gap-6" aria-label="Principal">
+    <!-- Navegación en móvil y tablet -->
+    <div class="dropdown sm:hidden">
+      <button
+        type="button"
+        class="btn btn-ghost btn-sm btn-circle"
+        aria-haspopup="menu"
+        aria-label="Abrir menú"
+      >
+        <svg
+          class="size-5"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          aria-hidden="true"
+        >
+          <path d="M4 7h16M4 12h16M4 17h16" stroke-width="1.8" stroke-linecap="round" />
+        </svg>
+      </button>
+      <ul
+        class="dropdown-content menu z-40 mt-2 w-56 rounded-box border border-base-300 bg-base-100 p-2 shadow-sm"
+        role="menu"
+      >
+        <li><a routerLink="/">Inicio</a></li>
+        <li><a routerLink="/storefront">Menú</a></li>
+        @if (auth.isAuthenticated()) {
+          <li><a routerLink="/storefront/orders">Mis pedidos</a></li>
+          <li><a routerLink="/storefront/cuenta">Mi cuenta</a></li>
+        }
+        @if (canEnterBackoffice()) {
+          <li><a routerLink="/backoffice">Panel administrativo</a></li>
+        }
+      </ul>
+    </div>
+
+    <a routerLink="/" aria-label="Inicio">
+      <app-brand-mark [size]="2.25" />
+    </a>
+
+    <div class="hidden items-center gap-1 sm:flex">
+      <a
+        routerLink="/"
+        routerLinkActive="bg-base-200 text-base-content"
+        [routerLinkActiveOptions]="{ exact: true }"
+        class="rounded-field px-3 py-2 text-sm font-medium text-base-content/70 hover:bg-base-200"
+      >
+        Inicio
+      </a>
+      <a
+        routerLink="/storefront"
+        [routerLinkActiveOptions]="{ exact: true }"
+        routerLinkActive="bg-base-200 text-base-content"
+        class="rounded-field px-3 py-2 text-sm font-medium text-base-content/70 hover:bg-base-200"
+      >
+        Menú
+      </a>
+      @if (auth.isAuthenticated()) {
+        <a
+          routerLink="/storefront/orders"
+          routerLinkActive="bg-base-200 text-base-content"
+          class="rounded-field px-3 py-2 text-sm font-medium text-base-content/70 hover:bg-base-200"
+        >
+          Mis pedidos
+        </a>
+      }
+    </div>
+
+    <div class="ms-auto flex items-center gap-1 sm:gap-2">
+      <app-theme-toggle />
+
+      <a
+        routerLink="/storefront/cart"
+        class="btn btn-ghost btn-sm"
+        [attr.aria-label]="'Carrito, ' + cart.count() + ' artículos'"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-5 w-5"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          aria-hidden="true"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="1.8"
+            d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
+          />
+        </svg>
+        @if (cart.count() > 0) {
+          <span class="badge badge-primary badge-sm">{{ cart.count() }}</span>
+        }
+      </a>
+
+      @if (auth.user(); as user) {
+        <div class="dropdown dropdown-end">
+          <button type="button" class="btn btn-ghost btn-sm" aria-haspopup="menu">
+            <span class="hidden sm:inline">{{ user.name }}</span>
+            <span class="sm:hidden" aria-hidden="true">
+              <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <circle cx="12" cy="8.5" r="3.5" stroke-width="1.6" />
+                <path
+                  d="M5 20c0-3.3 3.1-5.5 7-5.5s7 2.2 7 5.5"
+                  stroke-width="1.6"
+                  stroke-linecap="round"
+                />
+              </svg>
+            </span>
+          </button>
+          <ul
+            class="dropdown-content menu z-40 mt-2 w-52 rounded-box border border-base-300 bg-base-100 p-2 shadow-sm"
+            role="menu"
+          >
+            @if (canEnterBackoffice()) {
+              <li><a routerLink="/backoffice">Panel administrativo</a></li>
+            }
+            <li><a routerLink="/storefront/orders">Mis pedidos</a></li>
+            <li><a routerLink="/storefront/cuenta">Mi cuenta</a></li>
+            <li><button type="button" (click)="auth.logout()">Cerrar sesión</button></li>
+          </ul>
+        </div>
+      } @else {
+        <a routerLink="/auth/login" class="btn btn-primary btn-sm">Ingresar</a>
+      }
+    </div>
+  </nav>
+</header>

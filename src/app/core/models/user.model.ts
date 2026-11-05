@@ -1,0 +1,112 @@
+import { Id } from './api.model';
+
+export const USER_ROLES = [
+  'ADMINISTRADOR',
+  'JEFE_PRODUCCION',
+  'BODEGUERO',
+  'CAJERO',
+  'DESPACHADOR',
+  'AUDITOR',
+  'CLIENTE',
+] as const;
+
+export type UserRole = (typeof USER_ROLES)[number];
+
+export interface User {
+  readonly id: Id;
+  readonly name: string;
+  readonly email: string;
+  readonly role: UserRole;
+}
+
+export interface Credentials {
+  readonly email: string;
+  readonly password: string;
+}
+
+export interface RegisterPayload extends Credentials {
+  readonly nombre: string;
+  readonly telefono?: string;
+}
+
+export interface ApiUser {
+  readonly id: Id;
+  readonly nombre: string;
+  readonly email: string;
+  readonly telefono: string | null;
+  readonly rolId: Id;
+  readonly rol: UserRole;
+  readonly activo: boolean;
+}
+
+export interface ApiSession {
+  readonly tokenAcceso: string;
+  readonly tipoToken: string;
+  readonly expiraEn: number;
+  readonly usuario: ApiUser;
+}
+
+export function toAuthSession(session: ApiSession): AuthSession {
+  return {
+    accessToken: session.tokenAcceso,
+    expiresIn: session.expiraEn,
+    user: {
+      id: session.usuario.id,
+      name: session.usuario.nombre,
+      email: session.usuario.email,
+      role: session.usuario.rol,
+    },
+  };
+}
+
+/** El refresh token no viaja aquí: llega como cookie HttpOnly. */
+export interface AuthSession {
+  readonly accessToken: string;
+  /** Segundos de vida del access token. */
+  readonly expiresIn: number;
+  readonly user: User;
+}
+
+export const STAFF_ROLES: readonly UserRole[] = [
+  'ADMINISTRADOR',
+  'JEFE_PRODUCCION',
+  'BODEGUERO',
+  'CAJERO',
+  'DESPACHADOR',
+  'AUDITOR',
+];
+
+export const ROLE_LABELS: Readonly<Record<UserRole, string>> = {
+  ADMINISTRADOR: 'Administración',
+  JEFE_PRODUCCION: 'Jefe de producción',
+  BODEGUERO: 'Bodega',
+  CAJERO: 'Caja',
+  DESPACHADOR: 'Despacho',
+  AUDITOR: 'Auditoría',
+  CLIENTE: 'Cliente',
+};
+
+// Pantalla de inicio de cada rol después del login.
+export const ROLE_HOME: Readonly<Record<UserRole, string>> = {
+  ADMINISTRADOR: '/backoffice',
+  JEFE_PRODUCCION: '/backoffice/products',
+  BODEGUERO: '/backoffice/inventory',
+  CAJERO: '/backoffice/pos',
+  DESPACHADOR: '/backoffice/orders',
+  AUDITOR: '/backoffice/reports',
+  CLIENTE: '/',
+};
+
+export function canSeePublicSite(role: UserRole | null): boolean {
+  return role === null || role === 'CLIENTE' || role === 'ADMINISTRADOR';
+}
+
+/** HU-15: dirección de entrega guardada. */
+export interface SavedAddress {
+  readonly id: number;
+  readonly alias: string;
+  readonly direccion: string;
+  readonly referencia: string | null;
+  readonly telefono: string | null;
+  readonly predeterminada: boolean;
+}

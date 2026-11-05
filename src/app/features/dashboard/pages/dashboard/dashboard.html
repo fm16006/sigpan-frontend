@@ -1,0 +1,118 @@
+<app-page-header
+  title="Panel"
+  [subtitle]="'Resumen de la jornada · ' + (auth.user()?.name ?? '')"
+  [crumbs]="crumbs"
+>
+  <button type="button" class="btn btn-sm sm:btn-md" [disabled]="loading()" (click)="reload()">
+    Actualizar
+  </button>
+</app-page-header>
+
+<section class="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4" [attr.aria-busy]="loading()">
+  <app-stat-card label="Vendido hoy" [value]="(data()?.totalDia ?? 0) | money" hint="Mostrador y en línea" />
+  <app-stat-card
+    label="Mostrador"
+    [value]="channel('MOSTRADOR').total | money"
+    [hint]="channel('MOSTRADOR').ventas + ' ticket(s)'"
+  />
+  <app-stat-card
+    label="En línea"
+    [value]="channel('EN_LINEA').total | money"
+    [hint]="channel('EN_LINEA').ventas + ' pedido(s)'"
+  />
+  <app-stat-card label="Pedidos en curso" [value]="pendingOrders()" hint="Sin entregar ni cancelar" />
+</section>
+
+<div class="mt-6 grid gap-4 lg:grid-cols-3">
+  <section class="rounded-box border border-base-300 bg-base-100 p-4" aria-label="Más vendidos hoy">
+    <h2 class="mb-3 font-semibold">Más vendidos hoy</h2>
+    @for (m of data()?.masVendidos ?? []; track m.productoId) {
+      <div class="mb-2">
+        <div class="flex justify-between text-sm"><span>{{ m.producto }}</span><span class="tabular-nums">{{ m.cantidad }}</span></div>
+        <div class="h-1.5 rounded bg-base-200"><div class="h-1.5 rounded bg-primary" [style.width.%]="(m.cantidad / maxSold()) * 100"></div></div>
+      </div>
+    } @empty {
+      <p class="text-sm text-base-content/60">Todavía no hay ventas hoy.</p>
+    }
+  </section>
+
+  <section class="rounded-box border border-base-300 bg-base-100 p-4" aria-label="Pedidos por estado">
+    <div class="mb-3 flex items-center justify-between">
+      <h2 class="font-semibold">Pedidos por estado</h2>
+      <a routerLink="/backoffice/orders" class="link link-hover text-sm">Ver</a>
+    </div>
+    <ul class="grid gap-1.5 text-sm">
+      @for (s of orderStates(); track s.estado) {
+        <li class="flex justify-between" [class.text-base-content/45]="s.total === 0">
+          <span>{{ statusLabels[s.estado] ?? s.estado }}</span><span class="tabular-nums font-medium">{{ s.total }}</span>
+        </li>
+      }
+    </ul>
+  </section>
+
+  <section class="rounded-box border border-base-300 bg-base-100 p-4" aria-label="Alertas de inventario">
+    <div class="mb-3 flex items-center justify-between">
+      <h2 class="font-semibold">Insumos por reponer</h2>
+      <a routerLink="/backoffice/stock-control" class="link link-hover text-sm">Ver</a>
+    </div>
+    <ul class="grid gap-1.5 text-sm">
+      @for (a of (data()?.alertasReorden ?? []).slice(0, 6); track a.materiaPrimaId) {
+        <li class="flex justify-between">
+          <span [class.text-error]="a.critico">{{ a.materiaPrima }}</span>
+          <span class="tabular-nums">{{ a.existencia | number: '1.0-2' }} {{ a.unidad }}</span>
+        </li>
+      } @empty {
+        <li class="text-base-content/60">Nada por reponer.</li>
+      }
+    </ul>
+    @if ((data()?.lotesPorVencer ?? 0) > 0) {
+      <p class="mt-3 text-sm text-warning">{{ data()?.lotesPorVencer }} lote(s) vencen en los próximos días.</p>
+    }
+  </section>
+</div>
+
+<h2 class="mt-6 mb-2 font-sans text-[0.68rem] font-semibold uppercase tracking-[0.09em] text-base-content/55 sm:mt-8 sm:mb-3">Accesos rápidos</h2>
+<section
+  class="grid overflow-hidden rounded-box border border-base-300 bg-base-100 sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:border-0 sm:bg-transparent"
+  aria-label="Accesos rápidos"
+>
+  <a
+    routerLink="/backoffice/pos"
+    class="flex items-center gap-3 border-base-300 bg-base-100 px-4 py-3 transition-colors not-first:border-t hover:bg-base-200 sm:gap-4 sm:rounded-box sm:border sm:p-5 sm:not-first:border-t"
+  >
+    <span class="grid size-9 shrink-0 place-items-center rounded-field bg-primary/10 text-primary sm:size-10">
+      <app-icon name="pos" />
+    </span>
+    <span class="min-w-0 flex-1">
+      <span class="block text-sm font-semibold sm:text-base">Abrir punto de venta</span>
+      <span class="mt-0.5 block text-xs text-base-content/60 sm:text-sm">Registrar una venta en mostrador.</span>
+    </span>
+    <app-icon name="chevron" class="text-base-content/40" />
+  </a>
+  <a
+    routerLink="/backoffice/raw-materials"
+    class="flex items-center gap-3 border-base-300 bg-base-100 px-4 py-3 transition-colors not-first:border-t hover:bg-base-200 sm:gap-4 sm:rounded-box sm:border sm:p-5 sm:not-first:border-t"
+  >
+    <span class="grid size-9 shrink-0 place-items-center rounded-field bg-primary/10 text-primary sm:size-10">
+      <app-icon name="sack" />
+    </span>
+    <span class="min-w-0 flex-1">
+      <span class="block text-sm font-semibold sm:text-base">Revisar inventario</span>
+      <span class="mt-0.5 block text-xs text-base-content/60 sm:text-sm">Existencias y niveles de reposición.</span>
+    </span>
+    <app-icon name="chevron" class="text-base-content/40" />
+  </a>
+  <a
+    routerLink="/backoffice/users"
+    class="flex items-center gap-3 border-base-300 bg-base-100 px-4 py-3 transition-colors not-first:border-t hover:bg-base-200 sm:gap-4 sm:rounded-box sm:border sm:p-5 sm:not-first:border-t"
+  >
+    <span class="grid size-9 shrink-0 place-items-center rounded-field bg-primary/10 text-primary sm:size-10">
+      <app-icon name="users" />
+    </span>
+    <span class="min-w-0 flex-1">
+      <span class="block text-sm font-semibold sm:text-base">Usuarios y roles</span>
+      <span class="mt-0.5 block text-xs text-base-content/60 sm:text-sm">Asignar roles y activar cuentas.</span>
+    </span>
+    <app-icon name="chevron" class="text-base-content/40" />
+  </a>
+</section>

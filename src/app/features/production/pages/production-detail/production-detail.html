@@ -1,0 +1,239 @@
+<app-resource-state
+  [loading]="order.isLoading() && !order.hasValue()"
+  [failed]="!!order.error()"
+  (retry)="reloadAll()"
+>
+  @if (current(); as o) {
+    <app-detail-header [crumbs]="crumbs()" [title]="code()">
+      <div class="contents" chips>
+        <app-status-chip [tone]="statusTone[o.estado]" [label]="statusLabels[o.estado]" />
+        <a
+          class="font-semibold text-primary hover:underline"
+          [routerLink]="['/backoffice/products', o.productoId]"
+        >
+          {{ o.producto }}
+        </a>
+        <span class="text-base-content/60">
+          Receta {{ o.formula }} · planificada para el {{ o.fechaPlanificada | date: 'd MMM y' }}
+        </span>
+      </div>
+      <div class="contents" actions>
+        @if (canStart()) {
+          <button type="button" class="btn btn-sm btn-primary" (click)="pendingAction.set('PRODUCION')">
+            Iniciar
+          </button>
+        }
+        @if (canFinish()) {
+          <button type="button" class="btn btn-sm btn-primary" (click)="obtained.set(null); pendingAction.set('TERMINADO')">
+            <app-icon name="check" [size]="16" /> Terminar
+          </button>
+        }
+        @if (canCancel()) {
+          <button type="button" class="btn btn-sm btn-outline btn-error" (click)="pendingAction.set('CANCELADO')">
+            Cancelar orden
+          </button>
+        }
+        @if (!isOpen()) {
+          <span class="max-w-64 text-xs text-base-content/60">
+            Una orden {{ o.estado === 'TERMINADO' ? 'terminada ya movió' : 'cancelada no movió' }} el
+            inventario: no se edita ni se borra.
+          </span>
+        }
+      </div>
+    </app-detail-header>
+
+    <div class="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <app-stat-card label="Lotes" [value]="o.cantidad" />
+      @if (o.estado === 'TERMINADO') {
+        <app-stat-card
+          label="Unidades obtenidas"
+          [value]="produced() !== null ? (produced() | number: '1.0-3') + ' u' : '—'"
+          [hint]="units() !== null ? 'De ' + (units() | number: '1.0-3') + ' u planificadas' : ''"
+        />
+      } @else {
+        <app-stat-card
+          label="Unidades a producir"
+          [value]="units() !== null ? (units() | number: '1.0-3') + ' u' : '—'"
+        />
+      }
+      <app-stat-card
+        label="Costo estimado"
+        [value]="estimatedCost() !== null ? (estimatedCost() | money) : '—'"
+        [hint]="o.formulaVersion ? 'Receta versión ' + o.formulaVersion + ', costo actual de los insumos' : 'Con el costo actual de la receta'"
+      />
+      <app-stat-card
+        label="Costo por unidad"
+        [value]="costValue() ? (costValue()!.costoUnitario | money) : '—'"
+        hint="Según la receta"
+      />
+    </div>
+
+    <div class="grid gap-6 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
+      <section class="panel" aria-labelledby="h-insumos">
+        @if (o.estado === 'TERMINADO') {
+          <div>
+            <h2 id="h-insumos" class="text-xl font-semibold">Insumos descargados</h2>
+            <p class="text-xs text-base-content/55">Clic en un insumo para abrir su ficha</p>
+          </div>
+
+          <div class="-mx-4 sm:-mx-[1.375rem] border-t border-base-300">
+            <div
+              class="grid items-center gap-x-4 px-5 py-3 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_16px] max-md:hidden"
+            >
+              <span class="list-th">Insumo</span>
+              <span class="list-th text-end">Cantidad</span>
+              <span></span>
+            </div>
+            @for (item of discharged(); track item.line.id) {
+              <a
+                class="list-row grid-cols-2 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_16px]"
+                [routerLink]="['/backoffice/raw-materials', item.line.materiaPrimaId]"
+                [attr.aria-label]="'Abrir la ficha de ' + item.line.materiaPrima"
+              >
+                <span class="font-semibold">{{ item.line.materiaPrima }}</span>
+                <span class="tabular-nums md:text-end">
+                  {{ item.line.cantidad | number: '1.0-3' }} {{ item.unit }}
+                </span>
+                <app-icon name="chevron" class="text-base-content/40 max-md:hidden" />
+              </a>
+            } @empty {
+              <p class="border-t border-base-300 px-5 py-6 text-center text-sm text-base-content/55">
+                Esta orden no registró insumos descargados.
+              </p>
+            }
+          </div>
+
+          <!-- Pendiente backend: exponer el costo de cada insumo descargado en el detalle de la producción -->
+          <p class="text-xs text-base-content/55">
+            Próximamente: el costo de cada insumo descargado.
+          </p>
+        } @else if (o.estado === 'CANCELADO') {
+          <h2 id="h-insumos" class="text-xl font-semibold">Insumos</h2>
+          <p class="text-sm text-base-content/60">
+            La orden se canceló antes de terminar: no se descargó ningún insumo.
+          </p>
+        } @else {
+          <div>
+            <h2 id="h-insumos" class="text-xl font-semibold">Insumos que se descargarán</h2>
+            <p class="text-xs text-base-content/55">
+              Vista previa con la existencia de hoy, merma incluida{{ o.formulaVersion ? ' · receta versión ' + o.formulaVersion : '' }}
+            </p>
+          </div>
+          <app-explosion-table
+            [explosion]="previewValue()"
+            [loading]="preview.isLoading()"
+            [message]="previewMessage()"
+          />
+        }
+      </section>
+
+      <div class="flex flex-col gap-6">
+        <section class="panel" aria-labelledby="h-seguimiento">
+          <h2 id="h-seguimiento" class="text-xl font-semibold">Seguimiento</h2>
+          <ol class="flex flex-col gap-4">
+            @for (step of timeline(); track $index) {
+              <li class="flex items-start gap-3" [attr.aria-current]="step.state === 'current' ? 'step' : null">
+                <span
+                  class="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full text-xs"
+                  [class]="step.state === 'todo' ? 'border border-base-300 text-base-content/40' : step.bad ? 'bg-error text-error-content' : step.state === 'done' ? 'bg-success text-success-content' : 'bg-primary text-primary-content'"
+                >
+                  @if (step.state === 'done') {
+                    <app-icon name="check" [size]="14" [stroke]="2.6" />
+                  } @else if (step.bad) {
+                    <app-icon name="close" [size]="14" [stroke]="2.6" />
+                  } @else {
+                    {{ $index + 1 }}
+                  }
+                </span>
+                <span class="flex flex-col">
+                  <span [class]="step.state === 'todo' ? 'font-semibold text-base-content/55' : 'font-semibold'">{{ step.label }}</span>
+                  @if ($index === 0) {
+                    <span class="text-xs text-base-content/60">{{ o.fecha | date: 'd MMM y, HH:mm' }}</span>
+                  } @else if (step.state === 'current') {
+                    <span class="text-xs text-base-content/60">Estado actual</span>
+                  }
+                </span>
+              </li>
+            }
+          </ol>
+          <!-- Pendiente backend: exponer la fecha de cada cambio de estado y quién lo hizo -->
+          <p class="text-xs text-base-content/55">
+            Próximamente: la fecha de cada cambio de estado y quién lo hizo.
+          </p>
+        </section>
+
+        <section class="panel" aria-labelledby="h-inventario">
+          <h2 id="h-inventario" class="text-xl font-semibold">Entrada al inventario</h2>
+          <a
+            class="flex items-center justify-between gap-3 rounded-box border border-base-300 px-4 py-3 hover:bg-base-200"
+            [routerLink]="['/backoffice/products', o.productoId, 'existencias']"
+          >
+            <span class="flex flex-col">
+              <span class="text-xs text-base-content/60">{{ o.producto }}</span>
+              <span class="font-semibold tabular-nums">
+                @if (o.estado === 'TERMINADO') {
+                  +{{ produced() | number: '1.0-3' }} u entraron
+                } @else if (o.estado === 'CANCELADO') {
+                  Sin movimiento
+                } @else {
+                  +{{ units() | number: '1.0-3' }} u al terminar
+                }
+              </span>
+            </span>
+            <span class="flex items-center gap-1 text-sm text-primary">
+              Ver existencias <app-icon name="chevron" [size]="16" />
+            </span>
+          </a>
+          @if (o.comentario) {
+            <p class="text-xs text-base-content/60">Comentario: «{{ o.comentario }}»</p>
+          }
+          @if (o.formulaVersion) {
+            <p class="text-xs text-base-content/60">Receta versión {{ o.formulaVersion }}</p>
+          }
+          @if (o.cantidadObtenida != null) {
+            <p class="text-sm">
+              Obtenidas: <strong>{{ o.cantidadObtenida | number: '1.0-3' }}</strong> de
+              {{ units() !== null ? (units() | number: '1.0-3') : '—' }} planificadas
+              @if (o.mermaProceso && +o.mermaProceso > 0) {
+                <span class="text-warning"> · merma de proceso {{ o.mermaProceso | number: '1.0-3' }} u</span>
+              } @else if (o.mermaProceso && +o.mermaProceso < 0) {
+                <span> · salieron {{ -o.mermaProceso | number: '1.0-3' }} u de más</span>
+              }
+            </p>
+          }
+          @if (o.faltantes) {
+            <div role="alert" class="alert alert-warning py-2 text-xs">Creada con faltante: {{ o.faltantes }}</div>
+          }
+        </section>
+      </div>
+    </div>
+
+    @if (dialog(); as d) {
+      <app-confirm-dialog
+        [open]="true"
+        [title]="d.title"
+        [message]="d.message"
+        [confirmLabel]="d.confirmLabel"
+        [tone]="d.tone"
+        [busy]="busy()"
+        (confirmed)="confirmAction()"
+        (cancelled)="pendingAction.set(null)"
+      >
+        @if (pendingAction() === 'TERMINADO') {
+          <label class="grid gap-1 text-sm">
+            <span>Unidades obtenidas (planificadas: {{ units() || '—' }})</span>
+            <input
+              class="input w-full"
+              type="number"
+              min="0"
+              step="1"
+              [value]="obtained() ?? ''"
+              (input)="obtained.set($any($event.target).value === '' ? null : +$any($event.target).value)"
+            />
+            <span class="text-xs text-base-content/60">La diferencia queda como merma de proceso y ajusta el costo unitario.</span>
+          </label>
+        }
+      </app-confirm-dialog>
+    }
+  }
+</app-resource-state>

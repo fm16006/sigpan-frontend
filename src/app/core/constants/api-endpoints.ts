@@ -1,0 +1,224 @@
+import { Id } from '../models/api.model';
+
+// Rutas del backend.
+export const API_ENDPOINTS = {
+  auth: {
+    login: '/usuarios/login',
+    google: '/usuarios/login/google',
+    register: '/usuarios',
+    resendVerification: '/usuarios/reenviar-verificacion',
+    /** Canjea la cookie de refresh por un access token nuevo. */
+    refresh: '/usuarios/renovar-token',
+    logout: '/usuarios/logout',
+    me: '/usuarios/perfil',
+  },
+  productos: {
+    root: '/productos',
+    activos: '/productos/activos',
+    byId: (id: Id) => `/productos/${id}`,
+    imagen: (id: Id) => `/productos/${id}/imagen`,
+    /** Ofertas vigentes por producto (público). */
+    ofertas: '/productos/ofertas',
+    /** Habilita o deshabilita el producto en el punto de venta y/o la tienda en línea. */
+    canales: (id: Id) => `/productos/${id}/canales`,
+    precios: (id: Id) => `/productos/${id}/precios`,
+  },
+  categorias: {
+    root: '/categorias',
+    byId: (id: Id) => `/categorias/${id}`,
+    /** Reactiva una categoría desactivada. */
+    activar: (id: Id) => `/categorias/${id}/activar`,
+  },
+  usuarios: {
+    root: '/usuarios',
+    byId: (id: Id) => `/usuarios/${id}`,
+  },
+  roles: {
+    root: '/roles',
+  },
+  sucursales: {
+    /** La sucursal (única) con sus cajas activas; la usa el punto de venta para elegir caja. */
+    mine: '/sucursales/mi-sucursal',
+  },
+  materiasPrimas: {
+    root: '/materias-primas',
+    stockBajo: '/materias-primas/stock-bajo',
+    byId: (id: Id) => `/materias-primas/${id}`,
+    kardex: (id: Id) => `/materias-primas/${id}/kardex`,
+    existencia: (id: Id) => `/materias-primas/${id}/existencia`,
+    existencias: '/materias-primas/existencias',
+    alertasReorden: '/materias-primas/alertas-reorden',
+    porVencer: '/materias-primas/por-vencer',
+    unidades: (id: Id) => `/materias-primas/${id}/unidades`,
+    unidad: (id: Id, unidadId: Id) => `/materias-primas/${id}/unidades/${unidadId}`,
+  },
+  tomasFisicas: {
+    root: '/tomas-fisicas',
+    byId: (id: Id) => `/tomas-fisicas/${id}`,
+    conteos: (id: Id) => `/tomas-fisicas/${id}/conteos`,
+    cerrar: (id: Id) => `/tomas-fisicas/${id}/cerrar`,
+    anular: (id: Id) => `/tomas-fisicas/${id}/anular`,
+  },
+  inventarios: {
+    materiasPrimas: '/inventarios/materia-prima',
+    productos: '/inventarios/producto',
+    /** Inventario de un producto, por id de producto. */
+    byProducto: (productoId: Id) => `/inventarios/producto/${productoId}`,
+    /** Inventario de una materia prima, por id de materia prima. */
+    byMateriaPrima: (materiaPrimaId: Id) => `/inventarios/${materiaPrimaId}/materia-prima`,
+  },
+  movimientos: {
+    materiasPrimas: '/movimientos-inventario/materia-prima',
+    byMateriaPrima: (id: Id) => `/movimientos-inventario/materia-prima/${id}`,
+    productos: '/movimientos-inventario/producto',
+    byProducto: (id: Id) => `/movimientos-inventario/producto/${id}`,
+  },
+  formulas: {
+    root: '/formulas',
+    byId: (id: Id) => `/formulas/${id}`,
+    byProducto: (productoId: Id) => `/formulas/producto/${productoId}`,
+    /** Costo unitario calculado por el backend (solo administración y jefe de producción). */
+    costoUnitario: (id: Id) => `/formulas/${id}/costo-unitario`,
+    versiones: (id: Id) => `/formulas/${id}/versiones`,
+    /** Explosion de materiales de la formula de un producto (administracion y jefe de produccion). */
+    explosion: (productoId: Id) => `/formulas/producto/${productoId}/explosion`,
+  },
+  formulaDetalles: {
+    root: '/formula-detalles',
+    byId: (id: Id) => `/formula-detalles/${id}`,
+    byFormula: (id: Id) => `/formula-detalles/formula/${id}`,
+    byMateriaPrima: (id: Id) => `/formula-detalles/materia-prima/${id}`,
+  },
+  producciones: {
+    root: '/producciones',
+    byId: (id: Id) => `/producciones/${id}`,
+    status: (id: Id) => `/producciones/${id}/estado`,
+    factibilidad: '/producciones/factibilidad',
+    /** Insumos de la orden con la versión de la receta con que se confirmó (DEF-23). */
+    explosion: (id: Id) => `/producciones/${id}/explosion`,
+    /** Costo de la orden con esa misma versión y el costo actual de los insumos (DEF-23). */
+    costo: (id: Id) => `/producciones/${id}/costo`,
+  },
+  produccionDetalle: {
+    byProduccion: (id: Id) => `/produccion-detalle/produccion/${id}`,
+  },
+  logs: {
+    root: '/logs',
+  },
+  reportes: {
+    /** Catálogo de reportes del rol, con el contrato de cada uno (parámetros y columnas). */
+    root: '/reportes',
+    byCodigo: (codigo: string) => `/reportes/${codigo}`,
+    pdf: (codigo: string) => `/reportes/${codigo}/pdf`,
+    xlsx: (codigo: string) => `/reportes/${codigo}/xlsx`,
+  },
+  eventos: {
+    root: '/eventos',
+  },
+  promociones: {
+    root: '/promociones',
+    byId: (id: Id) => `/promociones/${id}`,
+  },
+  promocionesProductos: {
+    root: '/promociones-productos',
+    byId: (id: Id) => `/promociones-productos/${id}`,
+    byPromocion: (id: Id) => `/promociones-productos/promocion/${id}`,
+    byProducto: (id: Id) => `/promociones-productos/producto/${id}`,
+  },
+  combos: {
+    root: '/combos',
+    byId: (id: Id) => `/combos/${id}`,
+    /** Combos vendibles en el punto de venta, con su existencia (cajero y administración). */
+    pos: '/combos/pos',
+  },
+  combosDetalles: {
+    root: '/combos-detalles',
+    byId: (id: Id) => `/combos-detalles/${id}`,
+    byCombo: (id: Id) => `/combos-detalles/combo/${id}`,
+    byProducto: (id: Id) => `/combos-detalles/producto/${id}`,
+  },
+  escalasPrecio: {
+    root: '/escalas-precio',
+    byId: (id: Id) => `/escalas-precio/${id}`,
+    byProducto: (id: Id) => `/escalas-precio/producto/${id}`,
+  },
+  empresa: {
+    /** GET público; PUT solo administración. */
+    root: '/empresa',
+    logo: '/empresa/logo',
+  },
+  proveedores: {
+    root: '/proveedores',
+    byId: (id: Id) => `/proveedores/${id}`,
+    activo: (id: Id) => `/proveedores/${id}/activo`,
+  },
+  compras: {
+    root: '/compras',
+    byId: (id: Id) => `/compras/${id}`,
+    /** Últimas compras de un insumo (?materiaPrimaId) o de un producto de reventa (?productoId). */
+    ultimas: '/compras/ultimas',
+  },
+  orders: {
+    place: '/ventas/pedido',
+    counter: '/ventas/mostrador',
+    /** Encargo que registra la caja a nombre de un cliente. */
+    encargo: (clienteId: Id) => `/ventas/encargo/${clienteId}`,
+    mine: '/ventas/mis-pedidos',
+    queue: '/ventas/pedidos',
+    cashCut: '/ventas/corte',
+    status: (id: Id) => `/ventas/${id}/estado`,
+    /** Siguiente estado en un gesto. */
+    advance: (id: Id) => `/ventas/${id}/avanzar`,
+    /** Consulta pública con número de pedido y correo. */
+    tracking: '/ventas/seguimiento',
+    bestSellers: '/ventas/mas-vendidos',
+    /** Cotiza una canasta con el motor de promociones. No guarda nada. */
+    quote: '/ventas/cotizar',
+    anular: (id: Id) => `/ventas/${id}/anular`,
+    consulta: (id: Id) => `/ventas/${id}/consulta`,
+    /** HU-69: historial paginado de ventas y pedidos (desde, hasta, tipo, estado, cajeroId, cajaId, cliente, numero). */
+    history: '/ventas/historial',
+    byClient: '/ventas/cliente',
+    findClient: '/ventas/cliente/buscar',
+    productionSuggestion: '/ventas/sugerencia-produccion',
+  },
+  tablero: '/tablero',
+  miCuenta: {
+    perfil: '/mi-cuenta/perfil',
+    direcciones: '/mi-cuenta/direcciones',
+    direccion: (id: Id) => `/mi-cuenta/direcciones/${id}`,
+  },
+  /** Administración de las cajas: agregar, renombrar, quitar (desactivar) y volver a activar. */
+  cajas: {
+    root: '/cajas',
+    byId: (id: Id) => `/cajas/${id}`,
+    desactivar: (id: Id) => `/cajas/${id}/desactivar`,
+    activar: (id: Id) => `/cajas/${id}/activar`,
+  },
+  turnos: {
+    root: '/turnos',
+    actual: '/turnos/actual',
+    abrir: '/turnos/abrir',
+    cerrar: (id: Id) => `/turnos/${id}/cerrar`,
+    /** HU-68: cada caja libre u ocupada, con quién tiene el turno abierto. */
+    cajas: '/turnos/cajas',
+    /** HU-68: personal de caja activo y sin otro turno abierto. */
+    cajeros: '/turnos/cajeros',
+    cambiarCajero: (id: Id) => `/turnos/${id}/cambiar-cajero`,
+    /** HU-68: cortes anteriores paginados (desde, hasta, cajaId, cajeroId, soloConDiferencia, pagina, tamano). */
+    historial: '/turnos/historial',
+    ventas: (id: Id) => `/turnos/${id}/ventas`,
+  },
+  liquidaciones: {
+    root: '/liquidaciones',
+    byId: (id: Id) => `/liquidaciones/${id}`,
+  },
+} as const;
+
+// Rutas sin Authorization. Se comparan contra el path, no la URL completa.
+export const PUBLIC_API_PATHS: readonly string[] = [
+  API_ENDPOINTS.auth.login,
+  API_ENDPOINTS.auth.google,
+  API_ENDPOINTS.auth.resendVerification,
+  API_ENDPOINTS.auth.refresh,
+];

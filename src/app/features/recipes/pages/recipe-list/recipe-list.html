@@ -1,0 +1,127 @@
+<app-page-header
+  title="Recetas"
+  subtitle="Fórmulas de producción por producto: qué insumos lleva cada lote y cuánto rinde. Hacé clic en una receta para abrirla en su producto."
+  [crumbs]="crumbs"
+>
+  @if (canManage) {
+    <button type="button" class="btn btn-primary" (click)="openNew()">
+      <app-icon name="plus" [size]="16" /> Nueva receta
+    </button>
+  }
+</app-page-header>
+
+<div class="mb-4 flex flex-wrap items-center gap-3">
+  <label class="input input-bordered flex w-full items-center gap-2 md:w-80">
+    <app-icon name="search" class="text-base-content/50" />
+    <input
+      type="search"
+      class="grow"
+      placeholder="Buscar receta o producto"
+      aria-label="Buscar receta o producto"
+      [value]="search()"
+      (input)="search.set($any($event.target).value)"
+    />
+  </label>
+</div>
+
+<app-resource-state
+  [loading]="formulas.isLoading() && !formulas.hasValue()"
+  [failed]="!!formulas.error()"
+  [empty]="formulaItems().length === 0"
+  emptyTitle="Sin recetas"
+  emptyDescription="Las fórmulas registradas aparecen aquí con sus insumos."
+  (retry)="reloadAll()"
+>
+  <section class="overflow-hidden rounded-box border border-base-300 bg-base-100" aria-label="Lista de recetas">
+    <div
+      class="grid items-center gap-x-4 px-5 py-3 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1.3fr)_80px_80px_80px_100px_16px_36px] max-md:hidden"
+    >
+      <span class="list-th">Receta</span>
+      <span class="list-th">Producto</span>
+      <span class="list-th text-end">Rinde</span>
+      <span class="list-th text-end">Merma</span>
+      <span class="list-th text-end">Insumos</span>
+      <span class="list-th text-end">Costo unit.</span>
+      <span></span>
+      <span></span>
+    </div>
+
+    @for (row of visible(); track row.formula.id) {
+      <div class="relative">
+        <a
+          class="list-row grid-cols-2 gap-y-1 max-md:pe-14 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1.3fr)_80px_80px_80px_100px_16px_36px]"
+          [routerLink]="['/backoffice/products', row.formula.productoId, 'receta']"
+          [attr.aria-label]="'Abrir la receta ' + row.formula.nombre + ' en la ficha de ' + row.formula.producto"
+        >
+          <span class="min-w-0">
+            <span class="block truncate font-semibold">{{ row.formula.nombre }}</span>
+            @if (row.formula.descripcion) {
+              <span class="block truncate text-xs text-base-content/55">{{ row.formula.descripcion }}</span>
+            }
+          </span>
+          <span class="min-w-0 truncate">{{ row.formula.producto }}</span>
+          <span class="tabular-nums md:text-end">
+            <span class="text-xs text-base-content/55 md:hidden">Rinde </span>{{ row.formula.cantidadProduccion | number: '1.0-2' }} u
+          </span>
+          <span class="tabular-nums md:text-end">
+            <span class="text-xs text-base-content/55 md:hidden">Merma </span>{{ row.formula.porcentajeMerma | number: '1.0-2' }} %
+          </span>
+          <span class="tabular-nums md:text-end">
+            <span class="text-xs text-base-content/55 md:hidden">Insumos </span>{{ row.inputs }}
+          </span>
+          <span class="tabular-nums md:text-end">
+            @if (canManage) {
+              <app-recipe-unit-cost [formulaId]="row.formula.id" />
+            } @else {
+              <span class="text-base-content/45">—</span>
+            }
+          </span>
+          <app-icon name="chevron" class="text-base-content/40 max-md:hidden" />
+          <span class="max-md:hidden"></span>
+        </a>
+        @if (canManage) {
+          <button
+            type="button"
+            class="btn btn-ghost btn-sm btn-square absolute end-2 top-1/2 -translate-y-1/2 max-md:top-3 max-md:translate-y-0"
+            [attr.aria-label]="'Editar la receta ' + row.formula.nombre"
+            (click)="openEdit(row.formula)"
+          >
+            <app-icon name="edit" [size]="16" />
+          </button>
+          <button
+            type="button"
+            class="btn btn-ghost btn-xs absolute end-12 top-1/2 -translate-y-1/2 max-md:top-3 max-md:translate-y-0"
+            [attr.aria-label]="'Versiones de la receta ' + row.formula.nombre"
+            (click)="versionsOf.set(row.formula)"
+          >
+            v{{ row.formula.version ?? 1 }}
+          </button>
+        }
+      </div>
+    } @empty {
+      <p class="border-t border-base-300 px-5 py-8 text-center text-sm text-base-content/55">
+        Ninguna receta coincide con la búsqueda.
+      </p>
+    }
+
+    <p class="border-t border-base-300 px-5 py-3 text-xs text-base-content/55">
+      {{ visible().length }} de {{ formulaItems().length }} recetas
+    </p>
+  </section>
+</app-resource-state>
+
+@if (canManage) {
+  <app-recipe-drawer
+    [open]="drawerOpen()"
+    [formula]="editing()"
+    [presetProductId]="presetProductId()"
+    [products]="productItems()"
+    [materials]="materialItems()"
+    (closed)="drawerOpen.set(false)"
+    (changed)="reloadAll()"
+  />
+}
+
+@if (versionsOf(); as f) {
+  <app-recipe-versions [formula]="f" (closed)="versionsOf.set(null)" />
+}

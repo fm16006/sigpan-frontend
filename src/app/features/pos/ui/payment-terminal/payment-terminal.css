@@ -1,0 +1,101 @@
+.led {
+  transition: background-color 150ms;
+}
+.led-encendido,
+.led-secuencia,
+.led-parpadeo {
+  background-color: var(--color-success);
+}
+.led-error {
+  background-color: var(--color-error);
+}
+.led-parpadeo {
+  animation: parpadeo 1.2s steps(1) infinite;
+}
+.led-secuencia {
+  animation: encender 180ms ease-out both;
+}
+
+.contactless .onda {
+  animation: onda 1.6s ease-in-out infinite;
+}
+.contactless .onda:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.contactless .onda:nth-child(3) {
+  animation-delay: 0.4s;
+}
+.contactless .onda:nth-child(4) {
+  animation-delay: 0.6s;
+}
+
+.pop {
+  animation: pop 400ms cubic-bezier(0.2, 0.9, 0.3, 1.3) both;
+}
+.trazo {
+  stroke-dasharray: 40;
+  stroke-dashoffset: 40;
+  animation: trazar 450ms 200ms ease-out forwards;
+}
+.sacudir {
+  animation: sacudir 450ms ease-in-out both;
+}
+.paso {
+  animation: aparecer 300ms ease-out both;
+}
+
+@keyframes parpadeo {
+  50% {
+    background-color: color-mix(in oklab, var(--color-neutral-content) 15%, transparent);
+  }
+}
+@keyframes encender {
+  from {
+    background-color: color-mix(in oklab, var(--color-neutral-content) 15%, transparent);
+  }
+}
+@keyframes onda {
+  0%,
+  100% {
+    opacity: 0.15;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+}
+@keyframes trazar {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes sacudir {
+  20%,
+  60% {
+    transform: translateX(-6px);
+  }
+  40%,
+  80% {
+    transform: translateX(6px);
+  }
+}
+@keyframes aparecer {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+  }
+  .trazo {
+    stroke-dashoffset: 0;
+  }
+}

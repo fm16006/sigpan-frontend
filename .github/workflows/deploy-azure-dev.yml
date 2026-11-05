@@ -1,0 +1,60 @@
+name: Despliegue Azure (dev)
+
+on:
+  push:
+    branches: [deploy/azure-dev]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-azure-dev
+  cancel-in-progress: false
+
+env:
+  AZURE_WEBAPP_NAME: frontend-sigpan-igf115
+  DIST: dist/proyecto-panaderia-igf115
+
+jobs:
+  desplegar:
+    runs-on: ubuntu-latest
+    environment:
+      name: azure-dev
+      url: ${{ steps.publicar.outputs.webapp-url }}
+    steps:
+      - name: Descargar el codigo
+        uses: actions/checkout@v4
+
+      - name: Configurar Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Pruebas
+        run: npx ng test --watch=false
+
+      - name: Compilar
+        run: npm run build
+
+      - name: Preparar paquete
+        run: |
+          cat > "$DIST/package.json" <<'EOF'
+          {
+            "name": "sigpan-frontend",
+            "private": true,
+            "scripts": { "start": "node server/server.mjs" }
+          }
+          EOF
+
+      - name: Publicar en Azure App Service
+        id: publicar
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: ${{ env.DIST }}

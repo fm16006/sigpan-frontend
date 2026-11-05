@@ -1,0 +1,152 @@
+<!-- Encabezado -->
+<section class="border-b border-base-300 bg-base-200">
+  <div class="container-page py-10 sm:py-12">
+    <p class="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Menú del día</p>
+    <h1 class="mt-1 text-4xl font-semibold sm:text-5xl">Nuestro catálogo</h1>
+    <p class="mt-2 max-w-xl text-base-content/65">
+      Pan, postres y bebidas preparados hoy. Agregá lo que quieras y retiralo en la tienda.
+    </p>
+
+    <form
+      class="mt-6 max-w-xl"
+      role="search"
+      (submit)="$event.preventDefault(); applySearch(term.value)"
+    >
+      <label class="input input-lg w-full rounded-full shadow-sm">
+        <svg
+          class="size-5 opacity-50"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          aria-hidden="true"
+        >
+          <circle cx="11" cy="11" r="6.5" stroke-width="1.8" />
+          <path d="m16 16 4 4" stroke-width="1.8" stroke-linecap="round" />
+        </svg>
+        <input
+          #term
+          type="search"
+          name="search"
+          placeholder="Buscar pan, pastel, bebida…"
+          aria-label="Buscar productos"
+          (input)="applySearch(term.value)"
+        />
+      </label>
+    </form>
+  </div>
+</section>
+
+<!-- Categorías -->
+<div class="sticky top-16 z-20 border-b border-base-300 bg-base-100/90 backdrop-blur">
+  <div class="container-page flex items-center gap-3 py-3">
+    <div
+      class="flex flex-1 gap-2 overflow-x-auto pb-1"
+      role="group"
+      aria-label="Filtrar por categoría"
+    >
+      <button
+        type="button"
+        class="btn btn-sm shrink-0 gap-2 rounded-full"
+        [class.btn-primary]="categoryId() === null"
+        [attr.aria-pressed]="categoryId() === null"
+        (click)="selectCategory(null)"
+      >
+        <app-category-icon kind="todo" class="size-4" />
+        Todo
+      </button>
+      @for (category of categories(); track category.id) {
+        <button
+          type="button"
+          class="btn btn-sm shrink-0 gap-2 rounded-full capitalize"
+          [class.btn-primary]="categoryId() === category.id"
+          [attr.aria-pressed]="categoryId() === category.id"
+          (click)="selectCategory(category.id)"
+        >
+          <app-category-icon [name]="category.nombre" class="size-4" />
+          {{ category.nombre }}
+          <span class="text-xs opacity-60">{{ category.total }}</span>
+        </button>
+      }
+    </div>
+
+    <select
+      class="select select-sm w-auto rounded-full"
+      aria-label="Filtrar por especialidad"
+      [value]="especialidad()"
+      (change)="especialidad.set($any($event.target).value)"
+    >
+      <option value="">Toda especialidad</option>
+      @for (e of especialidades; track e) {
+        <option [value]="e">{{ especialidadLabels[e] }}</option>
+      }
+    </select>
+    <label class="flex items-center gap-2 text-sm">
+      <input type="checkbox" class="toggle toggle-sm" [checked]="soloDisponibles()" (change)="soloDisponibles.set(!soloDisponibles())" />
+      Solo disponibles
+    </label>
+
+    <select
+      class="select select-sm hidden w-auto rounded-full sm:block"
+      aria-label="Ordenar productos"
+      [value]="sort()"
+      (change)="applySort($any($event.target).value)"
+    >
+      <option value="destacados">Destacados</option>
+      <option value="precio-asc">Precio: menor a mayor</option>
+      <option value="precio-desc">Precio: mayor a menor</option>
+      <option value="nombre">Nombre</option>
+    </select>
+  </div>
+</div>
+
+<div class="container-page py-8 sm:py-10">
+  <app-resource-state
+    [loading]="catalog.isLoading()"
+    [failed]="!!catalog.error()"
+    [empty]="items().length === 0"
+    emptyTitle="No hay productos que coincidan"
+    emptyDescription="Probá con otra categoría o quitá el término de búsqueda."
+    [skeletonCount]="8"
+    (retry)="catalog.reload()"
+  >
+    @if (grouped()) {
+      <div class="grid gap-14">
+        @for (section of sections(); track section.id) {
+          <section [attr.aria-labelledby]="'categoria-' + section.id">
+            <div class="mb-5 flex items-center gap-3">
+              <app-category-icon [name]="section.nombre" class="size-7 text-primary" />
+              <h2 [id]="'categoria-' + section.id" class="text-2xl font-semibold capitalize">
+                {{ section.nombre }}
+              </h2>
+              <span class="h-px flex-1 bg-base-300"></span>
+              <button
+                type="button"
+                class="link link-primary text-sm"
+                (click)="selectCategory(section.id)"
+              >
+                Ver solo esta
+              </button>
+            </div>
+            <ul class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              @for (product of section.products; track product.id) {
+                <li><app-product-card [product]="product" (added)="shop.add($event)" /></li>
+              }
+            </ul>
+          </section>
+        }
+      </div>
+    } @else {
+      <p class="mb-5 text-sm text-base-content/60">
+        {{ items().length }} {{ items().length === 1 ? 'producto' : 'productos' }}
+        @if (selectedName(); as name) {
+          en <span class="font-medium capitalize text-base-content">{{ name }}</span>
+        }
+      </p>
+      <ul class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        @for (product of items(); track product.id) {
+          <li><app-product-card [product]="product" (added)="shop.add($event)" /></li>
+        }
+      </ul>
+    }
+  </app-resource-state>
+</div>

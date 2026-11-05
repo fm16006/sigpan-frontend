@@ -1,0 +1,137 @@
+<app-page-header
+  title="Materia prima"
+  subtitle="Insumos con su unidad base, existencia y costo promedio. Hacé clic en uno para abrir su ficha."
+  [crumbs]="crumbs"
+>
+  @if (canWrite) {
+    <button type="button" class="btn" (click)="drawer.set('purchase')">Registrar compra</button>
+    <button type="button" class="btn btn-primary" (click)="drawer.set('create')">
+      <app-icon name="plus" /> Nueva materia prima
+    </button>
+  }
+</app-page-header>
+
+<div class="mb-5 grid grid-cols-2 gap-3 sm:max-w-xl">
+  <app-stat-card label="Materias primas" [value]="total()" />
+  <app-stat-card
+    label="Bajo mínimo"
+    [value]="lowCount()"
+    [hint]="lowCount() > 0 ? 'Conviene reabastecerlas' : 'Todo en orden'"
+  />
+</div>
+
+<div class="mb-4 flex flex-wrap items-center gap-3">
+  <label
+    class="input input-bordered flex h-10 min-w-0 flex-1 basis-64 items-center gap-2"
+  >
+    <app-icon name="search" [size]="16" class="text-base-content/55" />
+    <input
+      type="search"
+      class="grow"
+      placeholder="Buscar insumo o código"
+      aria-label="Buscar insumo"
+      [value]="query()"
+      (input)="query.set($any($event.target).value)"
+    />
+  </label>
+  <div role="group" aria-label="Estado" class="inline-flex gap-0.5 rounded-lg bg-base-200 p-[3px]">
+    @for (option of segments(); track option.value) {
+      <button
+        type="button"
+        class="rounded-md px-3 py-1.5 text-sm font-medium text-base-content/65"
+        [class.bg-base-100]="segment() === option.value"
+        [class.text-base-content]="segment() === option.value"
+        [class.font-semibold]="segment() === option.value"
+        [class.shadow-sm]="segment() === option.value"
+        [attr.aria-pressed]="segment() === option.value"
+        (click)="segment.set(option.value)"
+      >
+        {{ option.label }} <span class="opacity-65">{{ option.count }}</span>
+      </button>
+    }
+  </div>
+</div>
+
+<app-resource-state
+  [loading]="loading()"
+  [failed]="failed()"
+  [empty]="rows().length === 0"
+  [emptyTitle]="total() === 0 ? 'Sin materias primas' : 'Sin resultados'"
+  [emptyDescription]="
+    total() === 0
+      ? 'Creá la primera con “Nueva materia prima”.'
+      : 'Probá con otra búsqueda o mostrá todas.'
+  "
+  (retry)="reload()"
+>
+  <section
+    class="overflow-hidden rounded-box border border-base-300 bg-base-100"
+    aria-label="Lista de materia prima"
+  >
+    <div
+      class="list-row max-md:hidden border-t-0! py-3.5! grid-cols-[minmax(12rem,2fr)_4rem_7rem_6.5rem_6.5rem_8rem_1rem]"
+      aria-hidden="true"
+    >
+      <span class="list-th">Insumo</span>
+      <span class="list-th">Unidad</span>
+      <span class="list-th text-end">Existencia</span>
+      <span class="list-th text-end">Mínimo</span>
+      <span class="list-th text-end">Costo prom.</span>
+      <span class="list-th">Estado</span>
+      <span></span>
+    </div>
+    @for (row of rows(); track row.itemId) {
+      <a
+        class="list-row grid-cols-[minmax(12rem,2fr)_4rem_7rem_6.5rem_6.5rem_8rem_1rem] max-md:grid-cols-[minmax(0,1fr)_auto] max-md:gap-y-2"
+        [routerLink]="['/backoffice/raw-materials', row.itemId]"
+        [attr.aria-label]="'Abrir ficha de ' + row.nombre"
+      >
+        <span class="flex min-w-0 items-center gap-3">
+          <span
+            class="grid size-10 shrink-0 place-items-center rounded-lg bg-base-200 font-serif text-base font-semibold text-base-content/70"
+            aria-hidden="true"
+            >{{ row.nombre.charAt(0).toUpperCase() }}</span
+          >
+          <span class="flex min-w-0 flex-col">
+            <span class="truncate font-semibold">{{ row.nombre }}</span>
+            <span class="font-mono text-xs text-base-content/60">{{ row.codigo }}</span>
+          </span>
+        </span>
+        <span class="text-sm max-md:hidden">{{ row.unidad }}</span>
+        <span class="text-end font-semibold tabular-nums max-md:col-start-1 max-md:text-start">
+          @if (!hasInventory(row)) {
+            —
+          } @else {
+            {{ row.cantidad | number: '1.0-3' }}<span class="md:hidden"> {{ row.unidad }}</span>
+          }
+        </span>
+        <span class="text-end tabular-nums text-base-content/65 max-md:hidden">
+          {{ row.minimo | number: '1.0-3' }}
+        </span>
+        <span class="text-end tabular-nums max-md:hidden">
+          {{ row.costoPromedio === null ? '—' : (row.costoPromedio | money) }}
+        </span>
+        <span class="max-md:col-start-2 max-md:row-start-1 max-md:justify-self-end md:justify-self-start">
+          <app-status-chip [label]="chips[row.estado].label" [tone]="chips[row.estado].tone" />
+        </span>
+        <app-icon name="chevron" class="text-base-content/40 max-md:hidden" />
+      </a>
+    }
+    <div class="border-t border-base-300 px-5 py-3 text-sm text-base-content/60">
+      {{ rows().length }} de {{ total() }} insumos · {{ lowCount() }} por debajo del mínimo
+    </div>
+  </section>
+</app-resource-state>
+
+@if (canWrite) {
+  <app-material-form-drawer
+    [open]="drawer() === 'create'"
+    (closed)="drawer.set(null)"
+    (saved)="onCreated($event)"
+  />
+  <app-purchase-drawer
+    [open]="drawer() === 'purchase'"
+    (closed)="drawer.set(null)"
+    (saved)="onPurchased()"
+  />
+}

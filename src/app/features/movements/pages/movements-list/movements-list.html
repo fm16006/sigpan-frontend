@@ -1,0 +1,147 @@
+<app-page-header
+  title="Movimientos"
+  subtitle="Kárdex de entradas y salidas de productos y materia prima. Hacé clic en un movimiento para abrir el artículo."
+  [crumbs]="crumbs"
+>
+  @if (canWrite) {
+    <button type="button" class="btn" (click)="drawer.set('adjustment')">
+      Ajuste de inventario
+    </button>
+    <button type="button" class="btn btn-primary" (click)="drawer.set('purchase')">
+      <app-icon name="plus" /> Registrar compra
+    </button>
+  }
+</app-page-header>
+
+<div class="mb-4 flex flex-wrap items-center gap-3">
+  <label class="input input-bordered flex h-10 min-w-0 flex-1 basis-64 items-center gap-2">
+    <app-icon name="search" [size]="16" class="text-base-content/55" />
+    <input
+      type="search"
+      class="grow"
+      placeholder="Buscar artículo o documento"
+      aria-label="Buscar artículo o documento"
+      [value]="query()"
+      (input)="setFilter(() => query.set($any($event.target).value))"
+    />
+  </label>
+  <div role="group" aria-label="Tipo" class="inline-flex gap-0.5 rounded-lg bg-base-200 p-[3px]">
+    @for (option of segments; track option.value) {
+      <button
+        type="button"
+        class="rounded-md px-3 py-1.5 text-sm font-medium text-base-content/65"
+        [class.bg-base-100]="segment() === option.value"
+        [class.text-base-content]="segment() === option.value"
+        [class.font-semibold]="segment() === option.value"
+        [class.shadow-sm]="segment() === option.value"
+        [attr.aria-pressed]="segment() === option.value"
+        (click)="setFilter(() => segment.set(option.value))"
+      >
+        {{ option.label }}
+      </button>
+    }
+  </div>
+  <select
+    class="select select-bordered h-10 min-h-10"
+    aria-label="Período"
+    [value]="period()"
+    (change)="setFilter(() => period.set($any($event.target).value))"
+  >
+    @for (option of periods; track option.value) {
+      <option [value]="option.value" [selected]="option.value === period()">{{ option.label }}</option>
+    }
+  </select>
+</div>
+
+<app-resource-state
+  [loading]="loading()"
+  [failed]="failed()"
+  [empty]="matching() === 0"
+  [emptyTitle]="total() === 0 ? 'Sin movimientos' : 'Sin resultados'"
+  [emptyDescription]="
+    total() === 0
+      ? 'Las compras, salidas y ajustes aparecen aquí.'
+      : 'Probá con otra búsqueda, otro tipo o otro período.'
+  "
+  (retry)="reload()"
+>
+  <section
+    class="overflow-hidden rounded-box border border-base-300 bg-base-100"
+    aria-label="Movimientos de inventario"
+  >
+    <div
+      class="list-row max-md:hidden border-t-0! py-3.5! grid-cols-[8.5rem_minmax(10rem,1.4fr)_6rem_6.5rem_5.5rem_minmax(7rem,1fr)_1rem]"
+      aria-hidden="true"
+    >
+      <span class="list-th">Fecha</span>
+      <span class="list-th">Artículo</span>
+      <span class="list-th">Tipo</span>
+      <span class="list-th text-end">Cantidad</span>
+      <span class="list-th text-end">Costo u.</span>
+      <span class="list-th">Documento</span>
+      <span></span>
+    </div>
+    @for (entry of entries(); track entry.key) {
+      <a
+        class="list-row grid-cols-[8.5rem_minmax(10rem,1.4fr)_6rem_6.5rem_5.5rem_minmax(7rem,1fr)_1rem] max-md:grid-cols-2 max-md:gap-y-1.5"
+        [routerLink]="entry.link"
+        [attr.aria-label]="'Abrir ' + entry.articulo"
+      >
+        <span class="text-sm tabular-nums text-base-content/75">
+          {{ entry.fecha | date: 'd MMM y, HH:mm' }}
+        </span>
+        <span class="flex min-w-0 flex-col max-md:order-first max-md:col-span-2">
+          <span class="truncate font-semibold">{{ entry.articulo }}</span>
+          <span class="truncate text-xs text-base-content/60">
+            {{ entry.kind === 'materia-prima' ? 'Materia prima' : 'Producto'
+            }}{{ entry.motivo ? ' · ' + entry.motivo : '' }}
+          </span>
+        </span>
+        <app-status-chip
+          [label]="entry.tipo === 'ENTRADA' ? 'Entrada' : 'Salida'"
+          [tone]="entry.tipo === 'ENTRADA' ? 'ok' : 'info'"
+        />
+        <span
+          class="text-end font-semibold tabular-nums"
+          [class.text-success]="entry.tipo === 'ENTRADA'"
+        >
+          {{ entry.tipo === 'ENTRADA' ? '+' : '−' }}{{ entry.cantidad | number: '1.0-3' }}
+        </span>
+        <span class="text-end tabular-nums max-md:hidden">
+          {{ entry.costo === null ? '—' : (entry.costo | money) }}
+        </span>
+        <span class="truncate text-sm max-md:col-span-2">{{ entry.documento ?? '—' }}</span>
+        <app-icon name="chevron" class="text-base-content/40 max-md:hidden" />
+      </a>
+    }
+    <div
+      class="flex flex-wrap items-center justify-between gap-3 border-t border-base-300 px-5 py-3 text-sm text-base-content/60"
+    >
+      <span>
+        {{ entries().length }} de {{ matching() }} movimientos. No se editan ni se borran: un error se
+        corrige con un ajuste.
+      </span>
+      @if (entries().length < matching()) {
+        <button type="button" class="btn btn-sm" (click)="showMore()">Mostrar más</button>
+      }
+    </div>
+  </section>
+
+  <!-- Pendiente backend: exponer quién registró cada movimiento y la merma como tipo propio -->
+  <p class="mt-3 text-xs text-base-content/55">
+    Próximamente: quién registró cada movimiento y la merma como tipo aparte.
+  </p>
+</app-resource-state>
+
+@if (canWrite) {
+  <app-purchase-drawer
+    [open]="drawer() === 'purchase'"
+    (closed)="drawer.set(null)"
+    (saved)="onSaved()"
+  />
+  <app-adjustment-drawer
+    [open]="drawer() === 'adjustment'"
+    (closed)="drawer.set(null)"
+    (saved)="onSaved()"
+  />
+}

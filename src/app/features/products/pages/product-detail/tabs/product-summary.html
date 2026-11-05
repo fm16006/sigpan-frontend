@@ -1,0 +1,242 @@
+@if (product(); as p) {
+  <!-- Teléfono y tableta (una columna): las columnas se disuelven y cada tarjeta lleva su orden,
+       con lo útil (existencia, precio) primero y el relleno al final. -->
+  <div class="grid items-start gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
+    <div class="flex min-w-0 flex-col gap-4 max-lg:contents">
+      <section class="panel max-lg:order-3" aria-labelledby="h-ficha">
+        <h2 id="h-ficha" class="font-serif text-base font-semibold sm:text-lg">Ficha</h2>
+        <dl class="data-list">
+          <dt class="text-base-content/60">Código</dt>
+          <dd class="font-mono text-[0.8rem]">{{ p.codigo }}</dd>
+          <dt class="text-base-content/60">Tipo</dt>
+          <dd class="flex flex-wrap items-center gap-2">
+            <span class="font-semibold">{{ typeLabels[p.tipo ?? 'ELABORADO'] }}</span>
+            <span class="text-xs text-base-content/60">
+              {{ ctx.resale() ? 'Se compra ya hecho a un proveedor' : 'Se produce con receta' }}
+            </span>
+          </dd>
+          <dt class="text-base-content/60">Especialidad</dt>
+          <dd>{{ especialidadLabels[p.especialidad] }}</dd>
+          <dt class="text-base-content/60">Categoría</dt>
+          <dd>{{ p.categoria }}</dd>
+          <dt class="text-base-content/60">Unidad de venta</dt>
+          <dd>{{ p.unidadVenta }}</dd>
+          <dt class="text-base-content/60">IVA</dt>
+          <dd>{{ p.exentoIva ? "Exento de IVA" : "Gravado según la configuración de la empresa" }}</dd>
+          <dt class="text-base-content/60">Alérgenos</dt>
+          <dd class="flex flex-wrap gap-1.5">
+            @for (item of alergenos(); track item) {
+              <span class="rounded-md bg-warning/25 px-2 py-px text-xs font-semibold">{{ item }}</span>
+            } @empty {
+              <span class="text-base-content/50">Sin alérgenos declarados</span>
+            }
+          </dd>
+          <dt class="text-base-content/60">Descripción</dt>
+          <dd class="leading-relaxed text-base-content/80">
+            {{ p.descripcion || 'Sin descripción.' }}
+          </dd>
+        </dl>
+      </section>
+
+      <section class="panel max-lg:order-6" aria-labelledby="h-ventas">
+        <h2 id="h-ventas" class="font-serif text-base font-semibold sm:text-lg">Ventas de los últimos 7 días</h2>
+        <!-- Pendiente backend: exponer las ventas por producto -->
+        <p class="rounded-lg border border-dashed border-base-300 px-3.5 py-3 text-sm text-base-content/60">
+          Próximamente: ventas de los últimos 7 días.
+        </p>
+      </section>
+
+      @if (ctx.resale()) {
+        <section class="panel max-lg:order-4" aria-labelledby="h-compras">
+          <div class="flex flex-wrap items-baseline justify-between gap-3">
+            <h2 id="h-compras" class="font-serif text-base font-semibold sm:text-lg">Últimas compras</h2>
+            <a [routerLink]="['/backoffice/products', p.id, 'compras']" class="text-sm font-semibold text-primary hover:underline">
+              Ver todas las compras →
+            </a>
+          </div>
+          @if (ctx.purchasesRes.isLoading() && !ctx.purchasesRes.hasValue()) {
+            <div class="h-16 animate-pulse rounded-lg bg-base-200" aria-busy="true"></div>
+          } @else if (ctx.purchasesRes.error()) {
+            <div role="alert" class="alert alert-error text-sm">
+              <span>No pudimos cargar las compras.</span>
+              <button type="button" class="btn btn-sm" (click)="ctx.purchasesRes.reload()">Reintentar</button>
+            </div>
+          } @else if (ctx.purchases().length === 0) {
+            <p class="rounded-lg bg-base-200 px-3.5 py-3 text-sm text-base-content/65">
+              Todavía no hay compras. La existencia de un producto de reventa sube cuando se registra una compra a un proveedor.
+            </p>
+          } @else {
+            <ul class="-mx-4 sm:-mx-[1.375rem] -mb-4 sm:-mb-5 overflow-hidden border-t border-base-300">
+              @for (item of ctx.purchases().slice(0, 3); track item.compraId + '-' + $index) {
+                <li>
+                  <a
+                    class="list-row grid-cols-[minmax(0,1fr)_auto_1rem] gap-y-0.5"
+                    [routerLink]="['/backoffice/purchases', item.compraId]"
+                  >
+                    <span class="flex min-w-0 flex-col">
+                      <span class="truncate text-sm font-medium">{{ item.proveedor }}</span>
+                      <span class="text-xs text-base-content/60">
+                        {{ docLabel(item) }} · {{ shortDate(item.fecha) }}
+                      </span>
+                    </span>
+                    <span class="flex flex-col items-end text-sm tabular-nums">
+                      <span class="font-semibold text-success">+{{ item.cantidad | number: '1.0-3' }} u</span>
+                      <span class="text-xs text-base-content/60">{{ item.costoUnitario | money }} c/u</span>
+                    </span>
+                    <app-icon name="chevron" class="text-base-content/40" />
+                  </a>
+                </li>
+              }
+            </ul>
+          }
+        </section>
+      } @else {
+      <section class="panel max-lg:order-4" aria-labelledby="h-receta">
+        <div class="flex flex-wrap items-baseline justify-between gap-3">
+          <h2 id="h-receta" class="font-serif text-base font-semibold sm:text-lg">Receta</h2>
+          <a [routerLink]="['/backoffice/products', p.id, 'receta']" class="text-sm font-semibold text-primary hover:underline">
+            Ver receta y costo →
+          </a>
+        </div>
+        @if (ctx.formula(); as f) {
+          <dl class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div class="flex flex-col gap-0.5">
+              <dt class="text-xs text-base-content/60">Receta</dt>
+              <dd class="font-semibold">{{ f.nombre }}</dd>
+            </div>
+            <div class="flex flex-col gap-0.5">
+              <dt class="text-xs text-base-content/60">Rinde por lote</dt>
+              <dd class="font-semibold">{{ f.cantidadProduccion | number: '1.0-3' }} u</dd>
+            </div>
+            <div class="flex flex-col gap-0.5">
+              <dt class="text-xs text-base-content/60">Merma esperada</dt>
+              <dd class="font-semibold">{{ f.porcentajeMerma | number: '1.0-2' }} %</dd>
+            </div>
+            <div class="flex flex-col gap-0.5">
+              <dt class="text-xs text-base-content/60">Insumos</dt>
+              <dd class="font-semibold">{{ ctx.lines().length }}</dd>
+            </div>
+          </dl>
+        } @else if (ctx.formulaLoading()) {
+          <div class="h-12 animate-pulse rounded-lg bg-base-200" aria-busy="true"></div>
+        } @else {
+          <p class="text-sm text-base-content/60">
+            Este producto no tiene receta.
+            <a routerLink="/backoffice/recipes" class="font-semibold text-primary hover:underline">Nueva receta</a>
+          </p>
+        }
+      </section>
+      }
+    </div>
+
+    <div class="flex min-w-0 flex-col gap-4 max-lg:contents">
+      <section class="panel max-lg:order-1" aria-labelledby="h-exist">
+        <h2 id="h-exist" class="font-serif text-base font-semibold sm:text-lg">Existencia</h2>
+        <div class="flex items-baseline gap-2.5">
+          <span class="font-serif text-5xl font-semibold leading-none max-sm:text-4xl">{{ p.disponible ?? 0 }}</span>
+          <span class="text-base-content/60">unidades disponibles</span>
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <div class="h-2 overflow-hidden rounded-full bg-base-200">
+            <div class="h-full rounded-full" [class]="barClass()" [style.width.%]="percent()"></div>
+          </div>
+          <div class="flex justify-between text-xs text-base-content/60">
+            <span>Mínimo {{ p.stockMinimo ?? 0 }} u</span>
+            <span>Se marca agotado en 0</span>
+          </div>
+        </div>
+        <a [routerLink]="['/backoffice/products', p.id, 'existencias']" class="text-sm font-semibold text-primary hover:underline">
+          Ver movimientos →
+        </a>
+      </section>
+
+      <section class="panel max-lg:order-2" aria-labelledby="h-precio">
+        <h2 id="h-precio" class="font-serif text-base font-semibold sm:text-lg">Precio y margen</h2>
+        <div class="grid grid-cols-3 gap-2.5">
+          <div class="flex flex-col gap-0.5">
+            <span class="text-xs text-base-content/60">Precio</span>
+            <span class="font-serif text-xl font-semibold max-sm:text-lg">{{ p.precio | money }}</span>
+          </div>
+          <div class="flex flex-col gap-0.5">
+            <span class="text-xs text-base-content/60">Costo unitario</span>
+            <span class="font-serif text-xl font-semibold max-sm:text-lg">
+              @if (ctx.costoUnitario() !== null) {
+                {{ ctx.costoUnitario() | money }}
+              } @else {
+                —
+              }
+            </span>
+          </div>
+          <div class="flex flex-col gap-0.5">
+            <span class="text-xs text-base-content/60">Margen</span>
+            <span class="font-serif text-xl font-semibold max-sm:text-lg" [class.text-success]="(ctx.margen() ?? 0) > 0" [class.text-error]="(ctx.margen() ?? 0) < 0">
+              @if (ctx.margen() !== null) {
+                {{ ctx.margen() }} %
+              } @else {
+                —
+              }
+            </span>
+          </div>
+        </div>
+        @if (ctx.costoUnitario() === null) {
+          <p class="rounded-lg bg-base-200 px-3 py-2.5 text-[0.8rem] leading-normal text-base-content/70">
+            @if (ctx.resale()) {
+              El costo es el promedio de sus compras. Sin compras no hay costo ni margen.
+            } @else {
+              El costo sale de la receta. Sin receta no hay costo ni margen.
+            }
+          </p>
+        } @else if (ctx.resale()) {
+          <p class="rounded-lg bg-base-200 px-3 py-2.5 text-[0.8rem] leading-normal text-base-content/70">
+            Costo promedio ponderado de sus compras.
+          </p>
+        }
+        <a [routerLink]="['/backoffice/products', p.id, 'precios']" class="text-sm font-semibold text-primary hover:underline">
+          Ver precios →
+        </a>
+      </section>
+
+      <section class="panel max-lg:order-5" aria-labelledby="h-en">
+        <h2 id="h-en" class="font-serif text-base font-semibold sm:text-lg">Aparece en</h2>
+        @for (item of combosActivos(); track item.line.id) {
+          <a
+            class="flex items-center justify-between gap-3 rounded-[10px] border border-base-300 px-3.5 py-3 hover:bg-base-200"
+            [routerLink]="['/backoffice/combos', item.line.comboId]"
+          >
+            <span class="flex min-w-0 flex-col gap-0.5">
+              <span class="text-xs text-base-content/60">Combo</span>
+              <span class="truncate font-semibold">{{ item.line.combo }} · {{ item.line.cantidad }} u por combo</span>
+            </span>
+            <app-icon name="chevron" class="text-base-content/40" />
+          </a>
+        }
+        @for (item of promos(); track item.link.promocionId) {
+          <a
+            class="flex items-center justify-between gap-3 rounded-[10px] border border-base-300 px-3.5 py-3 hover:bg-base-200"
+            routerLink="/backoffice/promotions"
+          >
+            <span class="flex min-w-0 flex-col gap-0.5">
+              <span class="text-xs text-base-content/60">
+                @if (item.promotion; as promotion) {
+                  Promoción {{ promotionChips[stateOf(promotion)].label.toLowerCase() }}
+                } @else {
+                  Promoción
+                }
+              </span>
+              <span class="truncate font-semibold">
+                {{ item.link.promocion }}
+                @if (item.promotion?.fechaFin; as fin) {
+                  · hasta {{ until(fin) }}
+                }
+              </span>
+            </span>
+            <app-icon name="chevron" class="text-base-content/40" />
+          </a>
+        }
+        @if (combosActivos().length === 0 && promos().length === 0) {
+          <p class="text-sm text-base-content/60">Todavía no forma parte de ningún combo ni promoción.</p>
+        }
+      </section>
+    </div>
+  </div>
+}

@@ -1,0 +1,54 @@
+<div class="container-page py-6 sm:py-8 lg:py-10">
+  <app-page-header title="Seguí tu pedido" subtitle="Con el número de pedido y el correo de tu cuenta" />
+
+  <form class="grid max-w-xl gap-3 sm:grid-cols-[8rem_1fr_auto]" (ngSubmit)="search()">
+    <input
+      class="input w-full"
+      name="numero"
+      inputmode="numeric"
+      placeholder="N.º de pedido"
+      aria-label="Número de pedido"
+      [(ngModel)]="numero"
+      required
+    />
+    <input
+      class="input w-full"
+      name="correo"
+      type="email"
+      placeholder="Correo"
+      aria-label="Correo de la cuenta"
+      autocomplete="email"
+      [(ngModel)]="correo"
+      required
+    />
+    <button type="submit" class="btn btn-primary" [disabled]="searching()">
+      @if (searching()) {
+        <span class="loading loading-spinner loading-sm"></span>
+      }
+      Consultar
+    </button>
+  </form>
+
+  @if (notFound()) {
+    <p class="mt-4 text-sm text-error">No encontramos un pedido con esos datos.</p>
+  }
+
+  @if (order(); as o) {
+    <section class="mt-6 grid max-w-xl gap-5 rounded-box border border-base-300 bg-base-100 p-5">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p class="font-medium">Pedido #{{ o.id }}</p>
+          <p class="text-sm text-base-content/55">
+            {{ modeLabels[o.modalidad ?? 'RETIRO'] }} ·
+            {{ o.fechaProgramada ? (o.fechaProgramada | date: 'short') : 'lo antes posible' }}
+          </p>
+        </div>
+        <span class="badge" [class]="statusBadge[o.estado] ?? 'badge-ghost'">
+          {{ statusLabels[o.estado] ?? o.estado }}
+        </span>
+      </div>
+      <app-order-timeline [order]="o" />
+      <p class="border-t border-base-300 pt-3 text-end font-medium">Total {{ o.total | money }}</p>
+    </section>
+  }
+</div>

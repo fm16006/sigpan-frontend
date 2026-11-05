@@ -1,0 +1,81 @@
+<app-auth-layout
+  title="Iniciar sesión"
+  subtitle="Accedé a tus pedidos y al panel interno."
+>
+  <form class="grid gap-4" [formGroup]="form" (ngSubmit)="submit()">
+    @if (verified) {
+      <div role="status" class="alert alert-success py-2 text-sm">
+        Tu cuenta quedó activa. Ya podés iniciar sesión.
+      </div>
+    }
+    @if (errorMessage()) {
+      <div role="alert" class="alert alert-error py-2 text-sm">{{ errorMessage() }}</div>
+    }
+    @if (unconfirmedEmail()) {
+      <button
+        type="button"
+        class="btn btn-outline btn-sm"
+        [disabled]="resendStatus() === 'sending' || resendStatus() === 'sent'"
+        (click)="resend()"
+      >
+        {{ resendStatus() === 'sent' ? 'Enlace reenviado, revisá tu correo' : 'Reenviar enlace de confirmación' }}
+      </button>
+      @if (resendStatus() === 'error') {
+        <p role="alert" class="text-xs text-error">No pudimos reenviar el enlace. Intentá más tarde.</p>
+      }
+    }
+
+    <div>
+      <label class="label" for="email">
+        <span class="label-text">Correo electrónico</span>
+      </label>
+      <input
+        id="email"
+        type="email"
+        formControlName="email"
+        autocomplete="email"
+        class="input input-bordered w-full"
+        [class.input-error]="!!errorFor('email')"
+        [attr.aria-invalid]="!!errorFor('email')"
+      />
+      @if (errorFor('email'); as message) {
+        <p class="mt-1 text-xs text-error">{{ message }}</p>
+      }
+    </div>
+
+    <div>
+      <label class="label" for="password">
+        <span class="label-text">Contraseña</span>
+      </label>
+      <input
+        id="password"
+        type="password"
+        formControlName="password"
+        autocomplete="current-password"
+        class="input input-bordered w-full"
+        [class.input-error]="!!errorFor('password')"
+        [attr.aria-invalid]="!!errorFor('password')"
+      />
+      @if (errorFor('password'); as message) {
+        <p class="mt-1 text-xs text-error">{{ message }}</p>
+      }
+    </div>
+
+    <button type="submit" class="btn btn-primary mt-2" [disabled]="submitting()">
+      @if (submitting()) {
+        <span class="loading loading-spinner loading-sm"></span>
+      }
+      Entrar
+    </button>
+  </form>
+
+  @if (googleEnabled) {
+    <div class="divider text-xs text-base-content/60">o</div>
+    <app-google-button text="signin_with" (credential)="loginWithGoogle($event)" />
+  }
+
+  <ng-container authFooter>
+    ¿No tenés cuenta?
+    <a routerLink="/auth/register" class="link link-primary">Registrate</a>
+  </ng-container>
+</app-auth-layout>

@@ -1,0 +1,189 @@
+@if (ctx.resale()) {
+  <app-empty-state
+    title="Este producto es de reventa"
+    description="Los productos de reventa se compran ya hechos: no llevan receta ni órdenes de producción. Su costo es el promedio ponderado de sus compras."
+  >
+    <a [routerLink]="['/backoffice/products', ctx.id(), 'compras']" class="btn btn-sm btn-primary">Ver compras</a>
+  </app-empty-state>
+} @else if (formula(); as f) {
+  <div class="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-5">
+    <app-stat-card label="Receta" [value]="f.nombre" />
+    <app-stat-card label="Rinde por lote" [value]="(f.cantidadProduccion | number: '1.0-3') + ' u'" />
+    <app-stat-card label="Merma esperada" [value]="(f.porcentajeMerma | number: '1.0-2') + ' %'" />
+    <app-stat-card
+      label="Costo por lote"
+      [value]="ctx.cost() ? (ctx.cost()!.costoTotal | money) : '—'"
+    />
+    <app-stat-card
+      label="Costo unitario · margen"
+      [value]="
+        ctx.costoUnitario() !== null
+          ? (ctx.costoUnitario() | money) + (ctx.margen() !== null ? ' · ' + ctx.margen() + ' %' : '')
+          : '—'
+      "
+    />
+  </div>
+
+  <div class="grid items-start gap-4 lg:grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)]">
+    <section class="overflow-hidden rounded-box border border-base-300 bg-base-100" aria-labelledby="h-ins">
+      <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+        <div class="flex flex-col gap-0.5">
+          <h2 id="h-ins" class="font-serif text-base font-semibold sm:text-lg">Insumos por lote</h2>
+          <span class="text-xs text-base-content/60">Hacé clic en un insumo para abrir su ficha</span>
+        </div>
+        <a routerLink="/backoffice/recipes" class="btn btn-sm">Editar receta</a>
+      </div>
+
+      <div class="grid items-center gap-x-4 px-5 py-3 max-md:hidden md:grid-cols-[minmax(0,1.6fr)_6rem_6rem_6rem_minmax(0,1fr)_1rem]">
+        <span class="list-th">Insumo</span>
+        <span class="list-th text-right">Por lote</span>
+        <span class="list-th text-right">Costo prom.</span>
+        <span class="list-th text-right">Subtotal</span>
+        <span class="list-th">Peso en el costo</span>
+        <span></span>
+      </div>
+      @for (row of rows(); track row.materiaPrimaId) {
+        <a
+          class="list-row grid-cols-2 gap-y-1.5 md:grid-cols-[minmax(0,1.6fr)_6rem_6rem_6rem_minmax(0,1fr)_1rem]"
+          [routerLink]="['/backoffice/raw-materials', row.materiaPrimaId]"
+          [attr.aria-label]="'Abrir ficha de ' + row.nombre"
+        >
+          <span class="truncate font-semibold max-md:col-span-2">{{ row.nombre }}</span>
+          <span class="tabular-nums md:text-right">{{ row.cantidad | number: '1.0-3' }} {{ row.unidad }}</span>
+          <span class="tabular-nums md:text-right max-md:text-right">
+            @if (row.costoPromedio !== null) {
+              {{ row.costoPromedio | money }}
+            } @else {
+              —
+            }
+          </span>
+          <span class="font-semibold tabular-nums md:text-right">
+            @if (row.subtotal !== null) {
+              {{ row.subtotal | money }}
+            } @else {
+              —
+            }
+          </span>
+          <span class="flex items-center gap-2 max-md:justify-end">
+            @if (row.peso !== null) {
+              <span class="h-1.5 flex-1 overflow-hidden rounded-full bg-base-200">
+                <span class="block h-full bg-primary" [style.width.%]="row.peso"></span>
+              </span>
+              <span class="w-9 text-right text-xs tabular-nums text-base-content/60">{{ row.peso }} %</span>
+            }
+          </span>
+          <app-icon name="chevron" class="text-base-content/40 max-md:hidden" />
+        </a>
+      } @empty {
+        <div class="border-t border-base-300 px-5 py-8 text-center text-sm text-base-content/60">
+          La receta todavía no tiene insumos.
+        </div>
+      }
+      <div class="flex flex-wrap justify-between gap-3 border-t border-base-300 bg-base-200/50 px-5 py-3.5 text-sm">
+        <span class="text-base-content/70">
+          Costo con el promedio ponderado vigente de cada insumo.
+        </span>
+        @if (ctx.cost(); as cost) {
+          <span class="font-semibold tabular-nums">Total del lote {{ cost.costoTotal | money }}</span>
+        }
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="h-sim">
+      <div class="flex flex-col gap-0.5">
+        <h2 id="h-sim" class="font-serif text-base font-semibold sm:text-lg">¿Alcanza para producir?</h2>
+        <span class="text-xs text-base-content/60">Explosión de materiales con la merma incluida</span>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-3">
+        <span class="font-semibold">Lotes</span>
+        <div class="inline-flex items-center overflow-hidden rounded-[10px] border border-base-300">
+          <button
+            type="button"
+            class="size-11 bg-base-200/60 text-lg hover:bg-base-200 disabled:opacity-40"
+            aria-label="Un lote menos"
+            [disabled]="lotes() <= 1"
+            (click)="changeLotes(-1)"
+          >
+            −
+          </button>
+          <span class="w-14 text-center font-serif text-xl font-semibold" aria-live="polite">{{ lotes() }}</span>
+          <button
+            type="button"
+            class="size-11 bg-base-200/60 text-lg hover:bg-base-200"
+            aria-label="Un lote más"
+            (click)="changeLotes(1)"
+          >
+            +
+          </button>
+        </div>
+        <span class="text-base-content/60">
+          = <b class="text-base-content">{{ unidades() | number: '1.0-3' }} u</b> de {{ f.producto }}
+        </span>
+      </div>
+
+      @if (explosion.error()) {
+        <p role="alert" class="rounded-lg bg-error/12 px-3 py-2.5 text-sm font-semibold">
+          No pudimos calcular la explosión de materiales.
+          <button type="button" class="link" (click)="explosion.reload()">Reintentar</button>
+        </p>
+      } @else if (explosionValue(); as e) {
+        <div>
+          <div class="grid grid-cols-[minmax(0,1.4fr)_1fr_1fr] gap-2 py-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-base-content/60">
+            <span>Insumo</span><span class="text-right">Requerido</span><span class="text-right">Existencia</span>
+          </div>
+          @for (insumo of e.insumos; track insumo.materiaPrimaId) {
+            <div class="grid grid-cols-[minmax(0,1.4fr)_1fr_1fr] gap-2 border-t border-base-300 py-2 text-sm">
+              <span class="truncate">{{ insumo.nombre }}</span>
+              <span
+                class="text-right font-semibold tabular-nums"
+                [class.text-error]="!insumo.suficiente"
+              >
+                {{ insumo.cantidadRequerida | number: '1.0-3' }} {{ insumo.unidadMedida }}
+              </span>
+              <span class="text-right tabular-nums text-base-content/60">
+                {{ insumo.existencia | number: '1.0-3' }} {{ insumo.unidadMedida }}
+              </span>
+            </div>
+          }
+        </div>
+        @if (e.alcanza) {
+          <p class="rounded-[10px] bg-success/15 px-3 py-2.5 text-[0.8rem] font-semibold">
+            Alcanza con la existencia actual.
+          </p>
+        } @else {
+          <div role="alert" class="rounded-[10px] bg-error/12 px-3 py-2.5 text-[0.8rem] font-semibold">
+            <p>No alcanza. Faltan:</p>
+            <ul class="mt-1 list-disc ps-5 font-normal">
+              @for (insumo of faltantes(); track insumo.materiaPrimaId) {
+                <li>{{ insumo.nombre }}: {{ missing(insumo) | number: '1.0-3' }} {{ insumo.unidadMedida }}</li>
+              }
+            </ul>
+          </div>
+        }
+      } @else {
+        <div class="h-24 animate-pulse rounded-lg bg-base-200" aria-busy="true"></div>
+      }
+
+      <a
+        routerLink="/backoffice/production"
+        [queryParams]="{ productoId: f.productoId, cantidad: unidades() }"
+        class="btn btn-primary"
+      >
+        Crear orden con {{ lotes() }} {{ lotes() === 1 ? 'lote' : 'lotes' }}
+      </a>
+    </section>
+  </div>
+} @else if (ctx.formulaLoading()) {
+  <div class="h-48 animate-pulse rounded-box bg-base-200" aria-busy="true"></div>
+} @else {
+  <app-empty-state
+    title="Este producto no tiene receta"
+    description="Sin receta no hay costo, ni explosión de materiales, ni órdenes de producción para este producto."
+  >
+    <a routerLink="/backoffice/recipes" class="btn btn-primary">
+      <app-icon name="plus" />
+      Nueva receta
+    </a>
+  </app-empty-state>
+}

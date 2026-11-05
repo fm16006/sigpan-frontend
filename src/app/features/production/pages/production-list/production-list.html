@@ -1,0 +1,118 @@
+<app-page-header
+  title="Órdenes de producción"
+  subtitle="Planificá, iniciá y terminá. Al terminar se descargan los insumos y entra el producto. Hacé clic en una orden para abrirla."
+  [crumbs]="crumbs"
+>
+  <button type="button" class="btn btn-primary" (click)="openNew()">
+    <app-icon name="plus" [size]="16" /> Nueva orden
+  </button>
+</app-page-header>
+
+<div class="mb-4 flex flex-wrap items-center gap-3">
+  <label class="input input-bordered flex w-full items-center gap-2 md:w-80">
+    <app-icon name="search" class="text-base-content/50" />
+    <input
+      type="search"
+      class="grow"
+      placeholder="Buscar orden, producto o receta"
+      aria-label="Buscar orden, producto o receta"
+      [value]="search()"
+      (input)="search.set($any($event.target).value)"
+    />
+  </label>
+
+  <div class="join" role="group" aria-label="Estado de la orden">
+    @for (item of segments; track item.value) {
+      <button
+        type="button"
+        class="btn btn-sm join-item"
+        [class.btn-active]="segment() === item.value"
+        [attr.aria-pressed]="segment() === item.value"
+        (click)="segment.set(item.value)"
+      >
+        {{ item.label }}
+        <span class="text-xs tabular-nums text-base-content/60">{{ counts()[item.value] }}</span>
+      </button>
+    }
+  </div>
+</div>
+
+<app-resource-state
+  [loading]="loading()"
+  [failed]="!!productions.error()"
+  [empty]="counts().todas === 0"
+  emptyTitle="Sin órdenes"
+  emptyDescription="Creá una orden para descontar insumos y sumar producto terminado."
+  (retry)="productions.reload()"
+>
+  <section class="overflow-hidden rounded-box border border-base-300 bg-base-100" aria-label="Lista de órdenes">
+    <div
+      class="grid items-center gap-x-4 px-5 py-3 md:grid-cols-[90px_minmax(0,1.6fr)_60px_90px_110px_minmax(0,1.7fr)_16px] max-md:hidden"
+    >
+      <span class="list-th">Orden</span>
+      <span class="list-th">Producto</span>
+      <span class="list-th text-end">Lotes</span>
+      <span class="list-th text-end">Unidades</span>
+      <span class="list-th">Planificada</span>
+      <span class="list-th">Avance</span>
+      <span></span>
+    </div>
+
+    @for (row of visible(); track row.production.id) {
+      <a
+        class="list-row grid-cols-2 gap-y-2 md:grid-cols-[90px_minmax(0,1.6fr)_60px_90px_110px_minmax(0,1.7fr)_16px]"
+        [routerLink]="['/backoffice/production', row.production.id]"
+        [attr.aria-label]="'Abrir la orden ' + row.code"
+      >
+        <span class="font-mono text-sm font-medium">{{ row.code }}</span>
+        <span class="min-w-0">
+          <span class="block truncate font-semibold">{{ row.production.producto }}</span>
+          <span class="block truncate text-xs text-base-content/55">{{ row.production.formula }}</span>
+        </span>
+        <span class="tabular-nums md:text-end">
+          <span class="text-xs text-base-content/55 md:hidden">Lotes </span>{{ row.production.cantidad }}
+        </span>
+        <span class="tabular-nums md:text-end">
+          @if (row.units !== null) {
+            {{ row.units | number: '1.0-3' }} u
+          } @else {
+            <span class="text-base-content/45">—</span>
+          }
+        </span>
+        <span class="text-sm">{{ row.production.fechaPlanificada | date: 'd MMM y' }}</span>
+        <span class="flex flex-wrap items-center gap-1 max-md:col-span-2">
+          @if (row.steps; as steps) {
+            @for (step of steps; track step.status) {
+              <span
+                [class]="stepClass(step.state)"
+                [attr.aria-current]="step.state === 'current' ? 'step' : null"
+              >
+                {{ statusLabels[step.status] }}
+              </span>
+            }
+          } @else {
+            <app-status-chip tone="bad" [label]="statusLabels[row.production.estado]" />
+          }
+        </span>
+        <app-icon name="chevron" class="text-base-content/40 max-md:hidden" />
+      </a>
+    } @empty {
+      <p class="border-t border-base-300 px-5 py-8 text-center text-sm text-base-content/55">
+        Ninguna orden coincide con el filtro.
+      </p>
+    }
+
+    <p class="border-t border-base-300 px-5 py-3 text-xs text-base-content/55">
+      {{ visible().length }} de {{ counts().todas }} órdenes
+    </p>
+  </section>
+</app-resource-state>
+
+<app-order-form-drawer
+  [open]="drawerOpen()"
+  [products]="productItems()"
+  [formulas]="formulaItems()"
+  [prefill]="prefill()"
+  (closed)="drawerOpen.set(false)"
+  (saved)="onSaved($event)"
+/>

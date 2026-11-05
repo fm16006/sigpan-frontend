@@ -1,0 +1,261 @@
+<header
+  class="flex items-center gap-x-3 bg-neutral px-3 py-2.5 text-neutral-content sm:gap-x-4 sm:px-4"
+>
+  <button
+    type="button"
+    class="btn btn-ghost btn-sm text-neutral-content hover:bg-neutral-content/10"
+    (click)="back.emit()"
+  >
+    ← Volver a vender
+  </button>
+  <span class="min-w-0 truncate font-serif text-lg font-semibold">
+    {{ place() }}<span class="max-sm:hidden"> · Cierre de caja</span>
+  </span>
+  @if (cashier()) {
+    <span class="ms-auto hidden min-w-0 truncate text-sm opacity-75 sm:inline">{{
+      cashier()
+    }}</span>
+  }
+</header>
+
+<main class="flex flex-col gap-4 p-3 sm:p-4 lg:p-6">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <h1 class="font-serif text-2xl font-semibold">Cierre de caja</h1>
+    @if (handoverShift()) {
+      <button type="button" class="btn btn-sm" (click)="handoverOpen.set(true)">
+        Pasar la caja a otro cajero
+      </button>
+    }
+  </div>
+
+  <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <div class="rounded-box border border-base-300 bg-base-100 p-4">
+      <p class="text-xs text-base-content/60">Ventas del día</p>
+      <p class="font-serif text-2xl font-semibold tabular-nums">{{ (cutValue()?.total ?? 0) | money }}</p>
+      <p class="text-xs text-base-content/60">
+        {{ cutValue()?.cantidadVentas ?? 0 }} ticket(s) · {{ cutValue()?.productosVendidos ?? 0 }}
+        producto(s)
+      </p>
+    </div>
+    <div class="rounded-box border border-base-300 bg-base-100 p-4">
+      <p class="text-xs text-base-content/60">En efectivo</p>
+      <p class="font-serif text-2xl font-semibold tabular-nums">{{ (cutValue()?.efectivo ?? 0) | money }}</p>
+      <p class="text-xs text-base-content/60">Recibido menos cambio</p>
+    </div>
+    <div class="rounded-box border border-base-300 bg-base-100 p-4">
+      <p class="text-xs text-base-content/60">Con tarjeta</p>
+      <p class="font-serif text-2xl font-semibold tabular-nums">{{ (cutValue()?.tarjeta ?? 0) | money }}</p>
+      <p class="text-xs text-base-content/60">Cobrado con tarjeta</p>
+    </div>
+    <div class="rounded-box border border-base-300 bg-base-100 p-4">
+      <p class="text-xs text-base-content/60">Anuladas</p>
+      <p class="font-serif text-2xl font-semibold tabular-nums">{{ voidedCount() }}</p>
+      <p class="text-xs text-base-content/60">No suman al total</p>
+    </div>
+  </div>
+
+  <div class="grid items-start gap-4 lg:grid-cols-2">
+    <section class="panel flex flex-col gap-4" aria-labelledby="caja-cuadre">
+      <div class="flex items-center justify-between gap-3">
+        <h2 id="caja-cuadre" class="font-serif text-lg font-semibold">Cuadre de efectivo</h2>
+        <!-- Pendiente backend (HU-38): registrar retiros de caja -->
+        <button
+          type="button"
+          class="btn btn-sm"
+          disabled
+          title="Próximamente"
+          aria-label="Registrar retiro (próximamente)"
+        >
+          Registrar retiro
+        </button>
+      </div>
+
+      @if (turno(); as shift) {
+        <dl class="grid grid-cols-2 gap-3 rounded-box bg-base-200 px-4 py-3 text-sm">
+          <div>
+            <dt class="text-xs text-base-content/60">Turno abierto</dt>
+            <dd class="font-semibold capitalize tabular-nums">
+              {{ shift.abiertaEn | date: 'EEE d MMM, HH:mm' }}
+            </dd>
+          </div>
+          <div>
+            <dt class="text-xs text-base-content/60">Fondo inicial</dt>
+            <dd class="font-semibold tabular-nums">{{ shift.fondo | money }}</dd>
+          </div>
+        </dl>
+      }
+
+      <dl class="text-sm tabular-nums">
+        <div class="flex justify-between border-b border-base-300 py-2">
+          <dt>Fondo inicial</dt>
+          <dd>{{ turno()?.fondo ?? 0 | money }}</dd>
+        </div>
+        <div class="flex justify-between border-b border-base-300 py-2">
+          <dt>+ Ventas en efectivo ({{ turno()?.cantidadVentas ?? 0 }})</dt>
+          <dd>{{ turno()?.efectivoVentas ?? 0 | money }}</dd>
+        </div>
+        <div class="flex justify-between border-b border-base-300 py-2 text-base-content/60">
+          <dt>Ventas con tarjeta</dt>
+          <dd>{{ turno()?.tarjetaVentas ?? 0 | money }}</dd>
+        </div>
+        <div class="flex justify-between py-2 font-bold">
+          <dt>Efectivo esperado</dt>
+          <dd>{{ turno()?.esperado ?? 0 | money }}</dd>
+        </div>
+      </dl>
+      <button type="button" class="btn btn-ghost btn-xs self-start" (click)="refresh()">Actualizar totales</button>
+
+      <fieldset class="grid gap-2">
+        <legend
+          class="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.09em] text-base-content/55"
+        >
+          Arqueo · lo que hay en la gaveta
+        </legend>
+        @for (value of denominations; track value) {
+          <div class="grid grid-cols-[4.5rem_1fr_5.5rem] items-center gap-3 tabular-nums">
+            <span class="font-semibold">{{ label(value) }}</span>
+            <span class="flex items-center gap-2">
+              <button
+                type="button"
+                class="btn btn-sm btn-square"
+                [attr.aria-label]="'Quitar uno de ' + label(value)"
+                [disabled]="count(value) === 0"
+                (click)="adjust(value, -1)"
+              >
+                −
+              </button>
+              <output
+                class="grid h-9 min-w-12 place-items-center rounded-field border border-base-300 font-semibold"
+                [attr.aria-label]="'Cantidad de ' + label(value)"
+              >
+                {{ count(value) }}
+              </output>
+              <button
+                type="button"
+                class="btn btn-sm btn-square"
+                [attr.aria-label]="'Agregar uno de ' + label(value)"
+                (click)="adjust(value, 1)"
+              >
+                +
+              </button>
+            </span>
+            <span class="text-end">{{ value * count(value) | money }}</span>
+          </div>
+        }
+      </fieldset>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div class="rounded-box bg-base-200 px-4 py-3">
+          <p class="text-xs text-base-content/60">Contado</p>
+          <p class="font-serif text-2xl font-semibold tabular-nums">{{ counted() | money }}</p>
+        </div>
+        <div class="rounded-box bg-base-200 px-4 py-3">
+          <p class="text-xs text-base-content/60">Diferencia</p>
+          <p class="font-serif text-2xl font-semibold tabular-nums" [class.text-error]="difference() < 0">
+            {{ difference() | money }}
+          </p>
+          <p class="text-xs text-base-content/60">
+            {{ difference() < 0 ? 'Faltante' : difference() > 0 ? 'Sobrante' : 'Cuadra' }}
+          </p>
+        </div>
+      </div>
+
+      <button type="button" class="btn btn-primary btn-lg" [disabled]="closing()" (click)="confirmOpen.set(true)">
+        Cerrar caja
+      </button>
+    </section>
+
+    <section class="panel flex flex-col gap-3" aria-labelledby="caja-ventas">
+      <div class="flex flex-wrap items-end justify-between gap-3">
+        <h2 id="caja-ventas" class="font-serif text-lg font-semibold">Ventas del día</h2>
+        <div class="flex flex-wrap items-end gap-2">
+          <label class="grid gap-1 text-xs text-base-content/60">
+            Fecha
+            <input
+              #date
+              type="date"
+              class="input input-sm"
+              [value]="cutDate()"
+              (change)="cutDate.set(date.value)"
+            />
+          </label>
+          <button type="button" class="btn btn-sm" (click)="cut.reload()">Actualizar</button>
+        </div>
+      </div>
+
+      @if (cut.isLoading()) {
+        <div class="h-24 animate-pulse rounded-box bg-base-200" aria-busy="true"></div>
+      } @else if (cut.error()) {
+        <div role="alert" class="alert alert-error">
+          <span>No pudimos calcular el corte.</span>
+          <button type="button" class="btn btn-sm" (click)="cut.reload()">Reintentar</button>
+        </div>
+      } @else if (cutValue(); as corte) {
+        @if (corte.ventas.length === 0) {
+          <p class="py-8 text-center text-sm text-base-content/55">
+            No hay ventas registradas en esta fecha.
+          </p>
+        } @else {
+          <div>
+            <div
+              class="list-th hidden grid-cols-[3.5rem_3rem_minmax(0,1fr)_4.5rem_5.5rem] gap-3 py-2 md:grid"
+            >
+              <span>Ticket</span>
+              <span>Hora</span>
+              <span>Detalle</span>
+              <span class="text-end">Total</span>
+              <span class="text-end">Estado</span>
+            </div>
+            @for (venta of corte.ventas; track venta.id) {
+              <div
+                class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 border-t border-base-300 py-2.5 text-sm md:grid-cols-[3.5rem_3rem_minmax(0,1fr)_4.5rem_5.5rem]"
+                [class.opacity-60]="isCancelled(venta)"
+              >
+                <span class="font-mono">#{{ venta.id }}</span>
+                <span class="tabular-nums max-md:order-last">{{ venta.fecha | date: 'HH:mm' }}</span>
+                <span class="text-base-content/70 max-md:col-span-2">
+                  @if (venta.caja) {
+                    <span class="me-1.5 rounded bg-base-200 px-1.5 py-0.5 text-[0.6875rem] font-medium">{{ venta.caja }}</span>
+                  }
+                  @for (linea of venta.detalles ?? []; track linea.id; let last = $last) {
+                    {{ linea.cantidad }} × {{ linea.producto }}{{ last ? '' : ', ' }}
+                  }
+                </span>
+                <span class="text-end font-semibold tabular-nums" [class.line-through]="isCancelled(venta)">{{ venta.total | money }}</span>
+                <span class="text-end">
+                  @if (isCancelled(venta)) {
+                    <app-status-chip label="Anulada" tone="bad" />
+                  }
+                </span>
+              </div>
+            }
+          </div>
+        }
+        <p class="border-t border-base-300 pt-3 text-xs text-base-content/60">
+          Las anuladas se listan pero no suman. Para anular un ticket, buscalo en Pedidos › Anteriores.
+        </p>
+      }
+    </section>
+  </div>
+</main>
+
+<app-cashier-handover
+  [open]="handoverOpen()"
+  [shift]="handoverShift()"
+  (closed)="handoverOpen.set(false)"
+  (handedOver)="handedOver()"
+/>
+
+<app-confirm-dialog
+  [open]="confirmOpen()"
+  title="¿Cerrar la caja?"
+  [message]="
+    'Se cierra el turno con ' +
+    (counted() | money) +
+    ' contados. Para vender otra vez tendrás que abrir la caja.'
+  "
+  confirmLabel="Cerrar caja"
+  tone="primary"
+  (confirmed)="closeRegister()"
+  (cancelled)="confirmOpen.set(false)"
+/>

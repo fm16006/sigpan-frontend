@@ -1,0 +1,31 @@
+import { FormBuilder, NonNullableFormBuilder, Validators } from '@angular/forms';
+import { Especialidad, ProductType } from '../../../../core/models/catalog.model';
+
+export const PRODUCT_CODE_MAX = 30;
+export const PRODUCT_UNIT_MAX = 30;
+export const PRODUCT_ALLERGENS_MAX = 255;
+
+/** Formulario de producto. Se separa del componente para poder probarlo sin TestBed. */
+export function createProductForm(
+  fb: NonNullableFormBuilder = new FormBuilder().nonNullable,
+) {
+  return fb.group({
+    codigo: ['', [Validators.required, Validators.maxLength(PRODUCT_CODE_MAX)]],
+    nombre: ['', [Validators.required, Validators.minLength(3)]],
+    descripcion: [''],
+    precio: [0, [Validators.required, Validators.min(0.01)]],
+    categoriaId: [0, [Validators.required, Validators.min(1)]],
+    stockMinimo: [0, [Validators.required, Validators.min(0)]],
+    unidadVenta: ['', [Validators.required, Validators.maxLength(PRODUCT_UNIT_MAX)]],
+    tipo: ['ELABORADO' as ProductType, [Validators.required]],
+    especialidad: ['' as Especialidad | '', [Validators.required]],
+    alergenos: ['', [Validators.maxLength(PRODUCT_ALLERGENS_MAX)]],
+    // Interruptores manuales por canal: un producto nuevo sale habilitado en los dos.
+    disponiblePos: [true],
+    disponibleTienda: [true],
+    // Exento de IVA (HU-36): por defecto un producto nuevo lleva IVA.
+    exentoIva: [false],
+    // HU-55: vacío = se vende de existencia.
+    anticipacionHoras: [null as number | null, [Validators.min(1), Validators.max(720)]],
+  });
+}

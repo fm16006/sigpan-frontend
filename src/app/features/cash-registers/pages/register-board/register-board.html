@@ -1,0 +1,47 @@
+<div class="mb-5 flex flex-wrap items-end justify-between gap-3">
+  <div class="grid grid-cols-2 gap-3 sm:w-md">
+    <app-stat-card label="Ocupadas" [value]="counts().busy" />
+    <app-stat-card label="Libres" [value]="counts().free" />
+  </div>
+  <div class="flex items-center gap-3">
+    <p class="text-sm text-base-content/60">Se actualiza solo cada 30 segundos.</p>
+    <button type="button" class="btn" [disabled]="source.isLoading()" (click)="source.reload()">
+      Actualizar
+    </button>
+  </div>
+</div>
+
+<app-resource-state
+  [loading]="source.isLoading() && registers().length === 0"
+  [failed]="!!source.error()"
+  [empty]="registers().length === 0"
+  emptyTitle="No hay cajas activas"
+  [emptyDescription]="canManage ? 'Agregá una caja abajo.' : 'Pedile a la administración que agregue una caja.'"
+  (retry)="source.reload()"
+>
+  <ul class="grid gap-4 md:grid-cols-2 xl:grid-cols-3" aria-label="Cajas">
+    @for (status of registers(); track status.cajaId) {
+      <li class="flex">
+        <app-register-card
+          class="w-full"
+          [status]="status"
+          [canManage]="canManage"
+          (handover)="handover.set($event)"
+          (close)="closing.set($event)"
+        />
+      </li>
+    }
+  </ul>
+</app-resource-state>
+
+@if (canManage) {
+  <app-register-admin class="mt-6 block" (changed)="source.reload()" />
+}
+
+<app-cashier-handover
+  [open]="!!handover()"
+  [shift]="handover()"
+  (closed)="handover.set(null)"
+  (handedOver)="changed()"
+/>
+<app-close-shift-drawer [shift]="closing()" (closed)="closing.set(null)" (done)="changed()" />

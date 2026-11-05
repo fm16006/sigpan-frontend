@@ -1,0 +1,257 @@
+<app-form-drawer
+  [open]="true"
+  [title]="isEdit() ? 'Editar promoción' : 'Nueva promoción'"
+  subtitle="Elegí cuánto descuenta, cuándo y a qué productos aplica."
+  (closed)="cancel()"
+>
+  <form
+    id="promotion-form"
+    [formGroup]="form"
+    (ngSubmit)="save()"
+    class="grid gap-6"
+    aria-label="Formulario de promoción"
+  >
+    @if (formError(); as message) {
+      <div role="alert" class="alert alert-error text-sm">{{ message }}</div>
+    }
+
+    <fieldset class="grid gap-3">
+      <legend class="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.09em] text-base-content/55">
+        Datos
+      </legend>
+      <label class="form-control">
+        <span class="label-text mb-1">Nombre</span>
+        <input type="text" formControlName="nombre" class="input input-bordered w-full" />
+        @if (fieldError('nombre'); as message) {
+          <span class="mt-1 text-sm text-error">{{ message }}</span>
+        }
+      </label>
+      <label class="form-control">
+        <span class="label-text mb-1">Descripción</span>
+        <textarea formControlName="descripcion" class="textarea textarea-bordered w-full" rows="2"></textarea>
+      </label>
+    </fieldset>
+
+    <fieldset class="grid gap-3 sm:grid-cols-2">
+      <legend class="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.09em] text-base-content/55">
+        Descuento
+      </legend>
+      <label class="form-control">
+        <span class="label-text mb-1">Tipo de descuento</span>
+        <select formControlName="tipoDescuento" class="select select-bordered w-full">
+          @for (type of types; track type) {
+            <option [value]="type">{{ typeLabels[type] }}</option>
+          }
+        </select>
+      </label>
+      <label class="form-control">
+        <span class="label-text mb-1">Valor</span>
+        <input type="number" step="0.01" min="0" formControlName="valorDescuento" class="input input-bordered w-full" />
+        @if (fieldError('valorDescuento'); as message) {
+          <span class="mt-1 text-sm text-error">{{ message }}</span>
+        }
+      </label>
+      <label class="form-control sm:col-span-2">
+        <span class="label-text mb-1">Prioridad</span>
+        <input type="number" min="0" step="1" formControlName="prioridad" class="input input-bordered w-full" />
+        <span class="mt-1 text-xs text-base-content/55">
+          Desempata cuando dos promociones dejan el mismo total. Mayor valor gana.
+        </span>
+      </label>
+    </fieldset>
+
+    <fieldset class="grid gap-3 sm:grid-cols-2">
+      <legend class="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.09em] text-base-content/55">
+        Vigencia
+      </legend>
+      <div class="flex flex-wrap gap-4 sm:col-span-2" role="radiogroup" aria-label="Tipo de vigencia">
+        <label class="label cursor-pointer gap-2">
+          <input type="radio" class="radio radio-sm" formControlName="vigencia" value="RANGO" />
+          <span>Rango de fechas</span>
+        </label>
+        <label class="label cursor-pointer gap-2">
+          <input type="radio" class="radio radio-sm" formControlName="vigencia" value="MES" />
+          <span>Mes completo</span>
+        </label>
+      </div>
+
+      @if (form.controls.vigencia.value === 'MES') {
+        <label class="form-control sm:col-span-2">
+          <span class="label-text mb-1">Mes</span>
+          <input type="month" formControlName="mes" class="input input-bordered w-full" />
+          @if (fieldError('mes'); as message) {
+            <span class="mt-1 text-sm text-error">{{ message }}</span>
+          }
+        </label>
+      } @else {
+        <label class="form-control">
+          <span class="label-text mb-1">Inicio</span>
+          <input type="date" formControlName="fechaInicio" class="input input-bordered w-full" />
+        </label>
+        <label class="form-control">
+          <span class="label-text mb-1">Fin</span>
+          <input type="date" formControlName="fechaFin" class="input input-bordered w-full" />
+        </label>
+      }
+    </fieldset>
+
+    <fieldset class="grid gap-3">
+      <legend class="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.09em] text-base-content/55">
+        Alcance
+      </legend>
+
+      <div role="radiogroup" aria-label="Alcance de la promoción" class="grid gap-2 sm:grid-cols-3">
+        @for (option of scopes; track option) {
+          <label
+            class="flex cursor-pointer items-start gap-2.5 rounded-box border p-3 transition-colors"
+            [class.border-primary]="scope() === option"
+            [class.bg-primary/5]="scope() === option"
+            [class.border-base-300]="scope() !== option"
+          >
+            <input
+              type="radio"
+              name="alcance"
+              class="radio radio-sm mt-0.5"
+              [value]="option"
+              [checked]="scope() === option"
+              (change)="chooseScope(option)"
+            />
+            <span class="min-w-0">
+              <span class="block text-sm font-semibold">{{ scopeLabels[option] }}</span>
+              <span class="mt-0.5 block text-xs text-base-content/60">{{ scopeHints[option] }}</span>
+            </span>
+          </label>
+        }
+      </div>
+
+      @switch (scope()) {
+        @case ('TODOS') {
+          <p class="rounded-box bg-base-200 px-3 py-2.5 text-sm text-base-content/75" data-scope-note="todos">
+            La promoción se aplica a todos los productos del catálogo. Incluye también los productos que se
+            agreguen más adelante, sin tener que editarla.
+          </p>
+        }
+        @case ('CATEGORIAS') {
+          <div class="grid gap-2" data-scope-panel="categorias">
+            <div class="flex items-center justify-between gap-2 text-sm">
+              <span class="font-medium">Categorías</span>
+              <span class="text-base-content/55">
+                {{ selectedCategoryCount() }}
+                {{ selectedCategoryCount() === 1 ? 'seleccionada' : 'seleccionadas' }}
+              </span>
+            </div>
+            @if (categories.isLoading()) {
+              <span class="loading loading-spinner loading-sm"></span>
+            }
+            <div class="grid max-h-64 gap-1 overflow-y-auto rounded-box border border-base-300 p-2">
+              @for (category of activeCategories(); track category.id) {
+                <label class="flex cursor-pointer items-start gap-3 rounded-lg px-2 py-1.5 hover:bg-base-200/60">
+                  <input
+                    type="checkbox"
+                    class="checkbox checkbox-sm mt-0.5"
+                    [checked]="isCategorySelected(category.id)"
+                    (change)="toggleCategory(category.id, $any($event.target).checked)"
+                  />
+                  <span class="min-w-0 flex-1 text-sm">
+                    <span class="break-words font-medium">{{ category.nombre }}</span>
+                    <span class="ms-1.5 text-xs text-base-content/55">
+                      {{ category.productosActivos }}
+                      {{ category.productosActivos === 1 ? 'producto' : 'productos' }}
+                    </span>
+                  </span>
+                </label>
+              } @empty {
+                @if (!categories.isLoading()) {
+                  <p class="px-2 py-3 text-sm text-base-content/60">No hay categorías activas.</p>
+                }
+              }
+            </div>
+            <p class="text-xs text-base-content/55">
+              Los productos que se agreguen después a estas categorías también tendrán el descuento.
+            </p>
+            @if (categoriesError(); as message) {
+              <span role="alert" class="text-sm text-error">{{ message }}</span>
+            }
+          </div>
+        }
+        @default {
+          <div class="grid gap-2" data-scope-panel="productos">
+            <div class="flex items-center justify-between gap-2 text-sm">
+              <span class="font-medium">Productos</span>
+              <span class="text-base-content/55" data-selected-count>
+                {{ selectedCount() }} {{ selectedCount() === 1 ? 'seleccionado' : 'seleccionados' }}
+              </span>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2">
+              <label
+                class="flex h-9 min-w-0 flex-[1_1_12rem] items-center gap-2 rounded-field border border-base-300 bg-base-100 px-3"
+              >
+                <input
+                  type="search"
+                  class="min-w-0 flex-1 bg-transparent text-sm outline-none"
+                  placeholder="Buscar producto por nombre"
+                  aria-label="Buscar producto"
+                  [value]="term()"
+                  (input)="setTerm($any($event.target).value)"
+                />
+              </label>
+              <button type="button" class="btn btn-sm btn-ghost" data-action="select-filtered" (click)="selectFiltered()">
+                Seleccionar los filtrados
+              </button>
+              <button type="button" class="btn btn-sm btn-ghost" data-action="clear" (click)="clearProducts()">
+                Limpiar
+              </button>
+            </div>
+
+            @if (products.isLoading()) {
+              <span class="loading loading-spinner loading-sm"></span>
+            }
+            <ul class="grid max-h-64 gap-0.5 overflow-y-auto rounded-box border border-base-300 p-1.5" data-product-list>
+              @for (product of filteredProducts(); track product.id) {
+                <li>
+                  <label class="flex cursor-pointer items-start gap-3 rounded-lg px-2 py-1.5 hover:bg-base-200/60">
+                    <input
+                      type="checkbox"
+                      class="checkbox checkbox-sm mt-0.5 shrink-0"
+                      [checked]="isSelected(product.id)"
+                      (change)="toggleProduct(product.id, $any($event.target).checked)"
+                    />
+                    <span class="min-w-0 flex-1 text-sm">
+                      <span class="line-clamp-2 break-words" [attr.title]="product.nombre">{{ product.nombre }}</span>
+                      <span class="block truncate text-xs text-base-content/50">{{ product.categoria }}</span>
+                    </span>
+                  </label>
+                </li>
+              } @empty {
+                @if (!products.isLoading()) {
+                  <li class="px-2 py-3 text-sm text-base-content/60">
+                    {{ term() ? 'Ningún producto activo coincide con la búsqueda.' : 'No hay productos activos.' }}
+                  </li>
+                }
+              }
+            </ul>
+            @if (productsError(); as message) {
+              <span role="alert" class="text-sm text-error">{{ message }}</span>
+            }
+          </div>
+        }
+      }
+    </fieldset>
+  </form>
+
+  <div footer class="contents">
+    @if (isEdit()) {
+      <button type="button" class="btn btn-ghost me-auto text-error" [disabled]="saving()" (click)="requestRemove()">
+        Eliminar
+      </button>
+    }
+    <button type="button" class="btn btn-ghost" (click)="cancel()">Cancelar</button>
+    <button type="submit" form="promotion-form" class="btn btn-primary" [disabled]="saving()">
+      @if (saving()) {
+        <span class="loading loading-spinner loading-sm"></span>
+      }
+      Guardar
+    </button>
+  </div>
+</app-form-drawer>

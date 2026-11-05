@@ -1,0 +1,901 @@
+import {
+  Component,
+  DestroyRef,
+  ElementRef,
+  Injector,
+  PLATFORM_ID,
+  afterNextRender,
+  computed,
+  effect,
+  inject,
+  linkedSignal,
+  signal,
+  untracked,
+  viewChild,
+} from '@angular/core';
+import { HttpResourceRequest, httpResource } from '@angular/common/http';
+import { NgTemplateOutlet, isPlatformBrowser } from '@angular/common';
+import { Router, RouterLink } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Id } from '../../../../core/models/api.model';
+import { CatalogProduct } from '../../../../core/models/catalog.model';
+import { BestSeller } from '../../../../core/models/order.model';
+import { OffersStore } from '../../../../core/services/offers-store';
+import { ProductOffers } from '../../../../core/models/offer.model';
+import { OfferBadge } from '../../../../shared/ui/offer-badge/offer-badge';
+import { OrderService } from '../../../storefront/services/order.service';
+import { PosCombo } from '../../../../core/models/combo.model';
+import { PriceScale } from '../../../../core/models/price-scale.model';
+import { Quote, QuoteLine, QuoteSuggestion, ruleLabel } from '../../../../core/models/quote.model';
+import { QuoteService } from '../../../../core/services/quote.service';
+import { debouncedSignal } from '../../../../core/utils/debounced-signal';
+import { Auth } from '../../../../core/services/auth';
+import { Notifications } from '../../../../core/services/notifications';
+import { BackofficeMenu } from '../../../../shared/layout/backoffice-menu';
+import { MoneyPipe } from '../../../../shared/pipes/money.pipe';
+import { IvaLine } from '../../../../shared/ui/iva-line/iva-line';
+import { BrandMark } from '../../../../shared/ui/brand-mark/brand-mark';
+import { ConfirmDialog } from '../../../../shared/ui/confirm-dialog/confirm-dialog';
+import { Icon } from '../../../../shared/ui/icon/icon';
+import { ResourceState } from '../../../../shared/ui/resource-state/resource-state';
+import { ThemeToggle } from '../../../../shared/ui/theme-toggle/theme-toggle';
+import { PriceScaleService } from '../../../wholesale/services/price-scale.service';
+import { ComboService } from '../../../combos/services/combo.service';
+import { ProductService } from '../../../storefront/services/product.service';
+import { PosLine } from '../../models/checkout.model';
+import { BarcodeBurst } from '../../barcode-burst';
+import {
+  PosTile,
+  comboContents,
+  comboSoldOut,
+  findByCode,
+  mergeLines,
+  nextTier,
+  planComboAdd,
+  posCategories,
+  posShortcut,
+  posTiles,
+  ruleBadge,
+  tierHintText,
+} from '../../pos-logic';
+import { MAX_ORDERS, PosOrder, hasLines, itemCount, orderTotal } from '../../pos-orders';
+import { CashRegisterStore } from '../../services/cash-register.store';
+import { PosOrdersStore } from '../../services/pos-orders.store';
+import { CheckoutDialog } from '../../ui/checkout-dialog/checkout-dialog';
+import { PosEncargo } from '../../ui/pos-encargo/pos-encargo';
+import { PosApertura } from '../../ui/pos-apertura/pos-apertura';
+import { PosCaja } from '../../ui/pos-caja/pos-caja';
+import { PosPedidos } from '../../ui/pos-pedidos/pos-pedidos';
+import { registerLabel } from '../../register-utils';
+import { valueOr } from '../../../../core/http/resource-value';
+
+/** Qué ve el cajero: con la caja cerrada solo la apertura; abierta, la venta, el cierre o los pedidos. */
+type PosMode = 'apertura' | 'venta' | 'cierre' | 'pedidos';
+
+const POS_PATH = '/backoffice/pos';
+const PANEL_PATH = '/backoffice';
+const ONLINE_ORDERS_PATH = '/backoffice/orders';
+/** Existencias y ofertas al día sin recargar la página, igual que la cola de despacho. */
+const CATALOG_REFRESH_MS = 30_000;
+/** Pausa del ticket antes de cotizar: la misma que el carrito de la tienda (HU-32). */
+const QUOTE_DEBOUNCE_MS = 150;
+const TIME_FORMAT = new Intl.DateTimeFormat('es-SV', { hour: 'numeric', minute: '2-digit' });
+const SHIFT_TIME_FORMAT = new Intl.DateTimeFormat('es-SV', {
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+});
+/** Desde `lg` el ticket va a la izquierda; debajo, barra inferior y hoja. Igual que Tailwind. */
+const DESKTOP_QUERY = '(min-width: 1024px)';
+const DAY_FORMAT = new Intl.DateTimeFormat('es-SV', {
+  weekday: 'long',
+  day: 'numeric',
+  month: 'short',
+});
+const CATEGORY_TONES = [
+  'border-primary bg-primary/10',
+  'border-secondary bg-secondary/10',
+  'border-accent bg-accent/10',
+  'border-info bg-info/10',
+  'border-success bg-success/10',
+  'border-warning bg-warning/10',
+] as const;
+/** HU-55: se produce para el pedido, así que agotado no impide registrarlo como encargo. */
+function isMadeToOrder(product: CatalogProduct): boolean {
+  return (product.anticipacionHoras ?? 0) > 0;
+}
+
+const ROLE_NAMES: Readonly<Record<string, string>> = {
+  ADMINISTRADOR: 'Administración',
+  CAJERO: 'Cajero',
+};
+
+@Component({
+  selector: 'app-pos-screen',
+  imports: [
+    RouterLink,
+    NgTemplateOutlet,
+    ResourceState,
+    MoneyPipe,
+    BrandMark,
+    ThemeToggle,
+    Icon,
+    ConfirmDialog,
+    IvaLine,
+    OfferBadge,
+    CheckoutDialog,
+    PosEncargo,
+    PosCaja,
+    PosPedidos,
+    PosApertura,
+  ],
+  templateUrl: './pos-screen.html',
+  host: {
+    class: 'block h-dvh bg-base-200',
+    '(document:keydown)': 'onKeydown($event)',
+  },
+})
+export class PosScreen {
+  private readonly products = inject(ProductService);
+  private readonly comboService = inject(ComboService);
+  private readonly notifications = inject(Notifications);
+  private readonly menu = inject(BackofficeMenu);
+  private readonly priceScales = inject(PriceScaleService);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly register = inject(CashRegisterStore);
+  private readonly orders = inject(PosOrdersStore);
+  private readonly router = inject(Router);
+  private readonly injector = inject(Injector);
+
+  protected readonly auth = inject(Auth);
+  protected readonly isMadeToOrder = isMadeToOrder;
+  protected readonly isAdmin = this.auth.hasAnyRole(['ADMINISTRADOR']);
+  /** Caja del turno abierto ("Caja 01"), para la barra superior. */
+  protected readonly place = computed(() => registerLabel(this.register.lugar()?.caja));
+
+  /** Líneas del pedido activo: todo lo que sigue (cotización, pasos, cobro) opera sobre él. */
+  private readonly ticket = this.orders.lineas;
+  protected readonly orderList = this.orders.pedidos;
+  protected readonly activeName = computed(() => this.orders.activo().nombre);
+  protected readonly activeOrderId = this.orders.activoId;
+  protected readonly maxOrders = MAX_ORDERS;
+  private readonly now = signal(new Date());
+  /** Tramos de mayoreo por producto, consultados una sola vez por sesión (HU-33). */
+  protected readonly scales = signal<ReadonlyMap<Id, readonly PriceScale[]>>(new Map());
+  private readonly scaleRequests = new Set<Id>();
+
+  /** El cajero pidió ver el cierre de caja (solo aplica con la caja abierta). */
+  protected readonly closing = signal(false);
+  /** El cajero abrió la vista "Pedidos" (borradores y ventas anteriores). */
+  protected readonly viewingOrders = signal(false);
+  protected readonly mode = computed<PosMode>(() => {
+    if (this.register.estado() === 'cerrada') {
+      return 'apertura';
+    }
+    return this.closing() ? 'cierre' : this.viewingOrders() ? 'pedidos' : 'venta';
+  });
+  protected readonly shift = this.register.turno;
+  protected readonly shiftSince = computed(() => {
+    const since = this.shift()?.abiertaEn;
+    return since ? SHIFT_TIME_FORMAT.format(new Date(since)) : '';
+  });
+  /** Pantalla ancha: ticket fijo a la izquierda. En teléfono, barra inferior y hoja. */
+  protected readonly desktop = signal(true);
+  protected readonly sheetOpen = signal(false);
+  protected readonly search = signal('');
+  protected readonly category = signal('');
+  private readonly offers = inject(OffersStore);
+  /** HU-34: los 12 más vendidos de los últimos 30 días. */
+  private readonly orderService = inject(OrderService);
+  protected readonly bestSellers = httpResource<BestSeller[]>(() => this.orderService.bestSellersUrl(), {
+    defaultValue: [],
+  });
+  protected readonly bestIds = computed(() => valueOr(this.bestSellers, []).map((b) => b.productoId));
+  protected readonly BEST = '★ Más vendidos';
+  protected readonly selectedId = signal<Id | null>(null);
+  protected readonly checkoutOpen = signal(false);
+  protected readonly encargoOpen = signal(false);
+  protected readonly clearOpen = signal(false);
+  protected readonly logoutOpen = signal(false);
+  protected readonly closeRegisterOpen = signal(false);
+  protected readonly menuOpen = signal(false);
+  protected readonly panelOpen = signal(false);
+  /** Pedido que el cajero quiere descartar y está pendiente de confirmar. */
+  protected readonly discardTarget = signal<PosOrder | null>(null);
+
+  /** Teclas del lector de código de barras que llegan con el foco fuera del buscador (HU-34). */
+  private readonly burst = new BarcodeBurst();
+
+  private readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
+  private readonly menuClose = viewChild<ElementRef<HTMLButtonElement>>('menuClose');
+  private readonly menuTrigger = viewChild<ElementRef<HTMLButtonElement>>('menuTrigger');
+
+  protected readonly clock = computed(() => TIME_FORMAT.format(this.now()));
+  protected readonly day = computed(() => DAY_FORMAT.format(this.now()));
+  protected readonly roleName = computed(() => {
+    const role = this.auth.user()?.role;
+    return role ? (ROLE_NAMES[role] ?? role) : '';
+  });
+
+  protected readonly adminLinks = computed(() =>
+    this.menu.items().filter((item) => item.path !== POS_PATH),
+  );
+  /** Enlaces del menú del cajero: solo los que su rol puede ver. */
+  protected readonly panelLink = computed(() =>
+    this.adminLinks().find((item) => item.path === PANEL_PATH),
+  );
+  protected readonly onlineOrdersLink = computed(() =>
+    this.adminLinks().find((item) => item.path === ONLINE_ORDERS_PATH),
+  );
+  /** Pedidos con algo cargado: los que se pierden si no se cobran. */
+  protected readonly pending = this.orders.pendientes;
+  protected readonly pendingItems = computed(() =>
+    this.pending().reduce((sum, order) => sum + itemCount(order), 0),
+  );
+
+  protected readonly lines = this.ticket;
+  private readonly quotes = inject(QuoteService);
+
+  /** Canasta que se cotiza: solo producto y cantidad. El backend fija precios y descuentos. */
+  private readonly quoteLines = computed(() =>
+    this.ticket().map((line) => ({ productoId: line.product.id, cantidad: line.quantity })),
+  );
+  private readonly debouncedLines = debouncedSignal(this.quoteLines, QUOTE_DEBOUNCE_MS);
+
+  protected readonly quote = httpResource<Quote>((): HttpResourceRequest | undefined => {
+    const lineas = this.debouncedLines();
+    return lineas.length > 0 ? { url: this.quotes.url, method: 'POST', body: { lineas } } : undefined;
+  });
+  /** El ticket cambió y la cotización todavía no lo refleja: no se cobra en ese lapso. */
+  protected readonly quotePending = computed(() => this.quoteLines() !== this.debouncedLines());
+  /** Los importes a la vista todavía no son los de este ticket (se muestran en gris y no se cobra). */
+  protected readonly quoteStale = computed(() => this.quotePending() || this.quote.isLoading());
+  protected readonly canCharge = computed(
+    () => this.ticket().length > 0 && !this.quoteStale() && !this.quote.error(),
+  );
+  /**
+   * Última cotización del pedido activo. Mientras llega la del ticket nuevo se conserva la anterior
+   * (en gris) en vez de caer a $0.00 (HU-32). Sin líneas, con error o al cambiar de pedido no se conserva.
+   */
+  private readonly quoteValue = linkedSignal({
+    source: () => ({
+      value: valueOr(this.quote, undefined),
+      order: this.orders.activoId(),
+      keep: this.ticket().length > 0 && !this.quote.error(),
+    }),
+    computation: (now, previous): Quote | undefined => {
+      if (!now.keep) {
+        return undefined;
+      }
+      const sameOrder = previous?.source.order === now.order;
+      return now.value ?? (sameOrder ? previous?.value : undefined);
+    },
+  });
+  protected readonly quoteByProduct = computed(
+    () => new Map((this.quoteValue()?.lineas ?? []).map((line) => [line.productoId, line] as const)),
+  );
+  protected readonly subtotal = computed(() => this.quoteValue()?.subtotal ?? 0);
+  protected readonly descuento = computed(() => this.quoteValue()?.descuento ?? 0);
+  /** Total que cobra el backend (promociones, combos y mayoreo ya aplicados). */
+  protected readonly total = computed(() => this.quoteValue()?.total ?? 0);
+  protected readonly ahorro = computed(() => this.quoteValue()?.ahorro ?? 0);
+  /** Desglose del IVA de la cotización vigente, tal como lo calculó el servidor. */
+  protected readonly tax = computed(() => this.quoteValue() ?? null);
+  protected readonly ruleLabel = ruleLabel;
+  /** HU-33: combos a los que les falta un producto, como en el carrito. Los tramos los avisa cada línea. */
+  protected readonly comboSuggestions = computed(() =>
+    (this.quoteValue()?.sugerencias ?? []).filter((suggestion) => suggestion.tipo === 'COMBO'),
+  );
+  protected readonly itemCount = computed(() =>
+    this.ticket().reduce((sum, line) => sum + line.quantity, 0),
+  );
+
+  /**
+   * Total cotizado del pedido activo, solo si la cotización vigente es de estas líneas.
+   * Mientras se recotiza (o tras un cambio de pedido) es null, para no mostrar el total de otro.
+   */
+  private readonly settledTotal = computed<number | null>(() => {
+    const quote = this.quoteValue();
+    const lines = this.ticket();
+    if (
+      !quote ||
+      lines.length === 0 ||
+      this.quotePending() ||
+      this.quote.isLoading() ||
+      quote.lineas.length !== lines.length
+    ) {
+      return null;
+    }
+    const matches = lines.every((line) =>
+      quote.lineas.some(
+        (item) => item.productoId === line.product.id && item.cantidad === line.quantity,
+      ),
+    );
+    return matches ? quote.total : null;
+  });
+
+  protected readonly catalog = httpResource<CatalogProduct[]>(() => this.products.activePosUrl(), {
+    defaultValue: [],
+  });
+
+  private readonly catalogItems = computed(() => valueOr(this.catalog, []));
+
+  /**
+   * Combos activos que se pueden vender, con cuántos alcanzan con la existencia. Si esta consulta
+   * falla, el punto de venta sigue vendiendo productos (los combos simplemente no salen).
+   */
+  protected readonly comboCatalog = httpResource<PosCombo[]>(() => this.comboService.posUrl(), {
+    defaultValue: [],
+  });
+  private readonly comboItems = computed(() => valueOr(this.comboCatalog, []));
+
+  /** Categorías de productos y de combos: una categoría con solo combos también aparece. */
+  protected readonly categories = computed(() =>
+    posCategories(this.catalogItems(), this.comboItems()),
+  );
+
+  /** Tarjetas de la cuadrícula: productos y combos agrupados por categoría. */
+  protected readonly tiles = computed((): PosTile[] => {
+    if (this.category() !== this.BEST) {
+      return posTiles(this.catalogItems(), this.comboItems(), this.search(), this.category());
+    }
+    const found = posTiles(this.catalogItems(), [], this.search(), '');
+    return this.bestIds()
+      .map((id) => found.find((tile) => tile.kind === 'product' && tile.product.id === id))
+      .filter((tile): tile is PosTile => !!tile);
+  });
+
+  protected readonly selected = computed(
+    () => this.catalogItems().find((product) => product.id === this.selectedId()) ?? null,
+  );
+
+  protected readonly selectedDetail = httpResource<CatalogProduct>(() => {
+    const id = this.selectedId();
+    return id === null ? undefined : this.products.byIdUrl(id);
+  });
+
+  private readonly detailValue = computed(() => valueOr(this.selectedDetail, undefined));
+
+  protected readonly selectedLine = computed(
+    () => this.ticket().find((line) => line.product.id === this.selectedId()) ?? null,
+  );
+
+  constructor() {
+    this.offers.load();
+    if (isPlatformBrowser(inject(PLATFORM_ID))) {
+      const clock = setInterval(() => this.now.set(new Date()), 30_000);
+      const refresh = setInterval(() => {
+        this.catalog.reload();
+        this.comboCatalog.reload();
+        // HU-28: una liquidación nueva (o que empezó su horario) aparece sin recargar la página.
+        this.offers.load();
+      }, CATALOG_REFRESH_MS);
+      this.destroyRef.onDestroy(() => {
+        clearInterval(clock);
+        clearInterval(refresh);
+      });
+    }
+    this.watchViewport();
+
+    // Los pedidos en espera no se recotizan: se guarda el último total de cada uno para su pestaña.
+    effect(() => {
+      const total = this.settledTotal();
+      const id = this.orders.activoId();
+      if (total !== null) {
+        untracked(() => this.orders.guardarTotal(id, total));
+      }
+    });
+    // Un pedido recuperado del navegador (o al cambiar de pedido) también necesita sus tramos.
+    effect(() => {
+      const lines = this.ticket();
+      untracked(() => lines.forEach((line) => this.loadScales(line.product.id)));
+    });
+  }
+
+  private watchViewport(): void {
+    if (typeof matchMedia !== 'function') {
+      return;
+    }
+    const query = matchMedia(DESKTOP_QUERY);
+    const sync = () => this.desktop.set(query.matches);
+    sync();
+    query.addEventListener('change', sync);
+    this.destroyRef.onDestroy(() => query.removeEventListener('change', sync));
+  }
+
+  protected toneFor(category: string): string {
+    const index = this.categories().indexOf(category);
+    return CATEGORY_TONES[Math.max(0, index) % CATEGORY_TONES.length];
+  }
+
+  /** Ofertas vigentes del producto (HU-30): las mismas insignias y precios que muestra la tienda. */
+  protected offersOf(product: CatalogProduct): ProductOffers | undefined {
+    const offers = this.offers.of(product.id);
+    return offers?.ofertas.length ? offers : undefined;
+  }
+
+  /** Texto de los combos y tramos del producto, visible en la tarjeta como en la tienda (HU-30). */
+  protected offerNotes(product: CatalogProduct): string {
+    return (this.offersOf(product)?.ofertas ?? [])
+      .filter((offer) => offer.tipo === 'COMBO' || offer.tipo === 'ESCALA')
+      .map((offer) => offer.etiqueta)
+      .join(' · ');
+  }
+
+  /** Regla que la última cotización aplicó al producto, si no tiene una oferta de catálogo. */
+  protected ticketBadge(product: CatalogProduct): string {
+    return ruleBadge(this.quoteByProduct().get(product.id)?.regla);
+  }
+
+  protected pickTile(tile: PosTile): void {
+    if (tile.kind === 'combo') {
+      this.addCombo(tile.combo);
+    } else {
+      this.pick(tile.product);
+    }
+  }
+
+  protected tileKey(tile: PosTile): string {
+    return tile.kind === 'combo' ? `c${tile.combo.id}` : `p${tile.product.id}`;
+  }
+
+  protected readonly comboSoldOut = comboSoldOut;
+  protected readonly comboContents = comboContents;
+
+  /**
+   * Agrega al pedido activo todos los productos del combo con sus cantidades (suma si ya estaban).
+   * El precio del combo lo aplica el motor de promociones al cotizar; la venta sigue mandando productos.
+   */
+  protected addCombo(combo: PosCombo): void {
+    const plan = planComboAdd(combo, this.catalogItems(), this.ticket());
+    if (plan.error) {
+      this.notifications.error(plan.error);
+      return;
+    }
+    this.orders.cambiarLineas((lines) => mergeLines(lines, plan.lines));
+    plan.lines.forEach((line) => this.loadScales(line.product.id));
+  }
+
+  protected pick(product: CatalogProduct): void {
+    this.selectedId.set(product.id);
+    this.add(product);
+  }
+
+  protected add(product: CatalogProduct, quantity = 1): void {
+    if (this.soldOut(product) && !isMadeToOrder(product)) {
+      this.notifications.error(`${product.nombre} está agotado.`);
+      return;
+    }
+    const current = this.ticket().find((line) => line.product.id === product.id)?.quantity ?? 0;
+    if (!this.fitsStock(product, current + quantity)) {
+      return;
+    }
+    this.orders.cambiarLineas((lines) =>
+      lines.some((line) => line.product.id === product.id)
+        ? lines.map((line) =>
+            line.product.id === product.id ? { ...line, quantity: line.quantity + quantity } : line,
+          )
+        : [...lines, { product, quantity }],
+    );
+    this.loadScales(product.id);
+  }
+
+  /** Enter en el buscador: el código exacto agrega el producto; si no, el único resultado por nombre. */
+  protected scan(): void {
+    const text = this.search().trim();
+    if (!text) {
+      return;
+    }
+    const product = findByCode(this.catalogItems(), text);
+    // Sin código exacto, el único resultado por nombre (producto o combo).
+    const only = product ? null : this.tiles().length === 1 ? this.tiles()[0] : null;
+
+    if (!product && !only) {
+      this.notifications.error(`No existe un producto o combo con el código ${text}.`);
+      this.searchInput()?.nativeElement.select();
+      return;
+    }
+
+    if (product) {
+      this.pick(product);
+    } else if (only) {
+      this.pickTile(only);
+    }
+    this.search.set('');
+    this.focusSearch();
+  }
+
+  /** "Agregar" de una sugerencia de combo: suma lo que falta, con los mismos controles de existencia. */
+  protected applySuggestion(suggestion: QuoteSuggestion): void {
+    const product = this.catalogItems().find((item) => item.id === suggestion.productoId);
+    if (!product) {
+      this.notifications.error(`${suggestion.producto} no está habilitado en el punto de venta.`);
+      return;
+    }
+    this.add(product, suggestion.faltan);
+  }
+
+  protected focusSearch(): void {
+    this.searchInput()?.nativeElement.focus();
+  }
+
+  /** Línea sobre la que actúan +, − y Supr: la seleccionada o, si no hay, la última del ticket. */
+  private activeLine(): PosLine | null {
+    return this.selectedLine() ?? this.ticket().at(-1) ?? null;
+  }
+
+  protected step(amount: number, line: PosLine | null = this.activeLine()): void {
+    if (line) {
+      this.selectedId.set(line.product.id);
+      this.setQuantity(line.product.id, line.quantity + amount);
+    }
+  }
+
+  protected removeActive(): void {
+    const line = this.activeLine();
+    if (line) {
+      this.setQuantity(line.product.id, 0);
+    }
+  }
+
+  protected clear(): void {
+    this.orders.cambiarLineas(() => []);
+    this.clearOpen.set(false);
+    this.sheetOpen.set(false);
+  }
+
+  /** "Cerrar caja" del menú: si hay pedidos sin cobrar, primero se confirma. */
+  protected requestCloseRegister(): void {
+    this.menuOpen.set(false);
+    if (this.pending().length > 0) {
+      this.closeRegisterOpen.set(true);
+    } else {
+      this.closing.set(true);
+    }
+  }
+
+  protected confirmCloseRegister(): void {
+    this.closeRegisterOpen.set(false);
+    this.viewingOrders.set(false);
+    this.sheetOpen.set(false);
+    this.closing.set(true);
+  }
+
+  /** El turno ya se cerró: los pedidos pendientes se descartan y la pantalla vuelve a "Abrir caja". */
+  protected onRegisterClosed(): void {
+    this.orders.reiniciar();
+    this.selectedId.set(null);
+    this.search.set('');
+    this.category.set('');
+    this.sheetOpen.set(false);
+    this.closing.set(false);
+    this.viewingOrders.set(false);
+    // Con la caja cerrada no queda nada que hacer en el punto de venta: quien tiene panel vuelve a él.
+    if (this.panelLink()) this.goToPanel();
+  }
+
+  protected requestLogout(): void {
+    this.menuOpen.set(false);
+    if (this.pending().length > 0) {
+      this.logoutOpen.set(true);
+    } else {
+      this.auth.logout();
+    }
+  }
+
+  /** "Panel administrativo": los pedidos quedan guardados, pero se avisa antes de salir. */
+  protected requestPanel(): void {
+    this.menuOpen.set(false);
+    if (this.pending().length > 0) {
+      this.panelOpen.set(true);
+    } else {
+      this.goToPanel();
+    }
+  }
+
+  protected goToPanel(): void {
+    this.panelOpen.set(false);
+    void this.router.navigateByUrl(PANEL_PATH);
+  }
+
+  protected openMenu(): void {
+    this.menuOpen.set(true);
+    afterNextRender(() => this.menuClose()?.nativeElement.focus(), { injector: this.injector });
+  }
+
+  protected closeMenu(): void {
+    if (this.menuOpen()) {
+      this.menuOpen.set(false);
+      this.menuTrigger()?.nativeElement.focus();
+    }
+  }
+
+  protected orderHasLines(order: PosOrder): boolean {
+    return hasLines(order);
+  }
+
+  protected orderItems(order: PosOrder): number {
+    return itemCount(order);
+  }
+
+  /** Total para el rótulo: el cotizado vigente del activo y, para el resto, el último guardado. */
+  protected pillTotal(order: PosOrder): number {
+    const live = order.id === this.activeOrderId() ? this.settledTotal() : null;
+    return live ?? orderTotal(order);
+  }
+
+  /** Un pedido se puede descartar si tiene líneas o si hay más de uno abierto. */
+  protected canDiscard(order: PosOrder): boolean {
+    return hasLines(order) || this.orderList().length > 1;
+  }
+
+  /** Abre un pedido vacío y lo activa. Devuelve false (con aviso) si ya está el máximo. */
+  protected newOrder(): boolean {
+    if (!this.orders.crear()) {
+      this.notifications.info(
+        `Ya hay ${MAX_ORDERS} pedidos abiertos. Cobrá o descartá uno para abrir otro.`,
+      );
+      return false;
+    }
+    this.onOrderChanged();
+    return true;
+  }
+
+  /** "Ver todos los pedidos" del menú. */
+  protected openOrdersView(): void {
+    this.menuOpen.set(false);
+    this.sheetOpen.set(false);
+    this.viewingOrders.set(true);
+  }
+
+  /** "Retomar" en la vista Pedidos: el borrador pasa a ser el activo y se vuelve a vender. */
+  protected resumeOrder(order: PosOrder): void {
+    this.switchTo(order.id);
+    this.viewingOrders.set(false);
+  }
+
+  /** "Nuevo pedido" en la vista Pedidos: abre uno vacío y vuelve a vender. */
+  protected newOrderFromView(): void {
+    if (this.newOrder()) {
+      this.viewingOrders.set(false);
+    }
+  }
+
+  protected switchTo(id: number): void {
+    if (id !== this.activeOrderId()) {
+      this.orders.cambiar(id);
+      this.onOrderChanged();
+    }
+    this.menuOpen.set(false);
+  }
+
+  /** Ctrl+Tab y Ctrl+Mayús+Tab. */
+  private cycleOrders(step: number): void {
+    this.orders.ciclar(step);
+    this.onOrderChanged();
+  }
+
+  /** Descartar: sin líneas se quita directo; con líneas, antes se confirma. */
+  protected requestDiscard(order: PosOrder): void {
+    if (hasLines(order)) {
+      this.discardTarget.set(order);
+    } else {
+      this.discard(order);
+    }
+  }
+
+  protected discard(order: PosOrder): void {
+    const wasActive = order.id === this.activeOrderId();
+    this.discardTarget.set(null);
+    this.orders.quitar(order.id);
+    if (wasActive) {
+      this.onOrderChanged();
+    }
+  }
+
+  /** Otro pedido pasó a ser el activo: la línea marcada del anterior ya no aplica. */
+  private onOrderChanged(): void {
+    this.selectedId.set(null);
+    this.focusSearch();
+  }
+
+  protected lineQuote(line: PosLine): QuoteLine | undefined {
+    return this.quoteByProduct().get(line.product.id);
+  }
+
+  /** Aviso del siguiente tramo de mayoreo para la línea, o null si no aplica (HU-33). */
+  protected tierHint(line: PosLine): string | null {
+    const scales = this.scales().get(line.product.id);
+    if (!scales?.length) {
+      return null;
+    }
+    const lineQuote = this.lineQuote(line);
+    const paying = lineQuote ? lineQuote.total / line.quantity : line.product.precio;
+    const hint = nextTier(scales, line.quantity, Math.min(line.product.precio, paying));
+    return hint ? tierHintText(hint) : null;
+  }
+
+  protected charge(): void {
+    if (this.canCharge()) {
+      this.sheetOpen.set(false);
+      this.checkoutOpen.set(true);
+    }
+  }
+
+  protected openEncargo(): void {
+    if (this.canCharge()) {
+      this.sheetOpen.set(false);
+      this.menuOpen.set(false);
+      this.encargoOpen.set(true);
+    }
+  }
+
+  protected finishSale(): void {
+    this.checkoutOpen.set(false);
+    this.encargoOpen.set(false);
+    // La venta descontó inventario: se recarga para que el POS vea la existencia nueva.
+    this.catalog.reload();
+    this.comboCatalog.reload();
+    this.offers.load();
+    // Pedido cobrado: sale de la lista y el siguiente queda activo (o uno vacío si era el único).
+    this.orders.quitar(this.activeOrderId());
+    this.selectedId.set(null);
+    this.search.set('');
+    this.category.set('');
+    this.focusSearch();
+  }
+
+  protected onKeydown(event: KeyboardEvent): void {
+    if (
+      this.mode() !== 'venta' ||
+      this.checkoutOpen() ||
+      this.encargoOpen() ||
+      this.clearOpen() ||
+      this.logoutOpen() ||
+      this.closeRegisterOpen() ||
+      this.panelOpen() ||
+      this.discardTarget()
+    ) {
+      return;
+    }
+    if (event.key === 'Escape' && this.menuOpen()) {
+      this.closeMenu();
+      return;
+    }
+    if (this.menuOpen()) {
+      return;
+    }
+    if (event.key === 'Escape' && this.sheetOpen()) {
+      this.sheetOpen.set(false);
+      return;
+    }
+    const target = event.target as HTMLElement | null;
+    const typing = !!target?.closest('input, textarea, select, [contenteditable="true"]');
+    const ctrl = event.ctrlKey || event.metaKey;
+    if (this.handleScanner(event, typing, ctrl)) {
+      return;
+    }
+    const action = posShortcut(event.key, typing, { ctrl, shift: event.shiftKey });
+    if (!action) {
+      return;
+    }
+
+    event.preventDefault();
+    switch (action) {
+      case 'buscar':
+        this.focusSearch();
+        break;
+      case 'cobrar':
+        this.charge();
+        break;
+      case 'mas':
+        this.step(1);
+        break;
+      case 'menos':
+        this.step(-1);
+        break;
+      case 'quitar':
+        this.removeActive();
+        break;
+      case 'nuevo-pedido':
+        this.newOrder();
+        break;
+      case 'pedido-siguiente':
+        this.cycleOrders(1);
+        break;
+      case 'pedido-anterior':
+        this.cycleOrders(-1);
+        break;
+    }
+  }
+
+  /**
+   * HU-34: con el foco fuera del buscador, la ráfaga del lector se toma como código y se da de alta,
+   * sin que sus «-» o «+» disparen los atajos. Devuelve true si la tecla ya se atendió.
+   */
+  private handleScanner(event: KeyboardEvent, typing: boolean, ctrl: boolean): boolean {
+    if (typing) {
+      // En el buscador el lector escribe directo y su Enter ya llama a scan().
+      this.burst.reset();
+      return false;
+    }
+    const result = this.burst.feed({
+      key: event.key,
+      time: event.timeStamp,
+      repeat: event.repeat,
+      modified: ctrl || event.altKey,
+    });
+    if (result.kind === 'pass') {
+      return false;
+    }
+    event.preventDefault();
+    if (result.kind === 'code') {
+      this.search.set(result.code);
+      this.focusSearch();
+      this.scan();
+    }
+    return true;
+  }
+
+  /** Lo dice el backend (agotado). Si el detalle recién consultado es del mismo producto, manda ese. */
+  protected soldOut(product: CatalogProduct): boolean {
+    const detail = this.detailValue();
+    return detail?.id === product.id ? detail.agotado : product.agotado;
+  }
+
+  /** Existencia conocida: la del detalle recién consultado o, si no, la del catálogo. */
+  private stockOf(product: CatalogProduct): number | null {
+    const detail = this.detailValue();
+    if (detail?.id === product.id && detail.disponible != null) {
+      return detail.disponible;
+    }
+    return product.disponible ?? null;
+  }
+
+  private fitsStock(product: CatalogProduct, quantity: number): boolean {
+    if (isMadeToOrder(product)) {
+      return true;
+    }
+    const stock = this.stockOf(product);
+    if (stock === null || quantity <= stock) {
+      return true;
+    }
+    this.notifications.error(
+      stock <= 0
+        ? `${product.nombre} está agotado.`
+        : `No hay más ${product.nombre}: solo quedan ${stock} en existencia.`,
+    );
+    return false;
+  }
+
+  private setQuantity(productId: Id, quantity: number): boolean {
+    const line = this.ticket().find((item) => item.product.id === productId);
+    if (line && quantity > line.quantity && !this.fitsStock(line.product, quantity)) {
+      return false;
+    }
+    this.orders.cambiarLineas((lines) =>
+      lines
+        .map((line) => (line.product.id === productId ? { ...line, quantity } : line))
+        .filter((line) => line.quantity > 0),
+    );
+    return true;
+  }
+
+  /**
+   * Consulta los tramos del producto la primera vez que entra al ticket. Si falla queda
+   * sin aviso de tramo: la venta no depende de esto, y el interceptor ya avisó del error.
+   */
+  private loadScales(productId: Id): void {
+    if (this.scaleRequests.has(productId)) {
+      return;
+    }
+    this.scaleRequests.add(productId);
+    this.priceScales
+      .byProduct(productId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (scales) => this.scales.update((map) => new Map(map).set(productId, scales)),
+        error: () => this.scales.update((map) => new Map(map).set(productId, [])),
+      });
+  }
+}
