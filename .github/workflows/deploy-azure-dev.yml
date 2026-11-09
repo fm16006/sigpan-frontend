@@ -2,7 +2,7 @@ name: Despliegue Azure (dev)
 
 on:
   push:
-    branches: [deploy/azure-dev]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
